@@ -746,6 +746,25 @@
   color: var(--mz-text-75);
 }
 
+.mz-prose h1,
+.mz-prose h2,
+.mz-prose h3,
+.mz-prose h4,
+.mz-prose h5,
+.mz-prose h6 {
+  color: var(--mz-text-90);
+}
+
+.mz-prose h2 {
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--mz-line);
+}
+
+.mz-prose h3 {
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--mz-primary);
+}
+
 .mz-prose a {
   color: var(--mz-primary);
   text-decoration: underline;

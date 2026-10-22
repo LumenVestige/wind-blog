@@ -958,6 +958,19 @@
   color: var(--heading-color);
 }
 
+.chirpy-prose h5 {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 1.05rem;
+  color: var(--heading-color);
+}
+
+.chirpy-prose h6 {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 0.95rem;
+  color: var(--heading-color);
+  opacity: 0.8;
+}
+
 .chirpy-prose p {
   margin: 0 0 1rem;
 }

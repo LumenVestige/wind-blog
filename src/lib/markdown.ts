@@ -13,6 +13,73 @@ marked.setOptions({
   breaks: true,
 })
 
+/** 正文允许保留的 HTML 标签；其余尖括号按普通文本展示（如 C++ 的 vector<T>）。 */
+const ALLOWED_HTML_TAGS = new Set([
+  'a', 'abbr', 'b', 'blockquote', 'br', 'button', 'code', 'del', 'details',
+  'div', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'kbd',
+  'input', 'li', 'mark', 'ol', 'p', 'pre', 's', 'section', 'span', 'strong',
+  'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead',
+  'tr', 'u', 'ul',
+])
+
+/** 把非白名单标签的 `<` 转义，避免 marked 当 HTML 解析后被 sanitize 丢弃。 */
+function escapeUnknownTagBrackets(text: string): string {
+  let out = ''
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i]
+    if (char !== '<') {
+      out += char
+      continue
+    }
+    const rest = text.slice(i)
+    if (rest.startsWith('<!--')) {
+      out += '<'
+      continue
+    }
+    const match = /^<(\/?)([A-Za-z][A-Za-z0-9-]*)(?=[\s/>])/.exec(rest)
+    if (match && ALLOWED_HTML_TAGS.has(match[2].toLowerCase())) {
+      out += '<'
+      continue
+    }
+    out += '&lt;'
+  }
+  return out
+}
+
+/** 跳过围栏代码和行内代码后再转义，代码里的 <T> 保持原样。 */
+function escapeUnknownTagsOutsideCode(source: string): string {
+  const lines = source.split('\n')
+  let fence: { marker: string; length: number } | null = null
+  const output: string[] = []
+  for (const line of lines) {
+    const trimmed = line.trimStart()
+    if (fence) {
+      const closing = new RegExp(`^\\${fence.marker}{${fence.length},}\\s*$`)
+      if (closing.test(trimmed)) fence = null
+      output.push(line)
+      continue
+    }
+    const opening = /^(`{3,}|~{3,})/.exec(trimmed)
+    if (opening) {
+      fence = { marker: opening[1][0], length: opening[1].length }
+      output.push(line)
+      continue
+    }
+    const snippets: string[] = []
+    const protectedLine = line.replace(/(`+)([^`]*?)\1/g, (raw) => {
+      const index = snippets.push(raw) - 1
+      return `\uE100${index}\uE101`
+    })
+    output.push(
+      escapeUnknownTagBrackets(protectedLine).replace(
+        /\uE100(\d+)\uE101/g,
+        (_, index: string) => snippets[Number(index)] ?? '',
+      ),
+    )
+  }
+  return output.join('\n')
+}
+
 const PLACEHOLDER_PREFIX = '@@MATH'
 const PLACEHOLDER_SUFFIX = '@@'
 
@@ -263,13 +330,7 @@ function restoreMath(html: string, pieces: MathPiece[]): string {
 export function sanitizeHtml(html: string): string {
   if (!html) return ''
 
-  const allowedTags = new Set([
-    'a', 'abbr', 'b', 'blockquote', 'br', 'button', 'code', 'del', 'details',
-    'div', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'kbd',
-    'input', 'li', 'mark', 'ol', 'p', 'pre', 's', 'section', 'span', 'strong',
-    'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead',
-    'tr', 'u', 'ul',
-  ])
+  const allowedTags = ALLOWED_HTML_TAGS
   const dropWithContent = new Set([
     'base', 'embed', 'form', 'iframe', 'link', 'math',
     'meta', 'object', 'script', 'style', 'svg', 'template', 'textarea',
@@ -873,7 +934,7 @@ export function renderMarkdown(md: string): string {
     const obsidian = preprocessObsidianMarkdown(md)
     const raw = obsidian.markdown.replace(/\$\$\$/g, '$')
     const { text, pieces } = extractMath(raw)
-    const html = marked.parse(text, { async: false }) as string
+    const html = marked.parse(escapeUnknownTagsOutsideCode(text), { async: false }) as string
     const withFootnotes = renderObsidianFootnotes(
       restoreMath(html, pieces),
       obsidian.footnotes,
