@@ -255,11 +255,45 @@ export function validateStaticPath(value: string): void {
   }
 }
 
+function isHtmlEntry(name: string): boolean {
+  const ext = name.split('.').pop()?.toLowerCase()
+  return ext === 'html' || ext === 'htm'
+}
+
+function rewriteHtmlAssetUrls(html: string, cdnDir: string): string {
+  return html.replace(
+    /(<(?:script|link|img|source|video|audio|iframe)\b[^>]*?\s(?:src|href)\s*=\s*)(["'])([^"']+)\2/gi,
+    (full, prefix: string, quote: string, value: string) => {
+      const target = value.trim()
+      if (!target || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#|\/)/i.test(target)) return full
+      const [path, suffix = ''] = target.split(/([?#].*)/)
+      const clean = path.replace(/^\.\//, '')
+      if (!clean || clean.split('/').some((part) => part === '..')) return full
+      return `${prefix}${quote}${cdnDir}${clean.split('/').map(encodeURIComponent).join('/')}${suffix}${quote}`
+    },
+  )
+}
+
+export async function serveStaticEntry(username: string, slug: string): Promise<Response> {
+  const resolved = resolveStaticFile(username, slug, '')
+  if (!isHtmlEntry(resolved.path)) return Response.redirect(resolved.url, 302)
+  const upstream = await fetch(resolved.url, { cache: 'no-store' })
+  if (!upstream.ok) return new Response('入口文件不可用', { status: 502 })
+  const html = rewriteHtmlAssetUrls(await upstream.text(), resolved.cdnDir)
+  return new Response(html, {
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-cache',
+      'content-security-policy': "frame-ancestors 'self'",
+    },
+  })
+}
+
 export function resolveStaticFile(
   username: string,
   slug: string,
   filePath: string,
-): { url: string; contentType: string } {
+): { url: string; contentType: string; path: string; cdnDir: string } {
   const row = get<StaticSiteRow & { username: string }>(
     `SELECT s.*, u.username FROM blog_static_sites s JOIN users u ON u.id = s.user_id
      WHERE u.username = ? COLLATE NOCASE AND s.slug = ?`,
@@ -270,6 +304,12 @@ export function resolveStaticFile(
   const rel = filePath || row.entry || 'index.html'
   validateStaticPath(rel)
   if (!row.prefix) throw new ApiError('页面尚未发布', 1, 404)
-  const key = `${row.prefix}/${rel.split('/').map(encodeURIComponent).join('/')}`
-  return { url: getUpyunClient().publicUrl(key), contentType: contentTypeFor(rel) }
+  const encoded = rel.split('/').map(encodeURIComponent).join('/')
+  const client = getUpyunClient()
+  return {
+    url: client.publicUrl(`${row.prefix}/${encoded}`),
+    contentType: contentTypeFor(rel),
+    path: rel,
+    cdnDir: client.publicUrl(`${row.prefix}/`),
+  }
 }

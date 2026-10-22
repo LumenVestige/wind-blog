@@ -1,5 +1,5 @@
 import { siteOwner } from '@/server/tenant'
-import { resolveStaticFile } from '@/server/blog/static-sites'
+import { resolveStaticFile, serveStaticEntry } from '@/server/blog/static-sites'
 import { ApiError } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,9 @@ export async function GET(
   const owner = siteOwner()
   const { slug, file } = await ctx.params
   try {
-    const { url } = resolveStaticFile(owner.username, slug, (file || []).join('/'))
+    const requested = (file || []).join('/')
+    if (!requested) return await serveStaticEntry(owner.username, slug)
+    const { url } = resolveStaticFile(owner.username, slug, requested)
     return Response.redirect(url, 302)
   } catch (e) {
     const status = e instanceof ApiError ? e.status : 404
