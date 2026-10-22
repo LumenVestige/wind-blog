@@ -269,6 +269,7 @@ export const articleMineH: Handler = async (ctx) => {
   const user = await requireUser(ctx.req)
   const q = getQuery(ctx.req)
   const data = listMine(user.id, {
+    status: str(q.get('status')) || undefined,
     page: num(q.get('page'), 1),
     pageSize: num(q.get('pageSize'), 20),
     keyword: str(q.get('keyword')) || undefined,

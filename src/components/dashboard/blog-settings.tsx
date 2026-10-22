@@ -1,503 +1,678 @@
 'use client'
-
-import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Monitor, Moon, Plus, Sun, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { api, ClientApiError } from '@/lib/api-client'
+import { useUnsavedChanges } from '@/lib/use-draft'
+import type {
+  SettingsSection,
+  SettingsSnapshot,
+  SettingsValues,
+} from '@/lib/admin-settings'
+import { settingsNav } from '@/lib/admin-nav'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from '@/components/ui/field'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { SiteSettings, AccountSettings } from './site-account-settings'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import { Badge } from '@/components/ui/badge'
 import { RequestError } from '@/components/ui/request-error'
-import { useUnsavedChanges } from '@/lib/use-draft'
-import { api, ClientApiError } from '@/lib/api-client'
+import { AdminHeading } from './admin-ui'
+import { AccountSettings } from './site-account-settings'
 
-interface SocialLink {
-  type: string
-  url: string
-  label?: string
-}
-interface Theme {
-  themeId: string
-  colorScheme: string
-  subtitle: string
-  socialLinks: SocialLink[]
-  aboutMd: string
-  homeIntroMd: string
-  friendsMd: string
-}
-
-const THEMES = [
-  {
-    id: 'mizuki',
-    label: 'Mizuki',
-    description: '毛玻璃顶栏 + 渐变卡片，Material Design 3 气质',
-    credit: 'LyraVoid/Mizuki',
-    creditUrl: 'https://github.com/LyraVoid/Mizuki',
-    badge: '默认',
-  },
-  {
-    id: 'chirpy',
-    label: 'Chirpy',
-    description: '左侧栏 + 文章卡片，经典技术博客风格',
-  },
-  {
-    id: 'simple',
-    label: '简约',
-    description: '顶栏导航 + 卡片列表，贴近主站风格',
-  },
-] as const
-
-const SCHEMES = [
-  { id: 'system', label: '跟随系统', description: '随读者设备的明暗设置', badge: '推荐默认' },
-  { id: 'light', label: '浅色', description: '始终使用浅色' },
-  { id: 'dark', label: '深色', description: '始终使用深色' },
-] as const
-
-const SOCIALS = [
-  { type: 'github', label: 'GitHub', placeholder: 'https://github.com/you' },
-  { type: 'twitter', label: 'X / Twitter', placeholder: 'https://x.com/you' },
-  { type: 'email', label: '邮箱', placeholder: 'mailto:you@example.com' },
-  { type: 'rss', label: 'RSS', placeholder: 'https://…/feed.xml' },
-  { type: 'bilibili', label: 'Bilibili', placeholder: 'https://space.bilibili.com/…' },
-  { type: 'zhihu', label: '知乎', placeholder: 'https://www.zhihu.com/people/…' },
-  { type: 'custom', label: '自定义链接', placeholder: 'https://…' },
-]
-
-export function BlogSettings({ username, name }: { username: string; name: string }) {
-  const [theme, setTheme] = useState<Theme | null>(null)
-  const [profile, setProfile] = useState({ name })
-  const [upyun, setUpyun] = useState({
-    bucket: '',
-    operator: '',
-    password: '',
-    domain: '',
-    scheme: 'https',
-    apiHost: '',
-    uploadDir: 'blog',
-    hasPassword: false,
-    publicBaseUrl: '',
-    configured: false,
-  })
-  const [savingUpyun, setSavingUpyun] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const router = useRouter()
-  const [error, setError] = useState<unknown>(null)
-  const [themeBase, setThemeBase] = useState('')
-  const [cdnBase, setCdnBase] = useState('')
-  const [profileBase, setProfileBase] = useState(name)
-  useUnsavedChanges(!!theme && JSON.stringify(theme) !== themeBase || !!cdnBase && JSON.stringify(upyun) !== cdnBase || profile.name !== profileBase)
-
-  const reload = useCallback(async () => {
+function useModule<S extends SettingsSection>(
+  section: S,
+  initial: SettingsSnapshot[S],
+) {
+  const [value, setValue] = useState<SettingsValues[S]>(initial.values)
+  const [baseline, setBaseline] = useState(initial)
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState<unknown>(null)
+  const router = useRouter(),
+    dirty = JSON.stringify(value) !== JSON.stringify(baseline.values)
+  useUnsavedChanges(dirty)
+  function change<K extends keyof SettingsValues[S]>(
+    key: K,
+    next: SettingsValues[S][K],
+  ) {
+    setValue((previous) => ({ ...previous, [key]: next }))
+  }
+  async function save(event: FormEvent) {
+    event.preventDefault()
+    if (busy || !dirty) return
+    setBusy(true)
     setError(null)
-    const [th, cdn] = await Promise.allSettled([
-      api.get<Theme>('/api/user/blog/theme/status', { username }),
-      api.get<typeof upyun>('/api/user/blog/upyun'),
-    ])
-    if (th.status === 'fulfilled') { setTheme(th.value); setThemeBase(JSON.stringify(th.value)) }
-    for (const result of [th, cdn]) if (result.status === 'rejected') setError(result.reason)
-    if (cdn.status === 'fulfilled') {
-      const next = {
-        bucket: cdn.value.bucket || '',
-        operator: cdn.value.operator || '',
-        password: '',
-        domain: cdn.value.domain || '',
-        scheme: cdn.value.scheme || 'https',
-        apiHost: cdn.value.apiHost || '',
-        uploadDir: cdn.value.uploadDir || 'blog',
-        hasPassword: !!cdn.value.hasPassword,
-        publicBaseUrl: cdn.value.publicBaseUrl || '',
-        configured: !!cdn.value.configured,
-      }; setUpyun(next); setCdnBase(JSON.stringify(next))
-    }
-  }, [username])
-
-  useEffect(() => {
-    void reload()
-  }, [reload])
-
-  async function guard(fn: () => Promise<unknown>, okMsg: string) {
     try {
-      await fn()
-      toast.success(okMsg)
+      const saved = await api.post<SettingsSnapshot[S]>(
+        '/api/manage/settings',
+        { section, values: value, version: baseline.version },
+      )
+      setValue(saved.values)
+      setBaseline(saved)
+      toast.success('设置已保存')
       router.refresh()
-    } catch (e) {
-      toast.error(e instanceof ClientApiError ? e.message : '操作失败')
-    }
-  }
-
-  async function uploadAvatar(file: File) {
-    const form = new FormData()
-    form.append('file', file)
-    form.append('purpose', 'avatar')
-    await guard(() => api.upload('/api/user/upload', form), '头像已更新')
-  }
-
-  async function saveTheme(e: React.FormEvent) {
-    e.preventDefault()
-    if (!theme) return
-    setSaving(true)
-    try {
-      await api.post('/api/user/blog/theme/config', {
-        themeId: theme.themeId,
-        colorScheme: theme.colorScheme,
-        subtitle: theme.subtitle,
-        socialLinks: theme.socialLinks
-          .map((l) => ({
-            type: l.type.trim().toLowerCase(),
-            url: l.url.trim(),
-            label: (l.label || '').trim() || undefined,
-          }))
-          .filter((l) => l.type && l.url),
-        aboutMd: theme.aboutMd,
-        homeIntroMd: theme.homeIntroMd,
-        friendsMd: theme.friendsMd,
-      })
-      setThemeBase(JSON.stringify(theme))
-      toast.success('外观已保存')
-      router.refresh()
-    } catch (err) {
-      toast.error(err instanceof ClientApiError ? err.message : '没保存上')
+    } catch (reason) {
+      setError(reason)
     } finally {
-      setSaving(false)
+      setBusy(false)
     }
   }
-
-  if (error) return <RequestError error={error} retry={() => void reload()} />
-  if (!theme || !cdnBase) return <p className="text-muted-foreground">加载中…</p>
-
+  async function reload() {
+    if (!window.confirm('重新加载会放弃本模块未保存的修改，确定继续吗？'))
+      return
+    setBusy(true)
+    try {
+      const saved = (await api.get<SettingsSnapshot>('/api/manage/settings'))[
+        section
+      ] as SettingsSnapshot[S]
+      setValue(saved.values)
+      setBaseline(saved)
+      setError(null)
+    } catch (reason) {
+      setError(reason)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return {
+    value,
+    change,
+    busy,
+    dirty,
+    error,
+    save,
+    reload,
+    reset: () => {
+      setValue(baseline.values)
+      setError(null)
+    },
+  }
+}
+type ModuleState = {
+  busy: boolean
+  dirty: boolean
+  error: unknown
+  save: (event: FormEvent) => Promise<void>
+  reset: () => void
+  reload: () => Promise<void>
+}
+function ModuleForm({
+  title,
+  description,
+  state,
+  children,
+}: {
+  title: string
+  description: string
+  state: ModuleState
+  children: ReactNode
+}) {
   return (
-    <div className="flex flex-col gap-6">
-      <SiteSettings />
-      {error != null && <RequestError error={error} retry={() => void reload()} />}
-
-      <form onSubmit={saveTheme} className="flex flex-col gap-6 rounded-xl border bg-card p-6 shadow-sm">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">外观设置</h1>
-          <p className="mt-1 text-sm text-muted-foreground">选择布局主题和读者默认明暗。</p>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label>主题</Label>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {THEMES.map((meta) => {
-              const active = theme.themeId === meta.id
-              return (
-                <button
-                  key={meta.id}
-                  type="button"
-                  onClick={() => setTheme({ ...theme, themeId: meta.id })}
-                  className={
-                    active
-                      ? 'rounded-xl border-2 border-primary bg-primary/5 p-4 text-left'
-                      : 'rounded-xl border p-4 text-left hover:bg-muted/50'
-                  }
-                >
-                  <div className="font-medium">{meta.label}</div>
-                  <p className="mt-1 text-xs text-muted-foreground">{meta.description}</p>
-                  {'badge' in meta && meta.badge ? (
-                    <span className="mt-2 inline-block text-[11px] text-primary">{meta.badge}</span>
-                  ) : null}
-                  {'creditUrl' in meta && meta.creditUrl ? (
-                    <a
-                      href={meta.creditUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 block text-[11px] text-primary hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      来源：{meta.credit}
-                    </a>
-                  ) : null}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label>默认明暗</Label>
-          <p className="text-xs text-muted-foreground">读者第一次打开时的外观；选「跟随系统」则随对方设备。</p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {SCHEMES.map((opt) => {
-              const active = theme.colorScheme === opt.id
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setTheme({ ...theme, colorScheme: opt.id })}
-                  className={
-                    active
-                      ? 'rounded-xl border-2 border-primary bg-primary/5 p-3 text-left'
-                      : 'rounded-xl border p-3 text-left hover:bg-muted/50'
-                  }
-                >
-                  <div className="font-medium">{opt.label}</div>
-                  <p className="mt-1 text-xs text-muted-foreground">{opt.description}</p>
-                  {'badge' in opt && opt.badge ? (
-                    <span className="mt-2 inline-block text-[11px] text-primary">{opt.badge}</span>
-                  ) : null}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="blog-subtitle">副标题 / 简介</Label>
-          <Input
-            id="blog-subtitle"
-            value={theme.subtitle}
-            maxLength={200}
-            placeholder="一句话介绍你的博客（可选）"
-            onChange={(e) => setTheme({ ...theme, subtitle: e.target.value })}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="blog-home-intro">首页介绍</Label>
-          <Textarea
-            id="blog-home-intro"
-            rows={4}
-            value={theme.homeIntroMd}
-            placeholder="显示在文章列表上方（支持 Markdown，可选）"
-            onChange={(e) => setTheme({ ...theme, homeIntroMd: e.target.value })}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="blog-about-md">关于</Label>
-          <Textarea
-            id="blog-about-md"
-            rows={6}
-            value={theme.aboutMd}
-            placeholder="关于页内容（支持 Markdown，留空用默认）"
-            onChange={(e) => setTheme({ ...theme, aboutMd: e.target.value })}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="blog-friends-md">友链</Label>
-          <Textarea
-            id="blog-friends-md"
-            rows={6}
-            value={theme.friendsMd}
-            placeholder="友链页内容（支持 Markdown，留空不显示入口）"
-            onChange={(e) => setTheme({ ...theme, friendsMd: e.target.value })}
-          />
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2">
-            <Label>外链图标</Label>
+    <form onSubmit={state.save}>
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldSet disabled={state.busy}>
+            <FieldGroup>{children}</FieldGroup>
+          </FieldSet>
+          {state.error != null && (
+            <div className="mt-5">
+              <RequestError error={state.error} />
+              {state.error instanceof ClientApiError &&
+                state.error.status === 409 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-3"
+                    disabled={state.busy}
+                    onClick={() => void state.reload()}
+                  >
+                    重新加载此模块
+                  </Button>
+                )}
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-wrap justify-between gap-4">
+          <p className="text-xs text-muted-foreground" role="status">
+            {state.dirty ? '有未保存的修改' : '所有修改已保存'}
+          </p>
+          <div className="flex gap-2">
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              onClick={() =>
-                setTheme({ ...theme, socialLinks: [...theme.socialLinks, { type: 'github', url: '' }] })
-              }
+              disabled={!state.dirty || state.busy}
+              onClick={state.reset}
             >
-              <Plus className="size-3.5" />
-              添加
+              撤销修改
+            </Button>
+            <Button type="submit" disabled={!state.dirty || state.busy}>
+              {state.busy ? '保存中…' : '保存修改'}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">Chirpy 在左下角，Mizuki 在右侧资料卡；留空则不显示。</p>
-          {theme.socialLinks.length === 0 ? (
-            <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-              还没有添加外链
-            </div>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {theme.socialLinks.map((l, i) => (
-                <li key={i} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[140px_1fr_1fr_auto]">
-                  <Select
-                    value={l.type || 'custom'}
-                    onValueChange={(v) => {
-                      const next = [...theme.socialLinks]
-                      next[i] = { ...next[i], type: v }
-                      setTheme({ ...theme, socialLinks: next })
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="类型" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SOCIALS.map((p) => (
-                        <SelectItem key={p.type} value={p.type}>
-                          {p.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    value={l.url}
-                    placeholder={SOCIALS.find((p) => p.type === l.type)?.placeholder || 'https://…'}
-                    onChange={(e) => {
-                      const next = [...theme.socialLinks]
-                      next[i] = { ...next[i], url: e.target.value }
-                      setTheme({ ...theme, socialLinks: next })
-                    }}
-                  />
-                  <Input
-                    value={l.label || ''}
-                    placeholder="显示名称（可选）"
-                    onChange={(e) => {
-                      const next = [...theme.socialLinks]
-                      next[i] = { ...next[i], label: e.target.value }
-                      setTheme({ ...theme, socialLinks: next })
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="删除"
-                    onClick={() =>
-                      setTheme({
-                        ...theme,
-                        socialLinks: theme.socialLinks.filter((_, j) => j !== i),
-                      })
-                    }
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-
-        <div className="flex flex-wrap items-center gap-2 pt-2">
-          <Button type="submit" disabled={saving}>
-            {saving ? '保存中…' : '保存外观'}
-          </Button>
-          <Button type="button" variant="outline" asChild>
-            <Link href={`/`}>打开博客</Link>
-          </Button>
-        </div>
-      </form>
-
-      <section className="rounded-xl border bg-card p-6 shadow-sm">
-        <h2 className="text-base font-semibold">个人资料</h2>
-        {!upyun.configured && <p className="mt-2 text-sm text-muted-foreground">头像上传需要先配置下方又拍云 CDN。</p>}
-        <div className="mt-4 flex flex-col gap-4">
-          <div className="space-y-1.5">
-            <Label>昵称</Label>
-            <Input value={profile.name} onChange={(e) => setProfile({ name: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>头像</Label>
-            <input
-              type="file"
-              disabled={!upyun.configured}
-              accept="image/jpeg,image/png,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon"
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) void uploadAvatar(f)
-              }}
-            />
-          </div>
-          <Button className="w-fit" onClick={() => guard(async () => { await api.post('/api/user/profile/update', profile); setProfileBase(profile.name) }, '已保存资料')}>
-            保存资料
-          </Button>
-        </div>
-      </section>
-
-      <section id="cdn" className="rounded-xl border bg-card p-6 shadow-sm">
-        <h2 className="text-base font-semibold">又拍云 CDN</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          填写存储空间和 CDN 域名。文章图片、头像会上传到这里，阅读时按这个域名展开。
-        </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>CDN 域名</Label>
-            <Input
-              placeholder="cdn.example.com"
-              value={upyun.domain}
-              onChange={(e) => setUpyun({ ...upyun, domain: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>协议</Label>
-            <Select value={upyun.scheme} onValueChange={(v) => setUpyun({ ...upyun, scheme: v })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="https">https</SelectItem>
-                <SelectItem value="http">http</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>存储空间 Bucket</Label>
-            <Input value={upyun.bucket} onChange={(e) => setUpyun({ ...upyun, bucket: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>操作员</Label>
-            <Input value={upyun.operator} onChange={(e) => setUpyun({ ...upyun, operator: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>操作员密码</Label>
-            <Input
-              type="password"
-              placeholder={upyun.hasPassword ? '已保存，留空则不修改' : '操作员密码'}
-              value={upyun.password}
-              onChange={(e) => setUpyun({ ...upyun, password: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>上传目录</Label>
-            <Input
-              placeholder="blog"
-              value={upyun.uploadDir}
-              onChange={(e) => setUpyun({ ...upyun, uploadDir: e.target.value })}
-            />
-            <p className="text-xs text-muted-foreground">
-              新图片会存到这个目录下，例如 {upyun.uploadDir.trim() || 'blog'}/文件名.jpg。已上传的图片路径不变。
-            </p>
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>API 地址（可选）</Label>
-            <Input
-              placeholder="https://v0.api.upyun.com"
-              value={upyun.apiHost}
-              onChange={(e) => setUpyun({ ...upyun, apiHost: e.target.value })}
-            />
-          </div>
-        </div>
-        {upyun.publicBaseUrl ? (
-          <p className="mt-3 text-sm text-muted-foreground">当前访问地址：{upyun.publicBaseUrl}</p>
-        ) : null}
-        <Button
-          className="mt-4"
-          disabled={savingUpyun}
-          onClick={async () => {
-            setSavingUpyun(true)
-            try {
-              const saved = await api.post<typeof upyun>('/api/user/blog/upyun', upyun)
-              toast.success('又拍云 CDN 已保存')
-              const next = { ...upyun, ...saved, password: '' }; setUpyun(next); setCdnBase(JSON.stringify(next))
-            } catch (e) {
-              toast.error(e instanceof ClientApiError ? e.message : '没保存上')
-            } finally {
-              setSavingUpyun(false)
-            }
+        </CardFooter>
+      </Card>
+    </form>
+  )
+}
+function TextField({
+  id,
+  label,
+  value,
+  onChange,
+  description,
+  required,
+  maxLength,
+  placeholder,
+  type = 'text',
+  autoComplete,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  description?: string
+  required?: boolean
+  maxLength?: number
+  placeholder?: string
+  type?: string
+  autoComplete?: string
+}) {
+  return (
+    <Field>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Input
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        type={type}
+        autoComplete={autoComplete}
+      />
+      {description && <FieldDescription>{description}</FieldDescription>}
+    </Field>
+  )
+}
+function General({ initial }: { initial: SettingsSnapshot['general'] }) {
+  const form = useModule('general', initial),
+    { value, change } = form
+  return (
+    <ModuleForm
+      title="基本信息"
+      description="设置读者看到的站点名称与身份。"
+      state={form}
+    >
+      <TextField
+        id="site-name"
+        label="站点名称"
+        value={value.siteName}
+        onChange={(value) => change('siteName', value)}
+        required
+        maxLength={64}
+      />
+      <TextField
+        id="display-name"
+        label="站长昵称"
+        value={value.displayName}
+        onChange={(value) => change('displayName', value)}
+        required
+        maxLength={64}
+      />
+      <TextField
+        id="favicon"
+        label="站点图标"
+        value={value.faviconUrl}
+        onChange={(value) => change('faviconUrl', value)}
+        maxLength={1024}
+        placeholder="https://… 或 /…"
+        description="留空使用站长头像。"
+      />
+      <TextField
+        id="icp"
+        label="备案号"
+        value={value.icpNumber}
+        onChange={(value) => change('icpNumber', value)}
+        maxLength={64}
+        placeholder="可选"
+      />
+    </ModuleForm>
+  )
+}
+function Appearance({ initial }: { initial: SettingsSnapshot['appearance'] }) {
+  const form = useModule('appearance', initial),
+    { value, change } = form
+  return (
+    <ModuleForm
+      title="外观"
+      description="Mizuki 是当前维护的博客主题。"
+      state={form}
+    >
+      <Field>
+        <FieldLabel id="scheme-label">默认明暗</FieldLabel>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          value={value.colorScheme}
+          onValueChange={(value) => {
+            if (value)
+              change(
+                'colorScheme',
+                value as SettingsValues['appearance']['colorScheme'],
+              )
           }}
+          aria-labelledby="scheme-label"
         >
-          {savingUpyun ? '保存中…' : '保存又拍云'}
-        </Button>
-      </section>
-
-      <AccountSettings />
-    </div>
+          <ToggleGroupItem value="system">
+            <Monitor />
+            跟随系统
+          </ToggleGroupItem>
+          <ToggleGroupItem value="light">
+            <Sun />
+            浅色
+          </ToggleGroupItem>
+          <ToggleGroupItem value="dark">
+            <Moon />
+            深色
+          </ToggleGroupItem>
+        </ToggleGroup>
+        <FieldDescription>读者仍可自行切换明暗模式。</FieldDescription>
+      </Field>
+      <TextField
+        id="subtitle"
+        label="博客简介"
+        value={value.subtitle}
+        onChange={(value) => change('subtitle', value)}
+        maxLength={200}
+        placeholder="一句话介绍你的博客"
+      />
+    </ModuleForm>
+  )
+}
+function Content({ initial }: { initial: SettingsSnapshot['content'] }) {
+  const form = useModule('content', initial),
+    { value, change } = form
+  return (
+    <ModuleForm
+      title="页面内容"
+      description="编辑首页介绍、关于页和友链页。支持 Markdown。"
+      state={form}
+    >
+      <Tabs defaultValue="homeIntroMd">
+        <TabsList>
+          <TabsTrigger value="homeIntroMd">首页介绍</TabsTrigger>
+          <TabsTrigger value="aboutMd">关于</TabsTrigger>
+          <TabsTrigger value="friendsMd">友链</TabsTrigger>
+        </TabsList>
+        {(
+          [
+            {
+              key: 'homeIntroMd',
+              label: '首页介绍',
+              help: '显示在首页文章列表上方。',
+            },
+            {
+              key: 'aboutMd',
+              label: '关于页内容',
+              help: '介绍你自己与这个博客。',
+            },
+            {
+              key: 'friendsMd',
+              label: '友链页内容',
+              help: '留空时隐藏友链入口。',
+            },
+          ] as const
+        ).map((item) => (
+          <TabsContent key={item.key} value={item.key}>
+            <Field>
+              <FieldLabel htmlFor={item.key}>{item.label}</FieldLabel>
+              <Textarea
+                id={item.key}
+                value={value[item.key]}
+                onChange={(event) => change(item.key, event.target.value)}
+                className="min-h-80 font-mono"
+                maxLength={200000}
+              />
+              <FieldDescription>{item.help}</FieldDescription>
+            </Field>
+          </TabsContent>
+        ))}
+      </Tabs>
+    </ModuleForm>
+  )
+}
+const socials = [
+  { id: 'github', label: 'GitHub' },
+  { id: 'twitter', label: 'X / Twitter' },
+  { id: 'email', label: '邮箱' },
+  { id: 'rss', label: 'RSS' },
+  { id: 'bilibili', label: 'Bilibili' },
+  { id: 'zhihu', label: '知乎' },
+  { id: 'custom', label: '自定义' },
+]
+function Social({ initial }: { initial: SettingsSnapshot['social'] }) {
+  const form = useModule('social', initial),
+    { value, change } = form
+  function update(
+    index: number,
+    patch: Partial<SettingsValues['social']['socialLinks'][number]>,
+  ) {
+    change(
+      'socialLinks',
+      value.socialLinks.map((item, i) =>
+        i === index ? { ...item, ...patch } : item,
+      ),
+    )
+  }
+  return (
+    <ModuleForm
+      title="社交链接"
+      description="展示在博客右侧的个人资料卡中。"
+      state={form}
+    >
+      {value.socialLinks.length === 0 && (
+        <p className="text-sm text-muted-foreground">还没有添加社交链接。</p>
+      )}
+      {value.socialLinks.map((item, index) => (
+        <FieldSet key={index} className="rounded-lg border p-4">
+          <FieldGroup className="gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">链接 {index + 1}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`移除链接 ${index + 1}`}
+                onClick={() =>
+                  change(
+                    'socialLinks',
+                    value.socialLinks.filter((_, i) => i !== index),
+                  )
+                }
+              >
+                <Trash2 />
+              </Button>
+            </div>
+            <Field>
+              <FieldLabel htmlFor={`social-type-${index}`}>平台</FieldLabel>
+              <Select
+                value={item.type}
+                onValueChange={(type) => update(index, { type })}
+              >
+                <SelectTrigger id={`social-type-${index}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {socials.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                    {!socials.some((option) => option.id === item.type) && (
+                      <SelectItem value={item.type}>{item.type}</SelectItem>
+                    )}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <TextField
+              id={`social-url-${index}`}
+              label="链接地址"
+              value={item.url}
+              onChange={(url) => update(index, { url })}
+              required
+              maxLength={1024}
+              placeholder={
+                item.type === 'email' ? 'mailto:you@example.com' : 'https://…'
+              }
+            />
+            <TextField
+              id={`social-label-${index}`}
+              label="显示名称"
+              value={item.label || ''}
+              onChange={(label) => update(index, { label })}
+              maxLength={64}
+              placeholder="可选"
+            />
+          </FieldGroup>
+        </FieldSet>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        disabled={value.socialLinks.length >= 20}
+        className="w-fit"
+        onClick={() =>
+          change('socialLinks', [
+            ...value.socialLinks,
+            { type: 'github', url: '', label: '' },
+          ])
+        }
+      >
+        <Plus data-icon="inline-start" />
+        添加链接
+      </Button>
+    </ModuleForm>
+  )
+}
+function Interaction({
+  initial,
+}: {
+  initial: SettingsSnapshot['interaction']
+}) {
+  const form = useModule('interaction', initial),
+    { value, change } = form
+  return (
+    <ModuleForm
+      title="访客互动"
+      description="控制读者参与博客互动的方式。"
+      state={form}
+    >
+      <Field orientation="horizontal">
+        <FieldContent>
+          <FieldLabel htmlFor="comments-enabled">允许访客留言</FieldLabel>
+          <FieldDescription>新留言审核通过后公开。</FieldDescription>
+        </FieldContent>
+        <Switch
+          id="comments-enabled"
+          checked={value.commentsEnabled}
+          onCheckedChange={(value) => change('commentsEnabled', value)}
+        />
+      </Field>
+      <Field orientation="horizontal">
+        <FieldContent>
+          <FieldLabel htmlFor="likes-enabled">允许访客点赞</FieldLabel>
+          <FieldDescription>读者可为文章与公开留言点赞。</FieldDescription>
+        </FieldContent>
+        <Switch
+          id="likes-enabled"
+          checked={value.likesEnabled}
+          onCheckedChange={(value) => change('likesEnabled', value)}
+        />
+      </Field>
+    </ModuleForm>
+  )
+}
+function Storage({ initial }: { initial: SettingsSnapshot['storage'] }) {
+  const form = useModule('storage', initial),
+    { value, change } = form
+  return (
+    <ModuleForm
+      title="存储与上传"
+      description="使用又拍云存储文章图片、头像和静态站点。"
+      state={form}
+    >
+      <div className="flex items-center gap-2">
+        <Badge variant={value.configured ? 'default' : 'secondary'}>
+          {value.configured ? '已配置' : '未配置'}
+        </Badge>
+        {value.publicBaseUrl && (
+          <span className="break-all text-xs text-muted-foreground">
+            {value.publicBaseUrl}
+          </span>
+        )}
+      </div>
+      <TextField
+        id="cdn-domain"
+        label="CDN 域名"
+        value={value.domain}
+        onChange={(value) => change('domain', value)}
+        required
+        maxLength={1024}
+        placeholder="cdn.example.com"
+      />
+      <TextField
+        id="cdn-bucket"
+        label="存储空间"
+        value={value.bucket}
+        onChange={(value) => change('bucket', value)}
+        required
+        maxLength={128}
+      />
+      <TextField
+        id="cdn-operator"
+        label="操作员"
+        value={value.operator}
+        onChange={(value) => change('operator', value)}
+        required
+        maxLength={128}
+        autoComplete="off"
+      />
+      <TextField
+        id="cdn-password"
+        label="操作员密码"
+        type="password"
+        value={value.password}
+        onChange={(value) => change('password', value)}
+        required={!value.hasPassword}
+        maxLength={512}
+        autoComplete="new-password"
+        placeholder={
+          value.hasPassword ? '已保存，留空保留原密码' : '输入操作员密码'
+        }
+      />
+      <TextField
+        id="cdn-directory"
+        label="上传目录"
+        value={value.uploadDir}
+        onChange={(value) => change('uploadDir', value)}
+        required
+        maxLength={256}
+        placeholder="blog"
+      />
+      <Collapsible className="group/advanced">
+        <CollapsibleTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full justify-between"
+          >
+            高级选项
+            <ChevronDown className="transition-transform group-data-[state=open]/advanced:rotate-180" />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="admin-collapsible">
+          <FieldGroup className="pt-4">
+            <Field>
+              <FieldLabel id="cdn-scheme-label">访问协议</FieldLabel>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={value.scheme}
+                onValueChange={(value) => {
+                  if (value) change('scheme', value as 'https' | 'http')
+                }}
+                aria-labelledby="cdn-scheme-label"
+              >
+                <ToggleGroupItem value="https">HTTPS</ToggleGroupItem>
+                <ToggleGroupItem value="http">HTTP</ToggleGroupItem>
+              </ToggleGroup>
+            </Field>
+            <TextField
+              id="cdn-api"
+              label="API 地址"
+              value={value.apiHost}
+              onChange={(value) => change('apiHost', value)}
+              placeholder="https://v0.api.upyun.com"
+              maxLength={1024}
+              description="留空使用又拍云默认地址。"
+            />
+          </FieldGroup>
+        </CollapsibleContent>
+      </Collapsible>
+    </ModuleForm>
+  )
+}
+export function BlogSettings({
+  section = 'general',
+  snapshot,
+  account,
+}: {
+  section?: SettingsSection | 'account'
+  snapshot: SettingsSnapshot
+  account: { username: string; email: string; avatar: string }
+}) {
+  const title =
+    settingsNav.find((item) => item.id === section)?.label || '基本信息'
+  return (
+    <>
+      <AdminHeading title={title} description="站点设置" />
+      <div className="max-w-3xl">
+        {section === 'general' ? (
+          <General initial={snapshot.general} />
+        ) : section === 'appearance' ? (
+          <Appearance initial={snapshot.appearance} />
+        ) : section === 'content' ? (
+          <Content initial={snapshot.content} />
+        ) : section === 'social' ? (
+          <Social initial={snapshot.social} />
+        ) : section === 'interaction' ? (
+          <Interaction initial={snapshot.interaction} />
+        ) : section === 'storage' ? (
+          <Storage initial={snapshot.storage} />
+        ) : (
+          <AccountSettings
+            account={account}
+            configured={snapshot.storage.values.configured}
+          />
+        )}
+      </div>
+    </>
   )
 }

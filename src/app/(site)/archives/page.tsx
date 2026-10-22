@@ -43,14 +43,14 @@ export default async function ArchivesPage() {
         ) : (
           groups.map((g) => (
             <div key={g.year}>
-              <div className="mz-archive-year">{g.year}</div>
+              <div className="mz-archive-year">{g.year}<span className="mz-archive-count">{g.items.length} 篇文章</span></div>
               <ul className="mz-archive-list">
                 {g.items.map(({ article: a, month, day }) => (
                   <li key={a.id}>
-                    <span className="date">
-                      {String(month).padStart(2, '0')}/{String(day).padStart(2, '0')}
-                    </span>
-                    <Link href={`/${a.slug}`}>{a.title}</Link>
+                    <Link href={`/${a.slug}`} className="mz-archive-row">
+                      <span className="date">{String(month).padStart(2, '0')}-{String(day).padStart(2, '0')}</span>
+                      <span className="mz-archive-title">{a.title}</span>
+                    </Link>
                   </li>
                 ))}
               </ul>

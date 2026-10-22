@@ -17,6 +17,7 @@
   --mz-nav-h: 4.25rem;
   --mz-ease: cubic-bezier(0.4, 0, 0.2, 1);
   --mz-duration: 180ms;
+  --mz-enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* light — oklch hue system from Mizuki variables.styl */
   --mz-primary: oklch(0.55 0.14 var(--mz-hue));
@@ -135,6 +136,7 @@
   -webkit-backdrop-filter: blur(6px) saturate(1.1);
   box-shadow: var(--mz-shadow);
   border: 1px solid var(--mz-line);
+  animation: mz-fade-in 180ms var(--mz-ease) backwards;
   transition:
     box-shadow var(--mz-duration) var(--mz-ease),
     background var(--mz-duration) var(--mz-ease);
@@ -228,6 +230,16 @@
   background: var(--mz-btn-bg);
 }
 
+.mz-nav-link svg {
+  transition: transform var(--mz-duration) var(--mz-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mz-nav-link:hover svg {
+    transform: translateY(-2px);
+  }
+}
+
 .mz-nav-actions {
   display: flex;
   align-items: center;
@@ -289,7 +301,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  animation: mz-fade-in 180ms var(--mz-ease);
+  transform-origin: top center;
+  animation: mz-panel-in 200ms var(--mz-enter-ease) backwards;
 }
 
 /* ---------- main grid ---------- */
@@ -334,7 +347,8 @@
 @media (min-width: 1024px) {
   .mz-sidebar {
     display: flex;
-    align-self: start;
+    /* Let the outline stay sticky for the full article, past the other widgets. */
+    align-self: stretch;
   }
 }
 
@@ -362,6 +376,15 @@
   box-shadow: var(--mz-shadow);
   padding: 1.1rem 1.15rem;
 }
+
+/* Opacity only: keep the sticky outline's containing block unchanged. */
+.mz-sidebar > .mz-widget {
+  animation: mz-fade-in 240ms var(--mz-ease) backwards;
+}
+
+.mz-sidebar > .mz-widget:nth-child(2) { animation-delay: 40ms; }
+.mz-sidebar > .mz-widget:nth-child(3) { animation-delay: 80ms; }
+.mz-sidebar > .mz-widget:nth-child(n + 4) { animation-delay: 120ms; }
 
 .mz-widget-title {
   font-size: 0.8rem;
@@ -518,7 +541,8 @@
   transition:
     box-shadow var(--mz-duration) var(--mz-ease),
     transform var(--mz-duration) var(--mz-ease);
-  animation: mz-rise 280ms var(--mz-ease) both;
+  /* Release transform after entry so hover can lift the card. */
+  animation: mz-rise 280ms var(--mz-enter-ease) backwards;
 }
 
 .mz-post-card:nth-child(1) {
@@ -683,6 +707,16 @@
   .mz-post-card:hover .mz-post-enter {
     background: var(--mz-btn-bg-hover);
   }
+
+  .mz-post-enter svg {
+    transition: transform 220ms var(--mz-enter-ease);
+  }
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .mz-post-card:hover .mz-post-enter svg {
+    transform: translateX(3px);
+  }
 }
 
 /* ---------- article page ---------- */
@@ -692,7 +726,7 @@
   border-radius: var(--mz-radius);
   box-shadow: var(--mz-shadow);
   padding: 1.5rem 1.25rem 2rem;
-  animation: mz-rise 260ms var(--mz-ease) both;
+  animation: mz-rise 260ms var(--mz-enter-ease) backwards;
 }
 
 @media (min-width: 768px) {
@@ -871,16 +905,7 @@
 }
 
 .mz-archive-list li {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  padding: 0.45rem 0.6rem;
-  border-radius: 0.5rem;
-  transition: background var(--mz-duration) var(--mz-ease);
-}
-
-.mz-archive-list li:hover {
-  background: var(--mz-btn-plain-hover);
+  min-width: 0;
 }
 
 .mz-archive-list .date {
@@ -946,7 +971,8 @@
   box-shadow: var(--mz-shadow-hover);
   border: 1px solid var(--mz-line);
   padding: 0.75rem;
-  animation: mz-fade-in 160ms var(--mz-ease);
+  transform-origin: top center;
+  animation: mz-panel-in 200ms var(--mz-enter-ease) backwards;
 }
 
 .mz-search-input {
@@ -1117,11 +1143,13 @@
 
 /* reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .mz-post-card,
-  .mz-article,
-  .mz-mobile-panel,
-  .mz-search-panel {
+  [data-blog-theme='mizuki'],
+  [data-blog-theme='mizuki'] *,
+  [data-blog-theme='mizuki'] *::before,
+  [data-blog-theme='mizuki'] *::after {
     animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
   }
 
   .mz-post-card:hover,
@@ -1130,6 +1158,23 @@
   }
 
   .mz-post-card:hover .mz-post-cover img {
+    transform: none;
+  }
+
+  .mz-nav-link:hover svg,
+  .mz-post-card:hover .mz-post-enter svg,
+  .mz-icon-btn:active {
+    transform: none;
+  }
+}
+
+@keyframes mz-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
     transform: none;
   }
 }

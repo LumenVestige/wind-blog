@@ -1,7 +1,2 @@
-import { ManageStatic } from '@/components/dashboard/manage-static'
-
-export const dynamic = 'force-dynamic'
-
-export default function ManageStaticPage() {
-  return <ManageStatic />
-}
+import { redirect } from 'next/navigation'
+export default async function LegacyPages({ searchParams }: { searchParams: Promise<{ tab?: string }> }) { redirect((await searchParams).tab === 'sites' ? '/manage/static-sites' : '/manage/pages') }

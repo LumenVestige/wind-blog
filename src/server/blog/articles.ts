@@ -430,6 +430,7 @@ export function deleteArticle(userId: number, id: number, isAdmin = false): void
 }
 
 export interface ListOptions {
+  status?: string
   page?: number
   pageSize?: number
   categoryId?: number
@@ -446,6 +447,12 @@ export function listMine(
   const pageSize = boundedInt(opts.pageSize, 20)
   const where: string[] = ['a.user_id = ?']
   const params: unknown[] = [userId]
+  if (opts.status === 'draft') {
+    where.push('EXISTS (SELECT 1 FROM blog_article_options o WHERE o.article_id = a.id AND o.is_draft = 1)')
+  } else if (opts.status && ['public', 'private', 'password'].includes(opts.status)) {
+    where.push('a.visibility = ? AND NOT EXISTS (SELECT 1 FROM blog_article_options o WHERE o.article_id = a.id AND o.is_draft = 1)')
+    params.push(opts.status)
+  }
   if (opts.categoryId) {
     where.push('a.category_id = ?')
     params.push(Number(opts.categoryId))

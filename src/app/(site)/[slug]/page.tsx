@@ -86,7 +86,7 @@ async function ArticleBody({ slug }: { slug: string }) {
         .map((a) => ({ id: a.id, slug: a.slug, title: a.title, summary: a.summary, summaryHtml: renderSummaryMarkdown(a.summary) }))
   const headings = requiresPassword
     ? []
-    : extractHeadings(info.content || '').filter((h) => h.level >= 2 && h.level <= 4)
+    : extractHeadings(info.content || '').filter((h) => h.level <= 4)
   const toc: TocItem[] =
     headings.length > 0
       ? headings.map((h) => ({ id: h.id, text: h.text, level: h.level }))

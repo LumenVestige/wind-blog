@@ -638,8 +638,9 @@
 /* show right panel earlier so「文章内容」大纲更易见；桌面 pin 住大纲 */
 @media (min-width: 992px) {
   .chirpy-panel {
-    display: block;
-    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
   }
 }
 
@@ -708,7 +709,8 @@
 }
 
 .chirpy-panel .access {
-  /* sticky 已提到 .chirpy-panel，此处只负责内边距 */
+  /* Fill the article height so the nested outline can remain sticky. */
+  flex: 1;
   margin-top: 1.5rem;
 }
 
@@ -722,7 +724,7 @@
   z-index: 5;
   max-height: calc(100svh - var(--chirpy-topbar-h, var(--mz-nav-h, 4.25rem)) - 1.5rem);
   overflow-y: auto;
-  overscroll-behavior: contain;
+  flex-shrink: 0;
   transition: box-shadow 0.25s ease;
 }
 

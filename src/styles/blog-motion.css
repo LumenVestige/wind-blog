@@ -1,0 +1,221 @@
+/* Reading and navigation motion shared by the blog shells. */
+[data-blog-theme] {
+  --blog-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --blog-accent: var(--mz-primary, var(--link-color, var(--primary)));
+  --blog-reading-bg: color-mix(in srgb, var(--blog-accent) 14%, transparent);
+}
+
+/* The template remounts on navigation; the shell and sticky rail stay in place. */
+.blog-page-transition {
+  animation: blog-page-enter 280ms var(--blog-motion-ease) backwards;
+}
+
+.blog-page-transition .mz-article {
+  animation: none;
+}
+
+@keyframes blog-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.toc-outline {
+  position: relative;
+  isolation: isolate;
+  margin-top: 0.65rem;
+}
+
+.toc-outline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.toc-reading-range {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  border-radius: 0.8rem;
+  background: var(--blog-reading-bg);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    transform 220ms var(--blog-motion-ease),
+    height 220ms var(--blog-motion-ease),
+    opacity 150ms ease;
+}
+
+.toc-outline-row {
+  position: relative;
+  margin: 0;
+}
+
+.toc-outline-link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  padding: 0.65rem 1.6rem 0.65rem 0.65rem;
+  border-radius: 0.65rem;
+  color: var(--mz-text-75, var(--text-muted-color));
+  font-size: 0.84rem;
+  line-height: 1.5;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.toc-outline-link:hover,
+.toc-outline-link:focus-visible {
+  color: var(--blog-accent);
+  background: color-mix(in srgb, var(--blog-accent) 8%, transparent);
+}
+
+.toc-outline-link.is-root,
+.toc-outline-link.is-active {
+  font-weight: 600;
+}
+
+.toc-section-number,
+.toc-section-dot {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--blog-accent);
+}
+
+.toc-section-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.45rem;
+  height: 1.45rem;
+  padding: 0 0.2rem;
+  border-radius: 0.5rem;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--blog-accent) 16%, transparent);
+}
+
+.toc-section-dot {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: var(--blog-accent);
+  opacity: 0.3;
+  transition:
+    opacity 160ms ease,
+    scale 160ms ease;
+}
+
+.is-reading .toc-section-dot {
+  opacity: 1;
+  scale: 1.15;
+}
+
+.toc-outline-toggle {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.1rem;
+  display: grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.6rem;
+  border-radius: 0.35rem;
+  color: var(--blog-accent);
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease;
+}
+
+.toc-outline-toggle:hover {
+  background: var(--blog-reading-bg);
+}
+
+.toc-outline-toggle.is-collapsed {
+  transform: rotate(-90deg);
+}
+
+/* A full-row link also makes the date and empty space clickable. */
+.mz-archive-list .mz-archive-row {
+  display: grid;
+  grid-template-columns: 3.2rem 0.35rem minmax(0, 1fr);
+  align-items: center;
+  gap: 1.1rem;
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.75rem;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.mz-archive-list .mz-archive-row::before {
+  content: "";
+  grid-column: 2;
+  grid-row: 1;
+  width: 0.3rem;
+  height: 0.3rem;
+  justify-self: center;
+  border-radius: 1rem;
+  background: var(--blog-accent);
+  opacity: 0.35;
+  transition:
+    height 200ms var(--blog-motion-ease),
+    opacity 160ms ease;
+}
+
+.mz-archive-row .date {
+  grid-column: 1;
+  grid-row: 1;
+}
+.mz-archive-title {
+  grid-column: 3;
+  transition: translate 200ms var(--blog-motion-ease);
+}
+.mz-archive-count {
+  margin-left: 1rem;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--mz-text-50);
+}
+
+.mz-archive-list .mz-archive-row:hover,
+.mz-archive-list .mz-archive-row:focus-visible {
+  color: var(--blog-accent);
+  background: var(--mz-btn-bg);
+}
+
+.mz-archive-row:hover::before,
+.mz-archive-row:focus-visible::before {
+  height: 1.35rem;
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mz-archive-row:hover .mz-archive-title {
+    translate: 3px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blog-page-transition,
+  .toc-reading-range,
+  .toc-outline *,
+  .mz-archive-row,
+  .mz-archive-row::before,
+  .mz-archive-title {
+    animation: none !important;
+    transition: none !important;
+  }
+  .mz-archive-row:hover .mz-archive-title {
+    translate: none;
+  }
+}

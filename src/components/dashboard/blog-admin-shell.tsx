@@ -1,33 +1,228 @@
 'use client'
-
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { confirmUnsavedNavigation } from '@/lib/use-draft'
-import { api } from '@/lib/api-client'
-import { useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import {
-  ArrowLeft,
-  BarChart3,
-  FileCode,
-  FolderOpen,
-  LayoutList,
+  ArrowUpRight,
+  ChevronRight,
+  ChevronsUpDown,
+  LogOut,
   PenLine,
-  Pin,
-  Settings, MessageSquare, LogOut,
+  Wind,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Separator } from '@/components/ui/separator'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+  useSidebar,
+} from '@/components/ui/sidebar'
+import { api } from '@/lib/api-client'
+import { confirmUnsavedNavigation } from '@/lib/use-draft'
+import { adminLocation, adminNav, adminNavActive } from '@/lib/admin-nav'
+import { AdminPageMotion } from './admin-page-motion'
 
-type Item = {
-  href: string
-  label: string
-  icon: typeof LayoutList
-  end?: boolean
-  also?: string[]
+function Navigation() {
+  const pathname = usePathname(),
+    params = useSearchParams()
+  const { setOpenMobile, state, setOpen } = useSidebar()
+  const current = pathname + (params.toString() ? `?${params}` : '')
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({
+    内容管理: true,
+    站点设置: pathname.startsWith('/manage/settings'),
+    访客与数据: false,
+  })
+  useEffect(() => {
+    for (const group of adminNav)
+      if (
+        'items' in group &&
+        group.items.some((item) =>
+          adminNavActive(item.href, pathname, params.toString()),
+        )
+      )
+        setExpanded({ [group.label]: true })
+  }, [current])
+  return (
+    <SidebarGroup>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {adminNav.map((group) =>
+            'href' in group ? (
+              <SidebarMenuItem key={group.label}>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={group.label}
+                  isActive={adminNavActive(
+                    group.href,
+                    pathname,
+                    params.toString(),
+                  )}
+                >
+                  <Link href={group.href} onClick={() => setOpenMobile(false)}>
+                    <group.icon />
+                    <span>{group.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : (
+              <Collapsible
+                key={group.label}
+                asChild
+                open={!!expanded[group.label]}
+                onOpenChange={(open) =>
+                  setExpanded({
+                    [group.label]: state === 'collapsed' ? true : open,
+                  })
+                }
+                className="group/nav"
+              >
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      tooltip={group.label}
+                      onClick={() => {
+                        if (state === 'collapsed') setOpen(true)
+                      }}
+                    >
+                      <group.icon />
+                      <span>{group.label}</span>
+                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/nav:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="admin-collapsible">
+                    <SidebarMenuSub>
+                      {group.items.map((item) => (
+                        <SidebarMenuSubItem key={item.href}>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={adminNavActive(
+                              item.href,
+                              pathname,
+                              params.toString(),
+                            )}
+                          >
+                            <Link
+                              href={item.href}
+                              aria-current={
+                                adminNavActive(
+                                  item.href,
+                                  pathname,
+                                  params.toString(),
+                                )
+                                  ? 'page'
+                                  : undefined
+                              }
+                              onClick={() => setOpenMobile(false)}
+                            >
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+            ),
+          )}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  )
 }
-
+function OwnerMenu({
+  username,
+  displayName,
+}: {
+  username: string
+  displayName: string
+}) {
+  const router = useRouter(),
+    [busy, setBusy] = useState(false)
+  async function logout() {
+    if (!confirmUnsavedNavigation()) return
+    setBusy(true)
+    try {
+      await api.post('/api/user/auth/logout')
+      router.replace('/login')
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '退出失败')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton size="lg">
+              <Avatar className="size-8 rounded-lg">
+                <AvatarFallback className="rounded-lg">
+                  {displayName.slice(0, 1).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">{displayName}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  @{username}
+                </span>
+              </span>
+              <ChevronsUpDown className="ml-auto size-4" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="top" className="min-w-52">
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link href="/manage/settings/account">账号安全</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={busy} onSelect={() => void logout()}>
+                <LogOut />
+                {busy ? '正在退出…' : '退出登录'}
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
+}
 export function BlogAdminShell({
   username,
   displayName,
@@ -37,112 +232,90 @@ export function BlogAdminShell({
   displayName: string
   children: React.ReactNode
 }) {
-  const pathname = usePathname()
-  const router = useRouter()
-  const [loggingOut, setLoggingOut] = useState(false)
-  async function logout() { if (!confirmUnsavedNavigation()) return; setLoggingOut(true); try { await api.post('/api/user/auth/logout'); router.replace('/login'); router.refresh() } catch (e) { toast.error(e instanceof Error ? e.message : '退出失败') } finally { setLoggingOut(false) } }
-  const groups: { label: string; items: Item[] }[] = [
-    {
-      label: '内容',
-      items: [
-        { href: '/manage', label: '文章', icon: LayoutList, end: true },
-        { href: '/manage/new', label: '写文章', icon: PenLine, also: ['/manage/edit'] },
-        { href: '/manage/pinned', label: '置顶', icon: Pin },
-        { href: '/manage/categories', label: '分类', icon: FolderOpen },
-        { href: '/manage/static', label: '页面', icon: FileCode },
-        { href: '/manage/comments', label: '留言审核', icon: MessageSquare },
-        { href: '/manage/analytics', label: '数据', icon: BarChart3 },
-      ],
-    },
-    {
-      label: '站点',
-      items: [
-        { href: '/manage/settings', label: '设置', icon: Settings },
-      ],
-    },
-  ]
-  const flat = groups.flatMap((g) => g.items)
-
-  function active(item: Item) {
-    if (item.also?.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
-      return true
-    }
-    if (item.end) return pathname === item.href
-    return pathname === item.href || pathname.startsWith(`${item.href}/`)
-  }
-
+  const pathname = usePathname(),
+    params = useSearchParams(),
+    location = adminLocation(pathname, params.toString())
   return (
-    <div className="min-h-svh bg-muted/30 text-foreground md:grid md:grid-cols-[15rem_1fr]" data-blog-admin="1">
-      <aside className="sticky top-0 hidden h-svh border-r bg-background md:flex md:flex-col">
-        <div className="border-b px-4 py-4">
-          <p className="truncate text-sm font-semibold">{displayName}</p>
-          <p className="truncate text-xs text-muted-foreground">@{username}</p>
-        </div>
-        <nav className="flex flex-1 flex-col gap-5 px-3 py-4">
-          {groups.map((group) => (
-            <div key={group.label}>
-              <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">{group.label}</p>
-              <div className="flex flex-col gap-0.5">
-                {group.items.map((item) => (
-                  <NavItem key={item.href} item={item} on={active(item)} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </nav>
-        <div className="space-y-2 border-t p-3">
-          <Button variant="ghost" className="w-full justify-start" disabled={loggingOut} onClick={() => void logout()}><LogOut className="size-3.5" />退出登录</Button>
-          <Button variant="outline" className="w-full justify-start" asChild>
-            <Link href="/">
-              <ArrowLeft className="size-3.5" />
-              打开博客
-            </Link>
-          </Button>
-        </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur md:hidden">
-          <div className="flex h-12 items-center gap-2 px-3">
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold">{displayName}</p>
-            <Button variant="ghost" size="sm" disabled={loggingOut} onClick={() => void logout()}>退出登录</Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/">博客</Link>
+    <SidebarProvider data-blog-admin="1">
+      <a
+        href="#admin-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:p-3"
+      >
+        跳到主要内容
+      </a>
+      <Sidebar variant="inset" collapsible="icon">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild>
+                <Link href="/manage">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                    <Wind />
+                  </span>
+                  <span className="grid flex-1 text-left leading-tight">
+                    <span className="font-semibold">Wind Blog</span>
+                    <span className="text-xs text-muted-foreground">
+                      站点管理
+                    </span>
+                  </span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarContent>
+          <Navigation />
+        </SidebarContent>
+        <SidebarFooter>
+          <OwnerMenu username={username} displayName={displayName} />
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+      <SidebarInset>
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4 lg:px-6">
+          <SidebarTrigger />
+          <Separator orientation="vertical" className="h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              {location.group && (
+                <>
+                  <BreadcrumbItem className="hidden sm:block">
+                    {location.group}
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden sm:block" />
+                </>
+              )}
+              <BreadcrumbItem>
+                <BreadcrumbPage>{location.title}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="ml-auto flex gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/" target="_blank" rel="noreferrer">
+                查看博客
+                <ArrowUpRight data-icon="inline-end" />
+              </a>
             </Button>
+            {pathname !== '/manage/new' &&
+              !pathname.startsWith('/manage/edit/') && (
+                <Button size="sm" asChild>
+                  <Link href="/manage/new">
+                    <PenLine data-icon="inline-start" />
+                    写文章
+                  </Link>
+                </Button>
+              )}
           </div>
-          <nav className="flex gap-1 overflow-x-auto px-3 pb-2">
-            {flat.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'shrink-0 rounded-md px-3 py-1.5 text-sm',
-                  active(item) ? 'bg-primary/10 font-medium text-primary' : 'text-muted-foreground',
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-3 py-6 sm:px-6">{children}</main>
-      </div>
-    </div>
-  )
-}
-
-function NavItem({ item, on }: { item: Item; on: boolean }) {
-  const Icon = item.icon
-  return (
-    <Link
-      href={item.href}
-      className={cn(
-        'inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm',
-        on ? 'bg-primary/10 font-medium text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-      )}
-    >
-      <Icon className="size-4" />
-      {item.label}
-    </Link>
+        <div
+          id="admin-content"
+          tabIndex={-1}
+          className="flex min-w-0 flex-1 flex-col p-4 outline-none md:p-6 lg:p-8"
+        >
+          <AdminPageMotion>{children}</AdminPageMotion>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

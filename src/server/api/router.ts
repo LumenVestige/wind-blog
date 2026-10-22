@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { ApiError, fail } from '@/lib/api'
 import type { Ctx, Handler } from './types'
+import { manageSettingsGetH, manageSettingsSaveH, manageCommentsH } from './manage'
 import {
   activateH, siteSettingsGetH, siteSettingsSaveH,
   activationStatusH,
@@ -85,6 +86,9 @@ import {
 } from './admin'
 
 const routes: Record<string, Handler> = {
+  'GET manage/settings': manageSettingsGetH,
+  'GET manage/comments': manageCommentsH,
+  'POST manage/settings': manageSettingsSaveH,
   'GET site/settings': siteSettingsGetH,
   'POST site/settings': siteSettingsSaveH,
   // setup (single tenant, first run)

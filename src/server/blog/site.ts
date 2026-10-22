@@ -33,11 +33,9 @@ export interface SiteConfigRow {
   updated_at: string
 }
 
-const THEMES: ThemeId[] = ['mizuki', 'chirpy', 'simple']
-
-function normalizeTheme(v: unknown, fallback: ThemeId = 'mizuki'): ThemeId {
-  const s = String(v || '')
-  return (THEMES as string[]).includes(s) ? (s as ThemeId) : fallback
+function normalizeTheme(_v: unknown): ThemeId {
+  // Retired theme IDs remain accepted by legacy clients, and resolve to Mizuki.
+  return 'mizuki'
 }
 
 function normalizeScheme(v: unknown, fallback: ColorScheme = 'system'): ColorScheme {
@@ -74,7 +72,7 @@ export function ensureSiteConfig(userId: number): SiteConfigRow {
 
 export function siteConfigData(row: SiteConfigRow) {
   return {
-    themeId: row.theme_id as ThemeId,
+    themeId: normalizeTheme(row.theme_id),
     colorScheme: row.color_scheme as ColorScheme,
     subtitle: row.subtitle,
     socialLinks: normalizeSocialLinks(parseJson(row.social_links, [])),
@@ -163,7 +161,7 @@ export function activationStatus(userId: number) {
     signedAgreementVersion: row.agreement_version,
     agreementAcceptedAt: isoToUnix(row.agreement_accepted_at),
     activatedAt: isoToUnix(row.activated_at),
-    themeId: row.theme_id,
+    themeId: normalizeTheme(row.theme_id),
     subtitle: row.subtitle,
     imageUploadEnabled: toBool(row.image_upload_enabled),
   }

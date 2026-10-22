@@ -8,7 +8,7 @@
 - **登录**：客户端 SHA-256 + 服务端 bcrypt、JWT 鉴权
 - **文章**：Markdown、自动或手工摘要、封面预览与移除、分类、标签、置顶、草稿、密码保护、私密、公开
 - **互动**：访客昵称留言（站长审核后公开）、3 层回复、匿名点赞；后台可独立关闭评论或点赞，无需访客注册
-- **博客外观**：三套完整主题外壳（**Mizuki / Chirpy / Simple**，由原前端主题样式迁移而来）、明暗模式、副标题、社交链接、关于 / 首页介绍 / 友链固定页、自定义导航页面
+- **博客外观**：**Mizuki** 主题（Chirpy / Simple 已停止维护，旧配置自动使用 Mizuki）、明暗模式、副标题、社交链接、关于 / 首页介绍 / 友链固定页、自定义导航页面
 - **静态站点**：上传 zip 发布到又拍云，`/static/{slug}/`（兼容 `/blog/{user}/static/{slug}/`）
 - **站长后台**：文章、服务器草稿、本地草稿恢复、置顶、分类、页面编辑 / 发布 / 导航、留言审核、统计、站点外观、图床与账户设置
 - **Obsidian 插件兼容**：现有插件只需把 `baseUrl` 指到本站即可
@@ -24,7 +24,7 @@ npm run dev                       # http://localhost:3000
 
 - 首次访问 `http://localhost:3000` 会自动进入 `/setup`，创建唯一站长账号（可同时配置又拍云）
 - 初始化完成后，根路径 `/` 就是博客首页；`/blog/{用户名}` 旧链接兼容转发
-- 写作 `/manage`；设置 `/manage/settings`；旧 `/dashboard/*` 路径兼容转发
+- 工作台 `/manage`；文章 `/manage/articles`；静态页面 `/manage/pages`；静态站点 `/manage/static-sites`；设置 `/manage/settings`；旧 `/dashboard/*` 路径兼容转发
 - 无需再手动 seed（可选：`npm run db:seed` 用 `.env.local` 里的 `ADMIN_*` 直接建号（密码至少 12 字符），适用于自动化部署）
 
 ## 环境变量
@@ -35,11 +35,11 @@ npm run dev                       # http://localhost:3000
 | `DB_PATH` | SQLite 文件路径，默认 `./data/wind-blog.db` |
 | `NEXT_PUBLIC_SITE_URL` | 站点公开地址 |
 | `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `db:seed` 初始站管 |
-| `CWXU_OBSIDIAN_PUBLISH_TOKEN` | 插件发布令牌（也可在后台设置里改） |
+| `CWXU_OBSIDIAN_PUBLISH_TOKEN` | 插件发布令牌（用于初始化） |
 
 ## 又拍云图床
 
-在 **后台设置 → 又拍云 CDN** 填写 `bucket / operator / password / 访问域名(CDN) / 协议`，可选 `API Host`。
+在 **站点设置 → 存储与上传** 填写 `bucket / operator / password / 访问域名(CDN) / 协议`，可选 `API Host`。
 配置后：
 
 - 唯一站长可在编辑器上传图片；允许 JPEG、PNG、GIF、WebP、ICO，最大 10MB；SVG 需先转为位图
@@ -123,3 +123,12 @@ tests/                     单元 / API / 插件契约测试
 支持一份镜像维护多个完全隔离的单站长实例，参考 [部署文档](docs/DEPLOYMENT.md) 和 `deploy/compose.yaml`。每个实例分别设置 `DB_PATH`、`JWT_SECRET`、`INSTANCE_ID`。`PUBLIC_SITE_URL` 可在运行时指定，反向代理部署可启用 `TRUST_PROXY=1` 并由可信代理覆盖转发头。
 
 后台提供站点名称、访客留言/点赞开关、修改密码和退出登录。邮件通知尚未实现，因此界面不显示通知开关。旧广场地址重定向至本站首页；保留插件所需的旧接口字段，但前台不再展示多用户平台入口。
+
+
+### 管理端操作规范
+
+- 工作台聚合写作入口与待审核留言；内容管理、访客与数据、站点设置使用可折叠二级菜单。
+- 内容模块默认进入列表，通过新建或上传按钮进入编辑流程。静态页面编辑 Markdown，静态站点上传 ZIP，两者独立管理。
+- 设置分为基本信息、外观、页面内容、社交链接、访客互动、存储与上传、账号安全。每个模块独立保存，敏感字段不回传，空白存储密码保留原值。
+- `/api/manage/settings` 使用模块版本检查并发修改；冲突时保留当前输入，用户可重新加载或撤销修改。原有插件兼容接口继续保留。
+- 管理端采用 shadcn/ui 组件与语义颜色；页面切换、折叠与弹层动画支持减少动态效果偏好。

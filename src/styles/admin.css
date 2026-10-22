@@ -1,0 +1,55 @@
+/* Motion follows newUI-20260715: small travel, short duration, no bounce. */
+.admin-collapsible {
+  overflow: hidden;
+}
+.admin-collapsible[data-state="open"] {
+  animation: admin-expand 220ms ease-out;
+}
+.admin-collapsible[data-state="closed"] {
+  animation: admin-collapse 180ms ease-out;
+}
+@keyframes admin-expand {
+  from {
+    height: 0;
+    opacity: 0.4;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+}
+@keyframes admin-collapse {
+  from {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0.4;
+  }
+}
+[data-blog-admin] button {
+  transition-property: color, background-color, border-color, box-shadow, scale;
+  transition-duration: 150ms;
+}
+[data-blog-admin] button:active:not(:disabled) {
+  scale: 0.98;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Radix portals sit outside the shell. */
+  [data-state],
+  [data-radix-popper-content-wrapper] {
+    animation: none !important;
+    transition: none !important;
+  }
+  [data-blog-admin] *,
+  [data-blog-admin] *::before,
+  [data-blog-admin] *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  [data-blog-admin] button:active {
+    scale: none;
+  }
+}

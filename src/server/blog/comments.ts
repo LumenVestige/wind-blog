@@ -123,5 +123,18 @@ export function moderateGuestComment(id: number) {
 export function pendingComments() {
   return all<CommentRow & { article_title: string; slug: string }>(`SELECT c.*, a.title AS article_title, a.slug FROM blog_comment_entries c JOIN blog_articles a ON a.id = c.article_id WHERE c.status = 'pending' ORDER BY c.created_at, c.id`).map(r => ({ ...serialize(r), articleTitle: r.article_title, slug: r.slug }))
 }
+export function manageComments(userId: number, opts: { status?: string; keyword?: string; page?: number; pageSize?: number }) {
+  const page = boundedInt(opts.page, 1, 1000000), pageSize = boundedInt(opts.pageSize, 20)
+  const status = opts.status === 'approved' ? 'approved' : 'pending'
+  const where = ['a.user_id = ?', 'c.status = ?'], params: unknown[] = [userId, status]
+  if (opts.keyword?.trim()) {
+    where.push('(c.content LIKE ? OR c.author_name LIKE ? OR a.title LIKE ?)')
+    const keyword = `%${opts.keyword.trim()}%`; params.push(keyword, keyword, keyword)
+  }
+  const filter = where.join(' AND ')
+  const total = get<{ n: number }>(`SELECT COUNT(*) AS n FROM blog_comment_entries c JOIN blog_articles a ON a.id = c.article_id WHERE ${filter}`, ...params)?.n || 0
+  const rows = all<CommentRow & { article_title: string; slug: string }>(`SELECT c.*, a.title AS article_title, a.slug FROM blog_comment_entries c JOIN blog_articles a ON a.id = c.article_id WHERE ${filter} ORDER BY c.created_at DESC, c.id DESC LIMIT ? OFFSET ?`, ...params, pageSize, (page - 1) * pageSize)
+  return { list: rows.map(row => ({ ...serialize(row), articleTitle: row.article_title, slug: row.slug })), total, page, pageSize }
+}
 export function commentBelongsToUser(id: number, userId: number): boolean { return userId > 0 && getComment(id)?.user_id === userId }
 export { toBool }

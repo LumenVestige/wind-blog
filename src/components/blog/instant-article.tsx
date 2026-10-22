@@ -78,7 +78,7 @@ export function InstantArticle({
     userId: article?.userId || 0,
   }
   const headings = article?.content
-    ? extractHeadings(article.content).filter((h) => h.level >= 2 && h.level <= 4)
+    ? extractHeadings(article.content).filter((h) => h.level <= 4)
     : []
   const toc: TocItem[] = headings.map((h) => ({ id: h.id, text: h.text, level: h.level }))
   const body = article ? (

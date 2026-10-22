@@ -3,7 +3,7 @@
 独立**单租户**博客平台（从 CWXU-Algo-Prj 博客系统抽离并强化）。Next.js + SQLite，兼容 GoAlgo Blog Obsidian 插件。
 
 - 首次访问进入 `/setup` 初始化唯一站长；之后禁止注册（`POST /api/setup`、`/user/auth/register` 在已初始化时返回 403）
-- 主题：三套外壳 `mizuki/chirpy/simple`（`src/components/blog/*-shell.tsx`）+ 样式 `src/styles/blog-*.css`，由 `src/app/(site)/layout.tsx` 按 `themeId` 选择
+- 主题：仅维护 Mizuki（`src/components/blog/mizuki-shell.tsx`、`src/styles/blog-mizuki.css`）；旧 Chirpy / Simple 配置统一解析为 Mizuki。`blog-chirpy.css` 暂保留共用的正文和移动目录样式。
 
 ## 结构
 
@@ -50,3 +50,7 @@ npm run migrate -- --old-url ... --new-url ...
 - 访客不是用户：留言存在 `blog_guest_comments`，审核后公开；负数评论 ID 区分旧登录用户评论。
 - 文章摘要模式和草稿标记存在 `blog_article_options`，新增 schema 仍只写 `schema.sql`。
 - 多实例共用代码时必须分别设置 `DB_PATH`、`JWT_SECRET`、`INSTANCE_ID`；仅信任自行覆盖转发头的反向代理。
+
+- 管理端使用 shadcn/ui + 语义 token，导航唯一注册表为 `src/lib/admin-nav.ts`，二级入口按任务分组。
+- 内容模块默认进入列表，通过明确的新建按钮进入表单；静态页面 `/manage/pages` 与静态站点 `/manage/static-sites` 分开管理。
+- 设置按模块独立保存，`/api/manage/settings` 使用版本号防止旧表单覆盖新配置；修改时保留原插件兼容接口。

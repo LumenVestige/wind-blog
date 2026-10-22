@@ -1,5 +1,6 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { api, sha256Hex } from '@/lib/api-client'
@@ -7,32 +8,228 @@ import { useUnsavedChanges } from '@/lib/use-draft'
 import { RequestError } from '@/components/ui/request-error'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-type Settings = { siteName: string; faviconUrl: string; icpNumber: string; commentsEnabled: boolean; likesEnabled: boolean }
-export function SiteSettings() {
-  const [value, setValue] = useState<Settings | null>(null), [baseline, setBaseline] = useState('')
-  const [error, setError] = useState<unknown>(null), [busy, setBusy] = useState(false)
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from '@/components/ui/field'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+export function AccountSettings({
+  account,
+  configured,
+}: {
+  account: { username: string; email: string; avatar: string }
+  configured: boolean
+}) {
+  const [oldPassword, setOld] = useState(''),
+    [newPassword, setNew] = useState(''),
+    [confirm, setConfirm] = useState('')
+  const [error, setError] = useState<unknown>(null),
+    [busy, setBusy] = useState(false)
+  const [file, setFile] = useState<File | null>(null),
+    [avatar, setAvatar] = useState(account.avatar),
+    [preview, setPreview] = useState(''),
+    [uploading, setUploading] = useState(false),
+    [uploadError, setUploadError] = useState<unknown>(null)
   const router = useRouter()
-  useUnsavedChanges(!!value && JSON.stringify(value) !== baseline)
-  const load = useCallback(async () => { setError(null); try { const data = await api.get<Settings>('/api/site/settings'); const next = { siteName: data.siteName, faviconUrl: data.faviconUrl || '', icpNumber: data.icpNumber || '', commentsEnabled: data.commentsEnabled, likesEnabled: data.likesEnabled }; setValue(next); setBaseline(JSON.stringify(next)) } catch (e) { setError(e) } }, [])
-  useEffect(() => { void load() }, [load])
-  return <section className="space-y-4 rounded-xl border bg-card p-6"><h2 className="font-semibold">站点设置</h2>{error != null && <RequestError error={error} retry={() => void load()} />}{!value ? !error && <p>加载中…</p> : <form className="space-y-4" onSubmit={async e => { e.preventDefault(); setBusy(true); setError(null); try { await api.post('/api/site/settings', value); setBaseline(JSON.stringify(value)); toast.success('站点设置已保存'); router.refresh() } catch (err) { setError(err) } finally { setBusy(false) } }}>
-    <Label htmlFor="site-name">站点名称</Label><Input id="site-name" required maxLength={64} value={value.siteName} onChange={e => setValue({ ...value, siteName: e.target.value })} />
-    <Label htmlFor="site-favicon">站点图标（留空则使用头像，没有头像时用默认图标）</Label><Input id="site-favicon" maxLength={1024} placeholder="https:// 或 / 开头的图片地址" value={value.faviconUrl} onChange={e => setValue({ ...value, faviconUrl: e.target.value })} />
-    <Label htmlFor="site-icp">备案号（留空则不显示）</Label><Input id="site-icp" maxLength={64} placeholder="例如 京ICP备00000000号" value={value.icpNumber} onChange={e => setValue({ ...value, icpNumber: e.target.value })} />
-    <div className="flex items-center gap-3"><Switch id="site-comments" checked={value.commentsEnabled} onCheckedChange={v => setValue({ ...value, commentsEnabled: v })} /><Label htmlFor="site-comments">允许访客留言（经站长审核后公开）</Label></div>
-    <div className="flex items-center gap-3"><Switch id="site-likes" checked={value.likesEnabled} onCheckedChange={v => setValue({ ...value, likesEnabled: v })} /><Label htmlFor="site-likes">允许访客点赞</Label></div>
-    <Button disabled={busy}>{busy ? '保存中…' : '保存站点设置'}</Button>
-  </form>}</section>
-}
-export function AccountSettings() {
-  const [oldPassword, setOld] = useState(''), [newPassword, setNew] = useState(''), [confirm, setConfirm] = useState('')
-  const [error, setError] = useState<unknown>(null), [busy, setBusy] = useState(false)
-  return <section id="account" className="space-y-4 rounded-xl border bg-card p-6"><h2 className="font-semibold">修改站长密码</h2><form className="max-w-md space-y-3" onSubmit={async e => { e.preventDefault(); if (newPassword !== confirm) { setError(new Error('两次新密码不一致')); return } setBusy(true); setError(null); try { await api.post('/api/user/auth/change-password', { oldPassword: await sha256Hex(oldPassword), newPassword: await sha256Hex(newPassword) }); setOld(''); setNew(''); setConfirm(''); toast.success('密码已修改，其他会话已退出') } catch (err) { setError(err) } finally { setBusy(false) } }}>
-    <Label htmlFor="old-password">原密码</Label><Input id="old-password" autoComplete="current-password" type="password" required value={oldPassword} onChange={e => setOld(e.target.value)} />
-    <Label htmlFor="new-password">新密码（至少 12 位）</Label><Input id="new-password" autoComplete="new-password" type="password" minLength={12} required value={newPassword} onChange={e => setNew(e.target.value)} />
-    <Label htmlFor="confirm-password">确认新密码</Label><Input id="confirm-password" autoComplete="new-password" type="password" minLength={12} required value={confirm} onChange={e => setConfirm(e.target.value)} />
-    {error != null && <RequestError error={error} />}<Button disabled={busy}>{busy ? '修改中…' : '修改密码'}</Button>
-  </form></section>
+  useUnsavedChanges(!!oldPassword || !!newPassword || !!confirm || !!file)
+  useEffect(() => {
+    if (!file) {
+      setPreview('')
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+  async function savePassword(event: FormEvent) {
+    event.preventDefault()
+    setError(null)
+    if (newPassword !== confirm) {
+      setError(new Error('两次输入的新密码不一致'))
+      return
+    }
+    if (newPassword === oldPassword) {
+      setError(new Error('新密码不能与原密码相同'))
+      return
+    }
+    setBusy(true)
+    try {
+      await api.post('/api/user/auth/change-password', {
+        oldPassword: await sha256Hex(oldPassword),
+        newPassword: await sha256Hex(newPassword),
+      })
+      setOld('')
+      setNew('')
+      setConfirm('')
+      toast.success('密码已修改，其他会话已退出')
+    } catch (reason) {
+      setError(reason)
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function uploadAvatar() {
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError(new Error('头像不能超过 10MB'))
+      return
+    }
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('purpose', 'avatar')
+      const saved = await api.upload<{ url: string }>('/api/user/upload', form)
+      setAvatar(saved.url)
+      setFile(null)
+      toast.success('头像已更新')
+      router.refresh()
+    } catch (reason) {
+      setUploadError(reason)
+    } finally {
+      setUploading(false)
+    }
+  }
+  return (
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>站长账号</CardTitle>
+          <CardDescription>管理站长身份与头像。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="account-username">用户名</FieldLabel>
+                <Input
+                  id="account-username"
+                  value={account.username}
+                  readOnly
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="account-email">邮箱</FieldLabel>
+                <Input id="account-email" value={account.email} readOnly />
+              </Field>
+            </div>
+            <Field>
+              <FieldLabel htmlFor="avatar-file">头像</FieldLabel>
+              <div className="flex items-center gap-4">
+                <Avatar className="size-16">
+                  <AvatarImage src={preview || avatar} alt="站长头像" />
+                  <AvatarFallback>
+                    {account.username.slice(0, 1).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <Input
+                  id="avatar-file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon"
+                  disabled={!configured || uploading}
+                  onChange={(event) => {
+                    setFile(event.target.files?.[0] || null)
+                    setUploadError(null)
+                  }}
+                />
+              </div>
+              {!configured ? (
+                <FieldDescription>
+                  <Link href="/manage/settings/storage" className="underline">
+                    配置存储
+                  </Link>
+                  后即可上传头像。
+                </FieldDescription>
+              ) : (
+                <FieldDescription>
+                  支持 JPG、PNG、WebP、GIF，最大 10MB。
+                </FieldDescription>
+              )}
+            </Field>
+            {uploadError != null && <RequestError error={uploadError} />}
+          </FieldGroup>
+        </CardContent>
+        <CardFooter>
+          <Button
+            disabled={!file || uploading || !configured}
+            onClick={() => void uploadAvatar()}
+          >
+            {uploading ? '上传中…' : '更新头像'}
+          </Button>
+        </CardFooter>
+      </Card>
+      <form onSubmit={savePassword}>
+        <Card>
+          <CardHeader>
+            <CardTitle>修改密码</CardTitle>
+            <CardDescription>修改后，其他设备需要重新登录。</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FieldSet disabled={busy}>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="old-password">原密码</FieldLabel>
+                  <Input
+                    id="old-password"
+                    autoComplete="current-password"
+                    type="password"
+                    required
+                    value={oldPassword}
+                    onChange={(event) => setOld(event.target.value)}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="new-password">新密码</FieldLabel>
+                  <Input
+                    id="new-password"
+                    autoComplete="new-password"
+                    type="password"
+                    minLength={12}
+                    maxLength={200}
+                    required
+                    value={newPassword}
+                    onChange={(event) => setNew(event.target.value)}
+                  />
+                  <FieldDescription>至少 12 位。</FieldDescription>
+                </Field>
+                <Field data-invalid={!!confirm && newPassword !== confirm}>
+                  <FieldLabel htmlFor="confirm-password">确认新密码</FieldLabel>
+                  <Input
+                    id="confirm-password"
+                    autoComplete="new-password"
+                    type="password"
+                    minLength={12}
+                    maxLength={200}
+                    required
+                    value={confirm}
+                    onChange={(event) => setConfirm(event.target.value)}
+                    aria-invalid={!!confirm && newPassword !== confirm}
+                  />
+                </Field>
+                {error != null && <RequestError error={error} />}
+              </FieldGroup>
+            </FieldSet>
+          </CardContent>
+          <CardFooter>
+            <Button disabled={busy || !oldPassword || !newPassword || !confirm}>
+              {busy ? '修改中…' : '修改密码'}
+            </Button>
+          </CardFooter>
+        </Card>
+      </form>
+    </div>
+  )
 }

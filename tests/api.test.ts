@@ -247,7 +247,7 @@ describe('blog lifecycle', () => {
     expect(data.list[0].content).toBe('nice post')
   })
 
-  it('saves theme config after activation', async () => {
+  it('saves config and resolves retired themes to Mizuki', async () => {
     const res = await call('POST', '/user/blog/theme/config', {
       token: tokens.alice,
       body: {
@@ -257,9 +257,9 @@ describe('blog lifecycle', () => {
         socialLinks: [{ type: 'github', url: 'https://github.com/alice' }],
       },
     })
-    expect(res.json.data).toMatchObject({ themeId: 'chirpy', colorScheme: 'dark' })
+    expect(res.json.data).toMatchObject({ themeId: 'mizuki', colorScheme: 'dark' })
     const status = await call('GET', '/user/blog/theme/status?username=alice')
-    expect((status.json.data as { themeId: string }).themeId).toBe('chirpy')
+    expect((status.json.data as { themeId: string }).themeId).toBe('mizuki')
   })
 
   it('creates nav pages and exposes them publicly', async () => {

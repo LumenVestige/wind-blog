@@ -9,8 +9,6 @@ import { getViewer } from '@/server/session'
 import { isInitialized, siteOwner, siteName } from '@/server/tenant'
 import { getSetting } from '@/lib/settings'
 import { MizukiShell } from '@/components/blog/mizuki-shell'
-import { ChirpyShell } from '@/components/blog/chirpy-shell'
-import { SimpleShell } from '@/components/blog/simple-shell'
 import type { BlogShellData } from '@/components/blog/shell-types'
 
 export const dynamic = 'force-dynamic'
@@ -55,20 +53,6 @@ export default async function BlogLayout({ children }: { children: React.ReactNo
     staticSites,
   }
 
-  if (cfg.themeId === 'chirpy') {
-    return (
-      <ChirpyShell data={data} scheme={cfg.colorScheme}>
-        {children}
-      </ChirpyShell>
-    )
-  }
-  if (cfg.themeId === 'simple') {
-    return (
-      <SimpleShell data={data} scheme={cfg.colorScheme}>
-        {children}
-      </SimpleShell>
-    )
-  }
   return (
     <MizukiShell data={data} scheme={cfg.colorScheme}>
       {children}

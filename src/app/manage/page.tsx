@@ -1,8 +1,3 @@
-import { ManageArticles } from '@/components/dashboard/manage-articles'
-import { siteOwner } from '@/server/tenant'
-
+import { ManageOverview } from '@/components/dashboard/manage-overview'
 export const dynamic = 'force-dynamic'
-
-export default function ManageArticlesPage() {
-  return <ManageArticles username={siteOwner().username} />
-}
+export default function ManagePage() { return <ManageOverview /> }

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getViewer } from '@/server/session'
 import { isInitialized, siteOwner } from '@/server/tenant'
 import { BlogAdminShell } from '@/components/dashboard/blog-admin-shell'
+import '@/styles/admin.css'
 
 export const dynamic = 'force-dynamic'
 
