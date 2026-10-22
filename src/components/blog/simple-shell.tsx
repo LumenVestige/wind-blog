@@ -25,10 +25,10 @@ export function SimpleShell({
     { href: '/', label: '文章', end: true },
     { href: `${base}/categories`, label: '分类' },
     { href: `${base}/archives`, label: '归档' },
+    { href: `${base}/static`, label: '静态页' },
     ...(data.showFriends ? [{ href: `${base}/friends`, label: '友链' }] : []),
     { href: `${base}/about`, label: '关于' },
     ...data.pages.map((p) => ({ href: `${base}/p/${p.slug}`, label: p.label })),
-    ...data.staticSites.map((s) => ({ href: s.publicPath, label: s.label, external: true })),
   ]
 
   function isActive(href: string, end?: boolean) {
@@ -49,18 +49,7 @@ export function SimpleShell({
           </div>
         </div>
         <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 pb-2">
-          {items.map((it) =>
-            'external' in it && it.external ? (
-              <a
-                key={it.href}
-                href={it.href}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
-              >
-                {it.label}
-              </a>
-            ) : (
+          {items.map((it) => (
               <Link
                 key={it.href}
                 href={it.href}
@@ -73,8 +62,7 @@ export function SimpleShell({
               >
                 {it.label}
               </Link>
-            ),
-          )}
+          ))}
         </nav>
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>

@@ -7,6 +7,7 @@ import {
   Archive,
   ArrowUp,
   FolderOpen,
+  GalleryVerticalEnd,
   Home,
   Info,
   Menu,
@@ -95,6 +96,7 @@ export function ChirpyShell({
     { href: '/', label: '首页', icon: Home, end: true },
     { href: `${base}/categories`, label: '分类', icon: FolderOpen },
     { href: `${base}/archives`, label: '归档', icon: Archive },
+    { href: `${base}/static`, label: '静态页', icon: GalleryVerticalEnd },
     ...(data.showFriends ? [{ href: `${base}/friends`, label: '友链', icon: Users }] : []),
     { href: `${base}/about`, label: '关于', icon: Info },
   ]
@@ -203,19 +205,7 @@ export function ChirpyShell({
                 </span>
               </Link>
             ))}
-            {data.staticSites.map((s) => (
-              <a
-                key={s.slug}
-                href={s.publicPath}
-                target="_blank"
-                rel="noreferrer"
-                className="chirpy-nav-item block"
-              >
-                <span className="chirpy-nav-link">
-                  <span>{s.label}</span>
-                </span>
-              </a>
-            ))}
+
           </ul>
         </nav>
 

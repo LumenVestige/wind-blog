@@ -10,6 +10,7 @@ import { signingSecret } from '@/lib/jwt'
 import { guardImage } from '@/server/images'
 import { getArticleById, makeUnlockToken, verifyUnlockToken } from '@/server/blog/articles'
 import { resolveStaticFile, serveStaticEntry, uploadStaticSite, validateStaticPath } from '@/server/blog/static-sites'
+import { stripGeneratedFooter } from '@/server/blog/articles'
 import { saveUpyun } from '@/lib/settings'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -244,23 +245,28 @@ describe('audit security and behavior regressions', () => {
     put.mockRestore(); del.mockRestore()
   })
 
+  it('removes only the generated footer at the end of an article', () => {
+    expect(stripGeneratedFooter('正文\n\n---\n\n本文由 AgentWorkFlow 生成\n')).toBe('正文\n')
+    expect(stripGeneratedFooter('正文里提到 本文由 AgentWorkFlow 生成\n')).toContain('本文由 AgentWorkFlow 生成')
+  })
+
   it('keeps the static entry on this site and rewrites its assets to the CDN', async () => {
     saveUpyun({ bucket: 'test', operator: 'owner', password: 'test-password', domain: 'cdn.test.local', scheme: 'https' })
     const put = vi.spyOn(UpyunClient.prototype, 'put').mockResolvedValue(undefined)
     const data = zipSync({
-      'index.html': new TextEncoder().encode('<link href="./app.css"><script src="app.js"></script><img src="https://keep.test/a.png"><a href="page.html">x</a>'),
+      'deck/index.html': new TextEncoder().encode('<img src="assets/agent_image6.png"><img src="https://keep.test/a.png">'),
+      'README.txt': new TextEncoder().encode('keep deck directory'),
     })
     const site = await uploadStaticSite(ownerId, 'owner', { data, title: 'preview' })
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(
-      '<link href="./app.css"><script src="app.js"></script><img src="https://keep.test/a.png"><a href="page.html">x</a>',
+      '<img src="assets/agent_image6.png"><img src="https://keep.test/a.png">',
     ))
     const response = await serveStaticEntry('owner', site.slug)
     const html = await response.text()
     expect(response.headers.get('content-type')).toContain('text/html')
     expect(html).toContain('https://cdn.test.local/blog-static/')
-    expect(html).toContain('/app.css')
-    expect(html).toContain('/app.js')
-    expect(html).toContain('href="page.html"')
+    expect(html).toContain('/deck/assets/agent_image6.png')
+    expect(html).not.toContain('src="assets/')
     expect(html).toContain('https://keep.test/a.png')
     fetchMock.mockRestore(); put.mockRestore()
   })

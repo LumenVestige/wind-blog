@@ -22,6 +22,9 @@ export function BlogNav({
       <Link href={`/archives`} className="text-muted-foreground hover:text-primary">
         归档
       </Link>
+      <Link href={`/static`} className="text-muted-foreground hover:text-primary">
+        静态页
+      </Link>
       {aboutMd && (
         <Link href={`/about`} className="text-muted-foreground hover:text-primary">
           关于
@@ -39,15 +42,7 @@ export function BlogNav({
           {p.label}
         </Link>
       ))}
-      {staticSites.map((s) => (
-        <Link
-          key={s.slug}
-          href={`/static/${s.slug}/`}
-          className="text-muted-foreground hover:text-primary"
-        >
-          {s.label}
-        </Link>
-      ))}
+
     </nav>
   )
 }

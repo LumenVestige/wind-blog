@@ -49,7 +49,7 @@ function serialize(row: StaticSiteRow, username: string): StaticSiteInfo {
     showInNav: row.show_in_nav === 1,
     navLabel: row.nav_label,
     navOrder: row.nav_order,
-    publicPath: `/static/${row.slug}/`,
+    publicPath: `/static/${row.slug}/index.html`,
     createdAt: isoToUnix(row.created_at),
     updatedAt: isoToUnix(row.updated_at),
   }
@@ -85,7 +85,7 @@ export function listStaticPublic(username: string): StaticSiteInfo[] {
   const rows = all<StaticSiteRow>(
     `SELECT s.* FROM blog_static_sites s JOIN users u ON u.id = s.user_id
      WHERE u.username = ? COLLATE NOCASE AND s.show_in_nav = 1
-     ORDER BY s.nav_order ASC, s.id ASC`,
+     ORDER BY s.updated_at DESC, s.id DESC`,
     username,
   )
   return rows.map((r) => serialize(r, username))
@@ -262,14 +262,11 @@ function isHtmlEntry(name: string): boolean {
 
 function rewriteHtmlAssetUrls(html: string, cdnDir: string): string {
   return html.replace(
-    /(<(?:script|link|img|source|video|audio|iframe)\b[^>]*?\s(?:src|href)\s*=\s*)(["'])([^"']+)\2/gi,
-    (full, prefix: string, quote: string, value: string) => {
-      const target = value.trim()
-      if (!target || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#|\/)/i.test(target)) return full
-      const [path, suffix = ''] = target.split(/([?#].*)/)
+    /(["'])((?:\.\/)?(?:assets\/)?[^"'\\\s?#]+?\.(?:png|jpe?g|gif|webp|svg|css|js|mjs|wasm|woff2?|ttf|mp4|webm|pdf))(?:([?#][^"']*))?\1/gi,
+    (full, quote: string, path: string, suffix = '') => {
       const clean = path.replace(/^\.\//, '')
-      if (!clean || clean.split('/').some((part) => part === '..')) return full
-      return `${prefix}${quote}${cdnDir}${clean.split('/').map(encodeURIComponent).join('/')}${suffix}${quote}`
+      if (/^(?:[a-z][a-z0-9+.-]*:|\/\/|\/)/i.test(clean) || clean.split('/').some((part) => part === '..')) return full
+      return `${quote}${cdnDir}${clean.split('/').map(encodeURIComponent).join('/')}${suffix}${quote}`
     },
   )
 }
@@ -306,10 +303,11 @@ export function resolveStaticFile(
   if (!row.prefix) throw new ApiError('页面尚未发布', 1, 404)
   const encoded = rel.split('/').map(encodeURIComponent).join('/')
   const client = getUpyunClient()
+  const directory = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/') + 1) : ''
   return {
     url: client.publicUrl(`${row.prefix}/${encoded}`),
     contentType: contentTypeFor(rel),
     path: rel,
-    cdnDir: client.publicUrl(`${row.prefix}/`),
+    cdnDir: client.publicUrl(`${row.prefix}/${directory}`),
   }
 }

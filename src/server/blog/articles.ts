@@ -269,6 +269,10 @@ function normalizeVisibility(v: unknown, fallback = 'public'): string {
   return fallback
 }
 
+export function stripGeneratedFooter(content: string): string {
+  return content.replace(/(?:[ \t]*\n)*[ \t]*---[ \t]*\n+[ \t]*本文由\s*AgentWorkFlow\s*生成[ \t]*(?:\n+)?$/u, '\n')
+}
+
 function resolveCover(coverUrl: string, content: string, useFirst: boolean): string {
   const cover = (coverUrl || '').trim()
   if (cover) return cover
@@ -282,7 +286,7 @@ export function createArticle(userId: number, req: WriteReq): ArticleRow {
     const title = (req.title || '').trim()
     if (!title) throw new ApiError('标题不能为空', 1, 400)
     if (title.length > 200) throw new ApiError('标题过长', 1, 400)
-    const content = req.content || ''
+    const content = stripGeneratedFooter(req.content || '')
     const visibility = req.isDraft ? 'private' : normalizeVisibility(req.visibility)
     let passwordHash = ''
     if (visibility === 'password') {
@@ -348,7 +352,7 @@ export function updateArticle(
     const title = (req.title ?? row.title).trim()
     if (!title) throw new ApiError('标题不能为空', 1, 400)
     if (title.length > 200) throw new ApiError('标题过长', 1, 400)
-    const content = req.content ?? row.content
+    const content = stripGeneratedFooter(req.content ?? row.content)
     const visibility = req.isDraft ? 'private' : normalizeVisibility(req.visibility, row.visibility)
 
     let passwordHash = row.password_hash

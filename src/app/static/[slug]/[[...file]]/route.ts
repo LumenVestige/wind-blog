@@ -12,7 +12,7 @@ export async function GET(
   const { slug, file } = await ctx.params
   try {
     const requested = (file || []).join('/')
-    if (!requested) return await serveStaticEntry(owner.username, slug)
+    if (!requested || requested === 'index.html') return await serveStaticEntry(owner.username, slug)
     const { url } = resolveStaticFile(owner.username, slug, requested)
     return Response.redirect(url, 302)
   } catch (e) {

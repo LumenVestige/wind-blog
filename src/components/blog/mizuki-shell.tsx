@@ -90,6 +90,7 @@ export function MizukiShell({
     { href: '/', label: '首页', icon: Home, end: true },
     { href: `${base}/categories`, label: '分类', icon: FolderOpen },
     { href: `${base}/archives`, label: '归档', icon: Archive },
+    { href: `${base}/static`, label: '静态页', icon: FolderOpen },
     ...(data.showFriends ? [{ href: `${base}/friends`, label: '友链', icon: Users }] : []),
     { href: `${base}/about`, label: '关于', icon: Info },
   ]
@@ -135,11 +136,7 @@ export function MizukiShell({
                 {p.label}
               </Link>
             ))}
-            {data.staticSites.map((s) => (
-              <a key={s.slug} href={s.publicPath} target="_blank" rel="noreferrer" className="mz-nav-link">
-                {s.label}
-              </a>
-            ))}
+
           </nav>
 
           <div className="mz-nav-actions">
