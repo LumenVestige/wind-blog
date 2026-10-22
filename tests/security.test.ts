@@ -260,7 +260,7 @@ describe('audit security and behavior regressions', () => {
     })
     const site = await uploadStaticSite(ownerId, 'owner', { data, title: 'preview' })
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(
-      '<img src="assets/agent_image6.png"><img src="https://keep.test/a.png">',
+      '<img src=\\"assets/agent_image6.png\\"><img src="https://keep.test/a.png">',
     ))
     const response = await serveStaticEntry('owner', site.slug)
     const html = await response.text()

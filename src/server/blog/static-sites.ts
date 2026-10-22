@@ -267,11 +267,11 @@ function isHtmlEntry(name: string): boolean {
 
 function rewriteHtmlAssetUrls(html: string, cdnDir: string): string {
   return html.replace(
-    /(["'])((?:\.\/)?(?:assets\/)?[^"'\\\s?#]+?\.(?:png|jpe?g|gif|webp|svg|css|js|mjs|wasm|woff2?|ttf|mp4|webm|pdf))(?:([?#][^"']*))?\1/gi,
-    (full, quote: string, path: string, suffix = '') => {
+    /((?:\\)?["'])((?:\.\/)?(?:assets\/)?[^"'\\\s?#]+?\.(?:png|jpe?g|gif|webp|svg|css|js|mjs|wasm|woff2?|ttf|mp4|webm|pdf))(?:([?#][^"'\\]*))?((?:\\)?["'])/gi,
+    (full, open: string, path: string, suffix = '', close: string) => {
       const clean = path.replace(/^\.\//, '')
       if (/^(?:[a-z][a-z0-9+.-]*:|\/\/|\/)/i.test(clean) || clean.split('/').some((part) => part === '..')) return full
-      return `${quote}${cdnDir}${clean.split('/').map(encodeURIComponent).join('/')}${suffix}${quote}`
+      return `${open}${cdnDir}${clean.split('/').map(encodeURIComponent).join('/')}${suffix}${close}`
     },
   )
 }
