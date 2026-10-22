@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { RequestError } from '@/components/ui/request-error'
 import { api, ClientApiError } from '@/lib/api-client'
@@ -35,6 +36,7 @@ export function ManagePinned() {
   const [pendingId, setPendingId] = useState<number | null>(null)
   const [reordering, setReordering] = useState(false)
   const [dragOver, setDragOver] = useState<number | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const dragFrom = useRef<number | null>(null)
   const pageSize = 10
 
@@ -122,11 +124,13 @@ export function ManagePinned() {
           <h1 className="text-xl font-semibold">文章置顶</h1>
           <p className="text-sm text-muted-foreground">拖动文章调整博客首页顺序</p>
         </div>
-        <Badge variant="secondary">已置顶 {pinned.length} 篇</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">已置顶 {pinned.length} 篇</Badge>
+          <Button onClick={() => setPickerOpen(true)}><Pin className="size-4" />添加文章</Button>
+        </div>
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
-        <Card>
+      <Card>
           <CardHeader>
             <CardTitle>置顶文章</CardTitle>
             <CardDescription>拖放或使用箭头调整，修改后自动保存。</CardDescription>
@@ -135,7 +139,7 @@ export function ManagePinned() {
             {pinnedError ? <RequestError error={pinnedError} retry={() => void loadPinned()} /> : loadingPinned ? (
               <p className="px-6 pb-4 text-sm text-muted-foreground">加载中…</p>
             ) : pinned.length === 0 ? (
-              <p className="px-6 pb-4 text-sm text-muted-foreground">还没有置顶文章。从右侧列表里选。</p>
+              <p className="px-6 pb-4 text-sm text-muted-foreground">还没有置顶文章。</p>
             ) : (
               <ol className={cn('divide-y', reordering && 'opacity-70')}>
                 {pinned.map((article, index) => (
@@ -197,13 +201,13 @@ export function ManagePinned() {
             )}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>添加文章</CardTitle>
-            <CardDescription>公开和密码文章可以置顶。</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+        <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+          <DialogContent className="fixed inset-y-0 right-0 left-auto top-0 h-full w-full max-w-md translate-x-0 translate-y-0 overflow-y-auto rounded-none data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right">
+          <DialogHeader>
+            <DialogTitle>添加文章</DialogTitle>
+            <DialogDescription>选择尚未置顶的公开或密码文章。</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
             <form
               className="flex gap-2"
               onSubmit={(e) => {
@@ -223,9 +227,8 @@ export function ManagePinned() {
               <p className="rounded-lg border py-8 text-center text-sm text-muted-foreground">没有找到文章</p>
             ) : (
               <ul className="divide-y rounded-lg border">
-                {articles.map((article) => {
+                {articles.filter((article) => !pinnedIds.has(article.id)).map((article) => {
                   const eligible = article.visibility === 'public' || article.visibility === 'password'
-                  const isPinned = pinnedIds.has(article.id)
                   return (
                     <li key={article.id} className="flex items-center gap-3 px-3 py-3">
                       <div className="min-w-0 flex-1">
@@ -238,11 +241,10 @@ export function ManagePinned() {
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={!eligible || isPinned || pendingId !== null || reordering}
+                        disabled={!eligible || pendingId !== null || reordering}
                         onClick={() => void togglePinned(article, true)}
                       >
-                        <Pin className="size-3.5" />
-                        {isPinned ? '已置顶' : '置顶'}
+                        <Pin className="size-3.5" />置顶
                       </Button>
                     </li>
                   )
@@ -262,9 +264,9 @@ export function ManagePinned() {
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          </DialogContent>
+        </Dialog>
     </div>
   )
 }
