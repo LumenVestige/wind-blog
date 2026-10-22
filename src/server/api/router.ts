@@ -201,8 +201,9 @@ export async function dispatch(req: NextRequest, path: string[]): Promise<Respon
     // an Origin header remain compatible; cookie credentials cannot bypass this.
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
       const origin = req.headers.get('origin')
-      const host = req.headers.get('x-forwarded-host')?.split(',')[0].trim() || req.headers.get('host')
-      const sameHost = !!origin && !!host && new URL(origin).host === host
+      const host = req.headers.get('x-forwarded-host')?.split(',')[0].trim() || req.headers.get('host') || new URL(req.url).host
+      let sameHost = false
+      try { sameHost = !!origin && new URL(origin).host === host } catch { sameHost = false }
       if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && !sameHost)) {
         throw new ApiError('不允许跨站操作', 403, 403)
       }

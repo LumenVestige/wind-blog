@@ -231,8 +231,9 @@ describe('audit security and behavior regressions', () => {
     await expect(uploadStaticSite(ownerId, 'owner', { data: bomb, title: 'bomb' })).rejects.toThrow('解压后')
     expect(put).not.toHaveBeenCalled()
     const data = zipSync({ 'folder/index.html': new TextEncoder().encode('hello'), 'folder/assets/a.js': new Uint8Array([1]) })
-    const site = await uploadStaticSite(ownerId, 'owner', { data, title: 'site', showInNav: true })
+    const site = await uploadStaticSite(ownerId, 'owner', { data, title: 'site', slug: 'agent', showInNav: true })
     expect(site.entry).toBe('index.html')
+    expect(site.slug).toMatch(/^agent-[a-z0-9]{6}$/)
     const before = resolveStaticFile('owner', site.slug, '').url
     put.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('upload failed'))
     await expect(uploadStaticSite(ownerId, 'owner', { data, title: 'replacement', id: site.id })).rejects.toThrow('upload failed')

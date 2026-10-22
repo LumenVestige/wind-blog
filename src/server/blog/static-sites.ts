@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import { unzipSync } from 'fflate'
 import { all, get, run } from '@/db'
 import { ApiError } from '@/lib/api'
-import { isValidSlug, slugify, uniqueSlug } from '@/lib/slug'
+import { isValidSlug, randomSlugSuffix, slugify, uniqueSlug } from '@/lib/slug'
 import { isoToUnix } from '@/lib/utils'
 import { getUpyunClient, isUpyunConfigured } from '@/lib/settings'
 import { isAuthorized } from '../images'
@@ -65,13 +65,16 @@ function slugExists(userId: number, slug: string, excludeId = 0): boolean {
 }
 
 function resolveSlug(userId: number, requested: string | undefined, title: string, excludeId = 0): string {
-  let base = (requested || '').trim().toLowerCase()
-  if (base) {
-    if (!isValidSlug(base)) base = slugify(base)
-    if (slugExists(userId, base, excludeId)) base = uniqueSlug(base, (s) => slugExists(userId, s, excludeId))
-    return base
+  if (excludeId && !(requested || '').trim()) {
+    const current = get<{ slug: string }>('SELECT slug FROM blog_static_sites WHERE id = ?', excludeId)
+    if (current?.slug) return current.slug
   }
-  return uniqueSlug(slugify(title), (s) => slugExists(userId, s, excludeId))
+  let base = (requested || '').trim().toLowerCase()
+  if (!base || !isValidSlug(base)) base = slugify(base || title)
+  if (base === 'post') base = 'page'
+  if (excludeId) return uniqueSlug(base, (s) => slugExists(userId, s, excludeId))
+  const withSuffix = `${base}-${randomSlugSuffix()}`.slice(0, 96).replace(/-+$/, '')
+  return uniqueSlug(withSuffix, (s) => slugExists(userId, s, excludeId))
 }
 
 export function listStaticMine(userId: number, username: string): StaticSiteInfo[] {
@@ -103,7 +106,9 @@ export function updateStaticSite(
   )
   if (!row) throw new ApiError('页面不存在', 1, 404)
   const title = (req.title ?? row.title).trim() || row.title
-  const slug = resolveSlug(userId, req.slug ?? row.slug, title, row.id)
+  const slug = req.slug !== undefined && req.slug !== row.slug
+    ? resolveSlug(userId, req.slug, title, row.id)
+    : row.slug
   run(
     `UPDATE blog_static_sites SET title = ?, slug = ?, show_in_nav = ?, nav_label = ?,
        nav_order = ?, updated_at = datetime('now') WHERE id = ?`,

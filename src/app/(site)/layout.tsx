@@ -36,7 +36,7 @@ export default async function BlogLayout({ children }: { children: React.ReactNo
     name: c.name,
     articleCount: c.articleCount,
   }))
-  const recent = listByUsername(username, { page: 1, pageSize: 6 })
+  const recent = listByUsername(username, { page: 1, pageSize: 3 })
   const recentPosts = recent.list.map((a) => ({ id: a.id, slug: a.slug, title: a.title }))
 
   const data: BlogShellData = {

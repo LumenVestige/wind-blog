@@ -276,7 +276,7 @@ export function MizukiShell({
               <div className="mz-widget">
                 <h2 className="mz-widget-title">最近更新</h2>
                 <ul className="mz-panel-list">
-                  {data.recentPosts.slice(0, 6).map((a) => (
+                  {data.recentPosts.slice(0, 3).map((a) => (
                     <li key={a.id}>
                       <Link href={`${base}/${a.slug}`}>{a.title}</Link>
                     </li>

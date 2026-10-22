@@ -354,7 +354,7 @@ export function ChirpyShell({
                     <section>
                       <h2 className="chirpy-panel-heading">最近更新</h2>
                       <ul className="chirpy-panel-list">
-                        {data.recentPosts.slice(0, 5).map((a) => (
+                        {data.recentPosts.slice(0, 3).map((a) => (
                           <li key={a.id}>
                             <Link href={`${base}/${a.slug}`}>{a.title}</Link>
                           </li>
