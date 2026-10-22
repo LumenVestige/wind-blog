@@ -18,6 +18,7 @@ import { extractHeadings, renderMarkdown, renderSummaryMarkdown } from '@/lib/ma
 import { isoToUnix } from '@/lib/utils'
 import { formatDateLong } from '@/lib/blog-present'
 import { ArticleBodyContent, ArticleView, type ArticleViewData } from '@/components/blog/article-view'
+import { InstantArticle } from '@/components/blog/instant-article'
 import type { TocItem } from '@/components/blog/article-toc'
 
 export const dynamic = 'force-dynamic'
@@ -140,42 +141,9 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const { username, themeId, row, owner } = await loadArticle(slug)
-  const tags = getArticleTags([row.id]).get(row.id) || []
-  const categoryName = listCategoriesPublic(username).find((c) => c.id === row.category_id)?.name || ''
-  const shell: ArticleViewData = {
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    content: row.summary || '',
-    html: '',
-    tags,
-    categoryName,
-    publishedLabel: formatDateLong(isoToUnix(row.published_at || row.created_at)),
-    viewCount: row.view_count,
-    likeCount: row.like_count,
-    liked: false,
-    commentCount: row.comment_count,
-    requiresPassword: false,
-    userId: row.user_id,
-  }
-  return (
-    <ArticleView
-      themeId={themeId}
-      username={username}
-      isOwner={owner}
-      article={shell}
-      related={[]}
-      toc={[]}
-      viewerId={0}
-      isAdmin={false}
-      bodySlot={(
-        <Suspense fallback={<ArticleBodyFallback />}>
-          <ArticleBody slug={slug} />
-        </Suspense>
-      )}
-    />
-  )
+  const author = siteOwner()
+  const themeId = siteConfigData(ensureSiteConfig(author.id)).themeId
+  return <InstantArticle themeId={themeId} username={author.username} categoryName="" />
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

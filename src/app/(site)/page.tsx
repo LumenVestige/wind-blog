@@ -5,6 +5,7 @@ import { listByUsername } from '@/server/blog/articles'
 import { listCategoriesPublic } from '@/server/blog/categories'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { expandUrl } from '@/server/images'
+import { ArticleLink } from '@/components/blog/article-link'
 import { Markdown } from '@/components/blog/markdown'
 import { MarkdownSummary } from '@/components/blog/markdown-summary'
 import { Badge } from '@/components/ui/badge'
@@ -48,6 +49,13 @@ export default async function BlogHomePage({
   })
   const categories = listCategoriesPublic(username)
   const catName = (id?: number | null) => categories.find((c) => c.id === id)?.name
+  const previewOf = (a: (typeof res.list)[number]) => ({
+    slug: a.slug,
+    title: a.title,
+    summary: a.summary,
+    publishedLabel: formatDateSlash(a.publishedAt || a.createdAt),
+    categoryName: catName(a.categoryId) || '',
+  })
   const pages = Math.max(1, Math.ceil(res.total / pageSize))
   const activeCat = categoryId ? catName(categoryId) : undefined
   const baseQuery = { q: keyword, categoryId, tag }
@@ -124,7 +132,7 @@ export default async function BlogHomePage({
         ) : (
           <div id="post-list" className="chirpy-post-list">
             {res.list.map((a) => (
-              <Link key={a.id} href={`/${a.slug}`} className="chirpy-card">
+              <ArticleLink key={a.id} preview={previewOf(a)} className="chirpy-card">
                 <div className="chirpy-card-body">
                   <h2 className="chirpy-card-title">{a.title}</h2>
                   {a.summary ? (
@@ -149,7 +157,7 @@ export default async function BlogHomePage({
                     </div>
                   </div>
                 </div>
-              </Link>
+              </ArticleLink>
             ))}
           </div>
         )}
@@ -177,9 +185,9 @@ export default async function BlogHomePage({
         ) : (
           <div className="mz-post-list">
             {res.list.map((a) => (
-              <Link
+              <ArticleLink
                 key={a.id}
-                href={`/${a.slug}`}
+                preview={previewOf(a)}
                 className={cn('mz-post-card', a.coverUrl && 'has-cover')}
               >
                 <div className="mz-post-body">
@@ -215,7 +223,7 @@ export default async function BlogHomePage({
                     <img src={a.coverUrl} alt="" />
                   </span>
                 ) : null}
-              </Link>
+              </ArticleLink>
             ))}
           </div>
         )}
@@ -293,8 +301,8 @@ export default async function BlogHomePage({
         <ul className="grid gap-4 sm:grid-cols-2">
           {res.list.map((a) => (
             <li key={a.id}>
-              <Link
-                href={`/${a.slug}`}
+              <ArticleLink
+                preview={previewOf(a)}
                 className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition hover:border-primary/40 hover:shadow-md"
               >
                 {a.coverUrl ? (
@@ -335,7 +343,7 @@ export default async function BlogHomePage({
                     </span>
                   </div>
                 </div>
-              </Link>
+              </ArticleLink>
             </li>
           ))}
         </ul>
