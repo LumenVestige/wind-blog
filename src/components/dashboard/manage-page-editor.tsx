@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import { api } from '@/lib/api-client'
 import { useLocalDraft, useUnsavedChanges } from '@/lib/use-draft'
+import { ActionButton } from '@/components/ui/action-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -267,13 +268,13 @@ export function ManagePageEditor({
                 </FieldGroup>
               </CardContent>
               <CardFooter className="flex flex-col items-stretch gap-3">
-                <Button type="submit" disabled={busy}>
+                <ActionButton type="submit" pending={busy}>
                   {busy
                     ? '保存中…'
                     : value.status === 'draft'
                       ? '保存草稿'
                       : '保存并发布'}
-                </Button>
+                </ActionButton>
                 <p
                   className="text-center text-xs text-muted-foreground"
                   role="status"

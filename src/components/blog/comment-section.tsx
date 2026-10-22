@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Heart } from 'lucide-react'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ActionButton } from '@/components/ui/action-button'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
@@ -156,6 +157,7 @@ export function CommentSection({
     return (
       <div
         key={c.id}
+        data-comment-row=""
         className={depth ? 'ml-3 border-l pl-3 sm:ml-6 sm:pl-4' : ''}
       >
         <div className="py-3">
@@ -250,7 +252,7 @@ export function CommentSection({
             </div>
           )}
           {replyTo && (
-            <p className="text-sm">
+            <p className="motion-reply text-sm">
               回复 {replyTo.author.name}{' '}
               <Button
                 variant="ghost"
@@ -274,9 +276,9 @@ export function CommentSection({
             placeholder="写下你的评论…（输入会保留在当前浏览器）"
           />
           <div className="flex justify-end">
-            <Button size="sm" disabled={busy}>
+            <ActionButton size="sm" pending={busy}>
               {busy ? '提交中…' : viewerId ? '发表评论' : '提交留言'}
-            </Button>
+            </ActionButton>
           </div>
         </form>
       ) : (

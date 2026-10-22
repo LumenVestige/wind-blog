@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { api, sha256Hex } from '@/lib/api-client'
 import { useUnsavedChanges } from '@/lib/use-draft'
 import { RequestError } from '@/components/ui/request-error'
+import { ActionButton } from '@/components/ui/action-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -163,12 +164,13 @@ export function AccountSettings({
           </FieldGroup>
         </CardContent>
         <CardFooter>
-          <Button
-            disabled={!file || uploading || !configured}
+          <ActionButton
+            pending={uploading}
+            disabled={!file || !configured}
             onClick={() => void uploadAvatar()}
           >
             {uploading ? '上传中…' : '更新头像'}
-          </Button>
+          </ActionButton>
         </CardFooter>
       </Card>
       <form onSubmit={savePassword}>
@@ -224,9 +226,12 @@ export function AccountSettings({
             </FieldSet>
           </CardContent>
           <CardFooter>
-            <Button disabled={busy || !oldPassword || !newPassword || !confirm}>
+            <ActionButton
+              pending={busy}
+              disabled={!oldPassword || !newPassword || !confirm}
+            >
               {busy ? '修改中…' : '修改密码'}
-            </Button>
+            </ActionButton>
           </CardFooter>
         </Card>
       </form>

@@ -9,16 +9,63 @@ const Tabs = TabsPrimitive.Root
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={cn(
-      'inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground',
-      className,
-    )}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const local = React.useRef<HTMLDivElement>(null)
+  React.useImperativeHandle(ref, () => local.current!)
+  React.useLayoutEffect(() => {
+    const list = local.current
+    if (!list) return
+    let frame = 0
+    const update = () => {
+      frame = 0
+      const selected = list.querySelector<HTMLElement>(
+        '[role="tab"][data-state="active"]',
+      )
+      if (!selected) return
+      const bounds = list.getBoundingClientRect(),
+        rect = selected.getBoundingClientRect()
+      list.style.setProperty(
+        '--tab-x',
+        `${rect.left - bounds.left + list.scrollLeft}px`,
+      )
+      list.style.setProperty(
+        '--tab-y',
+        `${rect.top - bounds.top + list.scrollTop}px`,
+      )
+      list.style.setProperty('--tab-width', `${rect.width}px`)
+      list.style.setProperty('--tab-height', `${rect.height}px`)
+      list.dataset.motionTabs = 'true'
+    }
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update)
+    }
+    const mutations = new MutationObserver(schedule)
+    mutations.observe(list, {
+      attributes: true,
+      attributeFilter: ['data-state'],
+      childList: true,
+      subtree: true,
+    })
+    const resize = new ResizeObserver(schedule)
+    resize.observe(list)
+    update()
+    return () => {
+      mutations.disconnect()
+      resize.disconnect()
+      cancelAnimationFrame(frame)
+    }
+  }, [])
+  return (
+    <TabsPrimitive.List
+      ref={local}
+      className={cn(
+        'relative isolate inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground',
+        className,
+      )}
+      {...props}
+    />
+  )
+})
 TabsList.displayName = TabsPrimitive.List.displayName
 
 const TabsTrigger = React.forwardRef<
@@ -41,6 +88,7 @@ const TabsContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Content
+    data-slot="tabs-content"
     ref={ref}
     className={cn('mt-4 focus-visible:outline-none', className)}
     {...props}

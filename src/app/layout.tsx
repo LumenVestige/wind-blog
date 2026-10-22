@@ -12,6 +12,7 @@ import '@/styles/markdown-body.css'
 import '@/styles/blog-mizuki.css'
 import '@/styles/blog-chirpy.css'
 import '@/styles/blog-motion.css'
+import '@/styles/motion.css'
 import { Toaster } from '@/components/ui/sonner'
 
 export async function generateMetadata(): Promise<Metadata> {

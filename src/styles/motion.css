@@ -1,0 +1,492 @@
+/* One motion vocabulary for Mizuki, shadcn surfaces and portalled controls. */
+:root {
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.motion-route-progress,
+.motion-reading-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  pointer-events: none;
+  z-index: 80;
+}
+.motion-route-progress {
+  opacity: 0;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.motion-reading-progress {
+  height: 2px;
+  z-index: 45;
+  transition: transform 180ms linear;
+}
+[data-motion-nav] {
+  position: relative;
+  isolation: isolate;
+}
+.motion-nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 0.5rem;
+  pointer-events: none;
+  opacity: 0;
+  z-index: -1;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 8%, transparent);
+}
+[data-motion-nav] .mz-nav-link.is-active,
+[data-motion-nav] [data-active='true'] {
+  background: transparent;
+}
+[data-motion-reveal] {
+  animation: none !important;
+}
+:is([data-blog-theme='mizuki'], [data-blog-admin]) :is(main, #admin-content) {
+  transition: opacity 140ms ease;
+}
+:is([data-blog-theme='mizuki'], [data-blog-admin])[data-navigating]
+  :is(main, #admin-content) {
+  opacity: 0.55;
+}
+.blog-page-transition {
+  animation-duration: 380ms;
+}
+
+/* Card lift and independent cover/title movement. */
+@media (hover: hover) and (pointer: fine) {
+  .mz-post-card,
+  .mz-cat-card {
+    transition:
+      transform 300ms var(--motion-ease),
+      box-shadow 300ms ease;
+  }
+  .mz-post-card:hover,
+  .mz-cat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--mz-shadow-hover);
+  }
+  .mz-post-title {
+    transition:
+      color 200ms ease,
+      translate 300ms var(--motion-ease);
+  }
+  .mz-post-card:hover .mz-post-title {
+    translate: 3px 0;
+    color: var(--mz-primary);
+  }
+  .mz-post-cover img {
+    transition: transform 600ms var(--motion-ease);
+  }
+  .mz-post-card:hover .mz-post-cover img {
+    transform: scale(1.07);
+  }
+  .mz-post-enter svg {
+    transition: translate 300ms var(--motion-spring);
+  }
+  .mz-post-card:hover .mz-post-enter svg {
+    translate: 4px 0;
+  }
+  .mz-tag,
+  [data-slot='badge'] {
+    transition:
+      translate 180ms var(--motion-ease),
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+  .mz-tag:hover,
+  a[data-slot='badge']:hover {
+    translate: 0 -2px;
+  }
+  [data-blog-admin] [data-slot='card'] {
+    transition:
+      box-shadow 240ms ease,
+      border-color 240ms ease;
+  }
+  [data-blog-admin] [data-slot='card']:hover {
+    box-shadow: 0 5px 22px color-mix(in srgb, var(--foreground) 5%, transparent);
+  }
+  [data-slot='button'] svg,
+  .mz-icon-btn svg {
+    transition:
+      translate 220ms var(--motion-spring),
+      rotate 220ms var(--motion-spring);
+  }
+  [data-slot='button']:hover svg[data-icon='inline-end'] {
+    translate: 3px 0;
+  }
+  .mz-icon-btn:hover svg {
+    rotate: -8deg;
+  }
+}
+:is([data-slot='button'], .mz-icon-btn, .mz-tag, .md-code-copy) {
+  transition-property: color, background-color, border-color, box-shadow, scale;
+  transition-duration: 180ms;
+  transition-timing-function: var(--motion-ease);
+}
+:is([data-slot='button'], .mz-icon-btn, .md-code-copy):active:not(:disabled) {
+  scale: 0.95;
+}
+[data-slot='button'] {
+  position: relative;
+}
+[data-slot='button'][aria-current='page'] {
+  animation: motion-selected 240ms var(--motion-spring);
+}
+[data-slot='button'][data-pending] {
+  overflow: hidden;
+}
+[data-slot='button'][data-pending]::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.65;
+  transform-origin: left;
+  animation: motion-working 1.15s ease-in-out infinite;
+}
+[data-slot='button'][data-saved],
+.md-code-copy[data-state='copied'] {
+  animation: motion-confirm 380ms var(--motion-spring);
+}
+.motion-success-icon {
+  animation: motion-selected 300ms var(--motion-spring);
+}
+:is(input, textarea, [role='combobox']) {
+  transition:
+    box-shadow 220ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+[data-slot='switch'] {
+  transition: background-color 220ms ease;
+}
+[role='switch'] > span {
+  transition: transform 240ms var(--motion-spring);
+}
+
+/* Portals retain Radix positioning and focus behavior. */
+[data-slot='dialog-content'][data-state='open'],
+[data-slot='alert-dialog-content'][data-state='open'] {
+  animation: motion-dialog-in 280ms var(--motion-ease);
+}
+[data-slot='dialog-content'][data-state='closed'],
+[data-slot='alert-dialog-content'][data-state='closed'] {
+  animation: motion-dialog-out 160ms ease-in;
+}
+[data-slot='dropdown-menu-content'],
+[data-slot='select-content'] {
+  transform-origin: var(
+    --radix-dropdown-menu-content-transform-origin,
+    var(--radix-select-content-transform-origin, top center)
+  );
+}
+:is(
+  [data-slot='dropdown-menu-content'],
+  [data-slot='select-content']
+)[data-state='open'] {
+  animation: motion-menu-in 200ms var(--motion-ease);
+}
+:is(
+  [data-slot='dropdown-menu-content'],
+  [data-slot='select-content']
+)[data-state='closed'] {
+  animation: motion-menu-out 140ms ease-in;
+}
+[role='menuitem'],
+[role='option'] {
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+[data-slot='tabs-content'][data-state='active'] {
+  animation: motion-content-in 260ms var(--motion-ease);
+}
+[role='tab'] {
+  transition:
+    background-color 200ms ease,
+    box-shadow 200ms ease,
+    color 200ms ease,
+    scale 180ms var(--motion-spring);
+}
+[role='tab']:active {
+  scale: 0.96;
+}
+[role='tab'][data-state='active'] {
+  animation: motion-selected 220ms var(--motion-ease);
+}
+[data-slot='field-error'],
+[role='alert']:not([data-sonner-toast]) {
+  animation: motion-content-in 220ms var(--motion-ease);
+}
+[data-slot='skeleton'] {
+  position: relative;
+  overflow: hidden;
+  animation: none;
+}
+[data-slot='skeleton']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    color-mix(in srgb, var(--background) 55%, transparent) 50%,
+    transparent 80%
+  );
+  animation: motion-shimmer 1.6s ease-in-out infinite;
+}
+[data-slot='table-row'] {
+  transition: background-color 180ms ease;
+}
+[data-motion-key] {
+  position: relative;
+}
+.motion-stat-bar {
+  height: 3px;
+  margin-top: 0.4rem;
+  margin-left: auto;
+  border-radius: 1rem;
+  background: var(--primary);
+  transform-origin: left;
+  animation: motion-bar-in 650ms var(--motion-ease) backwards;
+}
+
+/* Reading: folding outline branches, copy confirmation, replies and media. */
+.toc-outline-row {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 280ms var(--motion-ease),
+    opacity 180ms ease;
+}
+.toc-outline-row[data-collapsed='true'] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+.toc-row-inner {
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.toc-reading-range {
+  transition-duration: 320ms, 320ms, 180ms;
+}
+.motion-reply {
+  animation: motion-content-in 240ms var(--motion-ease);
+}
+[data-comment-row] button[aria-pressed='true'] svg,
+button[aria-pressed='true'] .lucide-heart {
+  animation: motion-heart 380ms var(--motion-spring);
+}
+.markdown-body img {
+  transition:
+    filter 240ms ease,
+    box-shadow 240ms ease;
+}
+.markdown-body img:hover {
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+.viewer-transition {
+  transition:
+    transform 320ms var(--motion-ease),
+    opacity 240ms ease;
+}
+.mz-back-top {
+  transition:
+    opacity 220ms ease,
+    translate 250ms var(--motion-spring),
+    box-shadow 200ms ease;
+}
+.mz-back-top:hover {
+  translate: 0 -4px;
+}
+
+@keyframes motion-content-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes motion-selected {
+  from {
+    scale: 0.92;
+  }
+  to {
+    scale: 1;
+  }
+}
+@keyframes motion-confirm {
+  0%,
+  100% {
+    scale: 1;
+  }
+  40% {
+    scale: 1.05;
+  }
+}
+@keyframes motion-heart {
+  0%,
+  100% {
+    scale: 1;
+  }
+  40% {
+    scale: 1.3;
+  }
+  70% {
+    scale: 0.95;
+  }
+}
+@keyframes motion-working {
+  0% {
+    translate: -100% 0;
+  }
+  100% {
+    translate: 100% 0;
+  }
+}
+@keyframes motion-shimmer {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 100% 0;
+  }
+}
+@keyframes motion-bar-in {
+  from {
+    scale: 0 1;
+  }
+  to {
+    scale: 1 1;
+  }
+}
+@keyframes motion-dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes motion-dialog-out {
+  to {
+    opacity: 0;
+    scale: 0.97;
+    transform: translateY(6px);
+  }
+}
+@keyframes motion-menu-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes motion-menu-out {
+  to {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
+  .motion-route-progress {
+    display: none;
+  }
+  .mz-post-card:hover,
+  .mz-cat-card:hover {
+    transform: none;
+  }
+  .mz-post-card:hover .mz-post-title,
+  .mz-post-card:hover .mz-post-enter svg,
+  .mz-tag:hover,
+  .mz-back-top:hover {
+    translate: none;
+  }
+  .mz-post-card:hover .mz-post-cover img {
+    transform: none;
+  }
+  :is([data-slot='button'], .mz-icon-btn, .md-code-copy):active {
+    scale: 1;
+  }
+}
+
+[data-motion-tabs='true']::before {
+  content: '';
+  position: absolute;
+  top: var(--tab-y);
+  left: var(--tab-x);
+  width: var(--tab-width);
+  height: var(--tab-height);
+  border-radius: 0.375rem;
+  background: var(--background);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--foreground) 10%, transparent);
+  pointer-events: none;
+  z-index: -1;
+  transition:
+    top 260ms var(--motion-ease),
+    left 260ms var(--motion-ease),
+    width 260ms var(--motion-ease),
+    height 260ms var(--motion-ease);
+}
+[data-motion-tabs='true'] [role='tab'][data-state='active'] {
+  background: transparent;
+  box-shadow: none;
+  animation: none;
+}
+[data-slot='sheet-content'][data-state='open'] {
+  animation-duration: 280ms;
+  animation-timing-function: var(--motion-ease);
+}
+
+/* Each dash grows into its gap, so the underline fuses rather than swaps styles. */
+@property --motion-link-join {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 50%;
+}
+.mz-prose a:not(:has(img)) {
+  --motion-link-join: 50%;
+  text-decoration: none;
+  background-image: linear-gradient(
+    to right,
+    currentColor 0 var(--motion-link-join),
+    transparent var(--motion-link-join) 100%
+  );
+  background-size: 8px 1px;
+  background-position: left calc(100% - 0.05em);
+  background-repeat: repeat-x;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition:
+    --motion-link-join 360ms var(--motion-ease),
+    color 180ms ease,
+    opacity 180ms ease;
+}
+.mz-prose a:not(:has(img)):is(:hover, :focus-visible) {
+  --motion-link-join: 100%;
+}

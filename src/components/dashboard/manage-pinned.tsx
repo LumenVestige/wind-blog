@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { useListMotion } from '@/components/motion/use-list-motion'
 import { useRef, useState } from 'react'
 import {
   ArrowDown,
@@ -142,6 +143,7 @@ export function ManagePinned() {
     [dragOver, setDragOver] = useState<number | null>(null)
   const drag = useRef<number | null>(null),
     list = query.data || []
+  const listRef = useListMotion(list.map(item => item.id).join(','))
   async function toggle(item: Article, pinned: boolean) {
     setBusy(true)
     try {
@@ -211,10 +213,11 @@ export function ManagePinned() {
               }
             />
           ) : (
-            <ol className="divide-y rounded-lg border" aria-busy={busy}>
+            <ol ref={listRef} className="divide-y rounded-lg border" aria-busy={busy}>
               {list.map((item, index) => (
                 <li
                   key={item.id}
+                  data-motion-key={item.id}
                   draggable={!busy}
                   onDragStart={() => {
                     drag.current = index

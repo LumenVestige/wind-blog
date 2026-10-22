@@ -11,6 +11,7 @@ import type {
   SettingsValues,
 } from '@/lib/admin-settings'
 import { settingsNav } from '@/lib/admin-nav'
+import { ActionButton } from '@/components/ui/action-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -57,6 +58,7 @@ function useModule<S extends SettingsSection>(
 ) {
   const [value, setValue] = useState<SettingsValues[S]>(initial.values)
   const [baseline, setBaseline] = useState(initial)
+  const [saveCount, setSaveCount] = useState(0)
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<unknown>(null)
   const router = useRouter(),
@@ -80,6 +82,7 @@ function useModule<S extends SettingsSection>(
       )
       setValue(saved.values)
       setBaseline(saved)
+      setSaveCount((count) => count + 1)
       toast.success('设置已保存')
       router.refresh()
     } catch (reason) {
@@ -107,6 +110,7 @@ function useModule<S extends SettingsSection>(
   }
   return {
     value,
+    successKey: String(saveCount),
     change,
     busy,
     dirty,
@@ -120,6 +124,7 @@ function useModule<S extends SettingsSection>(
   }
 }
 type ModuleState = {
+  successKey: string
   busy: boolean
   dirty: boolean
   error: unknown
@@ -180,9 +185,14 @@ function ModuleForm({
             >
               撤销修改
             </Button>
-            <Button type="submit" disabled={!state.dirty || state.busy}>
+            <ActionButton
+              type="submit"
+              pending={state.busy}
+              successKey={state.successKey}
+              disabled={!state.dirty}
+            >
               {state.busy ? '保存中…' : '保存修改'}
-            </Button>
+            </ActionButton>
           </div>
         </CardFooter>
       </Card>

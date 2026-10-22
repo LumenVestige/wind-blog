@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ImagePlus, Save } from 'lucide-react'
+import { ImagePlus } from 'lucide-react'
+import { ActionButton } from '@/components/ui/action-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -253,14 +254,17 @@ export function BlogEditor({
                 保存草稿
               </Button>
             )}
-            <Button disabled={saving || uploading} onClick={() => void save()}>
-              <Save data-icon="inline-start" />
+            <ActionButton
+              pending={saving}
+              disabled={uploading}
+              onClick={() => void save()}
+            >
               {saving
                 ? '保存中…'
                 : articleId && !isDraft
                   ? '更新文章'
                   : '发布文章'}
-            </Button>
+            </ActionButton>
           </>
         }
       />

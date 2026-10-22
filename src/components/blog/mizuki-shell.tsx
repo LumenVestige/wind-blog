@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { MotionSurface } from '@/components/motion/motion-surface'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -237,6 +238,7 @@ export function MizukiShell({
         )}
       </div>
 
+      <MotionSurface mode="blog" />
       <div className="mz-main-wrap">
         <div className="mz-grid has-sidebar">
           <main className="mz-content" aria-label="正文">

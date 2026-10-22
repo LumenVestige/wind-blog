@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { AnimatedNumber } from '@/components/motion/animated-number'
 import { Eye, Files, Heart, MessageSquare, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -84,7 +85,7 @@ export function ManageAnalytics({ username }: { username: string }) {
                 </CardHeader>
                 <CardContent>
                   <strong className="text-3xl font-semibold tabular-nums">
-                    {(item.value || 0).toLocaleString()}
+                    <AnimatedNumber value={item.value || 0} />
                   </strong>
                 </CardContent>
               </Card>
@@ -126,6 +127,14 @@ export function ManageAnalytics({ username }: { username: string }) {
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {item.viewCount.toLocaleString()}
+                          <div
+                            aria-hidden="true"
+                            className="motion-stat-bar"
+                            style={{
+                              width: `${Math.max(2, (item.viewCount / Math.max(1, query.data?.topArticles[0]?.viewCount || 0)) * 100)}%`,
+                              animationDelay: `${Math.min(index, 5) * 45}ms`,
+                            }}
+                          />
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {item.likeCount.toLocaleString()}

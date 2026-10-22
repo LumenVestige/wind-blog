@@ -35,6 +35,7 @@ const SelectContent = React.forwardRef<
 >(({ className, children, position = 'popper', ...props }, ref) => (
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
+      data-slot="select-content"
       ref={ref}
       className={cn(
         'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md',

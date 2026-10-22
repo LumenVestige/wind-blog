@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { AnimatedNumber } from '@/components/motion/animated-number'
 import {
   ArrowRight,
   Eye,
@@ -61,7 +62,7 @@ export function ManageOverview() {
               </CardHeader>
               <CardContent>
                 <strong className="text-3xl font-semibold tabular-nums">
-                  {(item.value || 0).toLocaleString()}
+                  <AnimatedNumber value={item.value || 0} />
                 </strong>
               </CardContent>
             </Card>

@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner'
 import { api } from '@/lib/api-client'
 import { useUnsavedChanges } from '@/lib/use-draft'
+import { ActionButton } from '@/components/ui/action-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
@@ -349,9 +350,12 @@ export function ManageStaticSites({ configured }: { configured: boolean }) {
               </FieldSet>
               {error != null && <RequestError error={error} />}
               <SheetFooter className="p-0">
-                <Button disabled={busy || !file || !upload.title.trim()}>
+                <ActionButton
+                  pending={busy}
+                  disabled={!file || !upload.title.trim()}
+                >
                   {busy ? '发布中…' : upload.id ? '更新并发布' : '上传并发布'}
-                </Button>
+                </ActionButton>
                 <Button
                   type="button"
                   variant="outline"
@@ -441,9 +445,9 @@ export function ManageStaticSites({ configured }: { configured: boolean }) {
                 >
                   取消
                 </Button>
-                <Button disabled={busy || !editDirty}>
+                <ActionButton pending={busy} disabled={!editDirty}>
                   {busy ? '保存中…' : '保存设置'}
-                </Button>
+                </ActionButton>
               </DialogFooter>
             </form>
           )}

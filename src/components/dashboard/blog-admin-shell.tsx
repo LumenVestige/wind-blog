@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { MotionSurface } from '@/components/motion/motion-surface'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
@@ -237,6 +238,7 @@ export function BlogAdminShell({
     location = adminLocation(pathname, params.toString())
   return (
     <SidebarProvider data-blog-admin="1">
+      <MotionSurface mode="admin" />
       <a
         href="#admin-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:p-3"
