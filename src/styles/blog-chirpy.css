@@ -639,11 +639,7 @@
 @media (min-width: 992px) {
   .chirpy-panel {
     display: block;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
     align-self: flex-start;
-    z-index: 10;
   }
 }
 
@@ -722,10 +718,11 @@
 
 .toc-card {
   position: sticky;
-  top: 5.5rem;
+  top: calc(var(--chirpy-topbar-h, var(--mz-nav-h, 4.25rem)) + 0.75rem);
   z-index: 5;
-  max-height: calc(100svh - 7rem);
+  max-height: calc(100svh - var(--chirpy-topbar-h, var(--mz-nav-h, 4.25rem)) - 1.5rem);
   overflow-y: auto;
+  overscroll-behavior: contain;
   transition: box-shadow 0.25s ease;
 }
 
