@@ -1,4 +1,3 @@
-import { requestOrigin } from '@/server/http'
 import type { NextRequest } from 'next/server'
 import { ApiError, fail } from '@/lib/api'
 import type { Ctx, Handler } from './types'
@@ -202,8 +201,9 @@ export async function dispatch(req: NextRequest, path: string[]): Promise<Respon
     // an Origin header remain compatible; cookie credentials cannot bypass this.
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
       const origin = req.headers.get('origin')
-      const trustedOrigin = requestOrigin(req)
-      if ((origin && origin !== trustedOrigin) || req.headers.get('sec-fetch-site') === 'cross-site') {
+      const host = req.headers.get('x-forwarded-host')?.split(',')[0].trim() || req.headers.get('host')
+      const sameHost = !!origin && !!host && new URL(origin).host === host
+      if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && !sameHost)) {
         throw new ApiError('不允许跨站操作', 403, 403)
       }
     }

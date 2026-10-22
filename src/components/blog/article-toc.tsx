@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface TocItem {
@@ -19,6 +19,9 @@ export function ArticleToc({
   variant?: 'chirpy' | 'mizuki'
 }) {
   const [activeId, setActiveId] = useState(toc[0]?.id || 'article-top')
+  const [pinned, setPinned] = useState(false)
+  const [open, setOpen] = useState<Record<string, boolean>>({})
+  const rootRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     if (toc.length === 0) return
@@ -46,6 +49,28 @@ export function ArticleToc({
     }
   }, [toc])
 
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const update = () => setPinned(root.getBoundingClientRect().top <= 88)
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    return () => window.removeEventListener('scroll', update)
+  }, [])
+
+  const minLevel = Math.min(...toc.map((item) => item.level))
+  function visible(index: number) {
+    const item = toc[index]
+    let parent: TocItem | undefined
+    for (let i = index - 1; i >= 0; i -= 1) {
+      if (toc[i].level < item.level) { parent = toc[i]; break }
+    }
+    return !parent || parent.level === minLevel || open[parent.id] !== false
+  }
+  function hasChildren(index: number) {
+    return toc[index + 1]?.level > toc[index].level
+  }
+
   function scrollTo(item: TocItem) {
     if (item.id === 'article-top') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -63,11 +88,12 @@ export function ArticleToc({
 
   if (variant === 'mizuki') {
     return (
-      <div className="mz-widget" id="toc-wrapper" aria-label="文章内容">
-        <h2 className="mz-widget-title">文章内容</h2>
+      <div ref={rootRef as React.RefObject<HTMLDivElement>} className={cn('mz-widget toc-card', pinned && 'is-pinned')} id="toc-wrapper" aria-label="目录">
+        <h2 className="mz-widget-title">目录</h2>
         <ul className="mz-panel-list">
-          {toc.map((item) => (
-            <li key={item.id} style={{ paddingLeft: `${Math.max(0, item.level - 1) * 0.55}rem` }}>
+          {toc.map((item, index) => visible(index) && (
+            <li key={item.id} className="toc-item" style={{ paddingLeft: `${Math.max(0, item.level - minLevel) * 0.75}rem` }}>
+              {hasChildren(index) && <button type="button" className={cn('toc-toggle', open[item.id] === false && 'is-collapsed')} aria-label="展开目录" onClick={() => setOpen((old) => ({ ...old, [item.id]: old[item.id] === false }))}>▸</button>}
               <a
                 href={item.id === 'article-top' ? '#' : `#${item.id}`}
                 data-toc-id={item.id}
@@ -87,17 +113,18 @@ export function ArticleToc({
   }
 
   return (
-    <section className="chirpy-toc mb-6" id="toc-wrapper" aria-label="文章内容">
-      <h2 className="chirpy-panel-heading">文章内容</h2>
+    <section ref={rootRef} className={cn('chirpy-toc toc-card mb-6', pinned && 'is-pinned')} id="toc-wrapper" aria-label="目录">
+      <h2 className="chirpy-panel-heading">目录</h2>
       <nav className="mt-2">
         <ul className="chirpy-toc-list">
-          {toc.map((item) => (
+          {toc.map((item, index) => visible(index) && (
             <li
               key={item.id}
-              className="chirpy-toc-item"
+              className="chirpy-toc-item toc-item"
               data-level={item.level}
-              style={{ paddingLeft: `${Math.max(0, item.level - 1) * 0.7}rem` }}
+              style={{ paddingLeft: `${Math.max(0, item.level - minLevel) * 0.85}rem` }}
             >
+              {hasChildren(index) && <button type="button" className={cn('toc-toggle', open[item.id] === false && 'is-collapsed')} aria-label="展开目录" onClick={() => setOpen((old) => ({ ...old, [item.id]: old[item.id] === false }))}>▸</button>}
               <a
                 href={item.id === 'article-top' ? '#' : `#${item.id}`}
                 data-toc-id={item.id}

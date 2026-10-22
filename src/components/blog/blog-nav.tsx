@@ -22,9 +22,11 @@ export function BlogNav({
       <Link href={`/archives`} className="text-muted-foreground hover:text-primary">
         归档
       </Link>
-      <Link href={`/static`} className="text-muted-foreground hover:text-primary">
-        静态页
-      </Link>
+      {staticSites.length > 0 && (
+        <Link href={`/static`} className="text-muted-foreground hover:text-primary">
+          静态页
+        </Link>
+      )}
       {aboutMd && (
         <Link href={`/about`} className="text-muted-foreground hover:text-primary">
           关于

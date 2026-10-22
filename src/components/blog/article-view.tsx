@@ -51,7 +51,7 @@ export function ArticleBodyContent({
   const mobileToc =
     !locked && toc.length > 0 ? (
       <details className={cn("mb-6 rounded-lg border p-3", isChirpy ? "chirpy-toc-mobile xl:hidden" : isMizuki ? "lg:hidden" : "")}>
-        <summary className="cursor-pointer select-none font-semibold text-[var(--label-color)]">文章内容</summary>
+        <summary className="cursor-pointer select-none font-semibold text-[var(--label-color)]">目录</summary>
         <ul className="chirpy-toc-list mt-2">
           {toc.map((item) => (
             <li key={item.id} className="chirpy-toc-item" style={{ paddingLeft: `${Math.max(0, item.level - 1) * 0.7}rem` }}>
@@ -145,7 +145,7 @@ export function ArticleView({
     !locked && toc.length > 0 ? (
       <details className={cn("mb-6 rounded-lg border p-3", isChirpy ? "chirpy-toc-mobile xl:hidden" : isMizuki ? "lg:hidden" : "")}>
         <summary className="cursor-pointer select-none font-semibold text-[var(--label-color)]">
-          文章内容
+          目录
         </summary>
         <ul className="chirpy-toc-list mt-2">
           {toc.map((item) => (

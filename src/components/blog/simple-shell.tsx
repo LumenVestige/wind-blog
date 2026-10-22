@@ -25,7 +25,7 @@ export function SimpleShell({
     { href: '/', label: '文章', end: true },
     { href: `${base}/categories`, label: '分类' },
     { href: `${base}/archives`, label: '归档' },
-    { href: `${base}/static`, label: '静态页' },
+    ...(data.staticSites.length ? [{ href: `${base}/static`, label: '静态页' }] : []),
     ...(data.showFriends ? [{ href: `${base}/friends`, label: '友链' }] : []),
     { href: `${base}/about`, label: '关于' },
     ...data.pages.map((p) => ({ href: `${base}/p/${p.slug}`, label: p.label })),

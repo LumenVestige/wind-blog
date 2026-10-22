@@ -96,7 +96,7 @@ export function ChirpyShell({
     { href: '/', label: '首页', icon: Home, end: true },
     { href: `${base}/categories`, label: '分类', icon: FolderOpen },
     { href: `${base}/archives`, label: '归档', icon: Archive },
-    { href: `${base}/static`, label: '静态页', icon: GalleryVerticalEnd },
+    ...(data.staticSites.length ? [{ href: `${base}/static`, label: '静态页', icon: GalleryVerticalEnd }] : []),
     ...(data.showFriends ? [{ href: `${base}/friends`, label: '友链', icon: Users }] : []),
     { href: `${base}/about`, label: '关于', icon: Info },
   ]
@@ -349,10 +349,7 @@ export function ChirpyShell({
               {showPanel && (
               <aside className="chirpy-panel" aria-label="侧栏信息">
                 <div className="access">
-                  {panel ? (
-                    panel
-                  ) : (
-                    <>
+                  <>
                   {data.recentPosts.length > 0 && (
                     <section>
                       <h2 className="chirpy-panel-heading">最近更新</h2>
@@ -377,8 +374,8 @@ export function ChirpyShell({
                       </div>
                     </section>
                   )}
-                    </>
-                  )}
+                  {panel}
+                  </>
                 </div>
               </aside>
               )}

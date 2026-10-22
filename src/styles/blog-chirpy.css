@@ -728,6 +728,41 @@
   padding-bottom: 1rem;
 }
 
+.toc-card {
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.toc-card.is-pinned {
+  position: sticky;
+  top: 5.5rem;
+  z-index: 5;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 12%);
+}
+
+.toc-item {
+  position: relative;
+  animation: toc-item-in 0.22s ease both;
+}
+
+.toc-toggle {
+  position: absolute;
+  left: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.toc-toggle.is-collapsed {
+  transform: rotate(-90deg);
+}
+
+@keyframes toc-item-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
 .chirpy-panel-heading {
   margin: 0;
   font-size: inherit;
