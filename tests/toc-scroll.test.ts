@@ -34,21 +34,39 @@ describe('outline scroll isolation', () => {
     expect(card.scrollTop).toBe(100)
   })
 
-  it('reveals an entry below the visible area by scrolling only the outline', () => {
+  it('centers an entry below the visible area by scrolling only the outline', () => {
     const card = outline()
     scrollTocItemIntoView(card, entry(300, 330))
-    expect(card.scrollTop).toBe(149)
+    expect(card.scrollTop).toBe(234)
   })
 
   it('reveals an entry above the visible area', () => {
     const card = outline()
     scrollTocItemIntoView(card, entry(40, 70))
-    expect(card.scrollTop).toBe(59)
+    expect(card.scrollTop).toBe(0)
   })
 
-  it('leaves visible entries and hidden mobile outlines alone', () => {
-    const card = outline()
+  it('recenters before a visible entry reaches either edge', () => {
+    const card = outline({ scrollTop: 300 })
     scrollTocItemIntoView(card, entry(100, 130))
+    expect(card.scrollTop).toBe(234)
+    const lower = outline({ scrollTop: 300 })
+    scrollTocItemIntoView(lower, entry(240, 270))
+    expect(lower.scrollTop).toBe(374)
+  })
+
+  it('clamps to the scroll limits at the beginning and end', () => {
+    const first = outline({ scrollTop: 0 })
+    scrollTocItemIntoView(first, entry(100, 130))
+    expect(first.scrollTop).toBe(0)
+    const last = outline({ scrollTop: 600 })
+    scrollTocItemIntoView(last, entry(240, 270))
+    expect(last.scrollTop).toBe(600)
+  })
+
+  it('leaves central entries and hidden mobile outlines alone', () => {
+    const card = outline()
+    scrollTocItemIntoView(card, entry(170, 200))
     expect(card.scrollTop).toBe(100)
     const hidden = outline({ height: 0 })
     scrollTocItemIntoView(hidden, entry(300, 330))

@@ -1,4 +1,4 @@
-/** Reveal the active entry inside the outline without scrolling any ancestors. */
+/** Recenter near an outline edge, without scrolling the article or ancestors. */
 export function scrollTocItemIntoView(
   container: HTMLElement,
   item: HTMLElement,
@@ -12,8 +12,15 @@ export function scrollTocItemIntoView(
   const entry = item.getBoundingClientRect()
   const top = viewport.top + container.clientTop
   const bottom = top + container.clientHeight
-  if (entry.top < top) container.scrollTop += entry.top - top
-  else if (entry.bottom > bottom) container.scrollTop += entry.bottom - bottom
+  const margin = Math.min(120, container.clientHeight / 4)
+  if (entry.top >= top + margin && entry.bottom <= bottom - margin) return
+
+  const target =
+    container.scrollTop + (entry.top + entry.bottom) / 2 - (top + bottom) / 2
+  container.scrollTop = Math.min(
+    container.scrollHeight - container.clientHeight,
+    Math.max(0, target),
+  )
 }
 
 /** The section crossing the reading line, plus headings visible below it. */
