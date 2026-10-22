@@ -23,6 +23,7 @@ import { SocialIcon, socialAriaLabel } from './social-icon'
 import { BlogSiteFooter } from './site-footer'
 import { BlogChrome } from './blog-chrome'
 import { useIsDark } from './use-is-dark'
+import { useBlogRouteScroll } from './use-blog-route-scroll'
 import type { BlogShellData } from './shell-types'
 
 export function MizukiShell({
@@ -35,6 +36,7 @@ export function MizukiShell({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  useBlogRouteScroll()
   const router = useRouter()
   const base = ''
   const dark = useIsDark()

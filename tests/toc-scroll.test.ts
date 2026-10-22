@@ -55,6 +55,18 @@ describe('outline scroll isolation', () => {
     expect(lower.scrollTop).toBe(374)
   })
 
+  it('passes the centered target to an animator without jumping first', () => {
+    const card = outline({ scrollTop: 300 })
+    const animate = vi.fn()
+    scrollTocItemIntoView(card, entry(240, 270), animate)
+    expect(animate).toHaveBeenCalledExactlyOnceWith(374)
+    expect(card.scrollTop).toBe(300)
+    expect(card.scrollIntoView).not.toHaveBeenCalled()
+    animate.mockClear()
+    scrollTocItemIntoView(card, entry(170, 200), animate)
+    expect(animate).not.toHaveBeenCalled()
+  })
+
   it('clamps to the scroll limits at the beginning and end', () => {
     const first = outline({ scrollTop: 0 })
     scrollTocItemIntoView(first, entry(100, 130))

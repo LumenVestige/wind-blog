@@ -2,6 +2,7 @@
 export function scrollTocItemIntoView(
   container: HTMLElement,
   item: HTMLElement,
+  scroll: (top: number) => void = (top) => { container.scrollTop = top },
 ) {
   if (
     container.clientHeight === 0 ||
@@ -17,10 +18,10 @@ export function scrollTocItemIntoView(
 
   const target =
     container.scrollTop + (entry.top + entry.bottom) / 2 - (top + bottom) / 2
-  container.scrollTop = Math.min(
+  scroll(Math.min(
     container.scrollHeight - container.clientHeight,
     Math.max(0, target),
-  )
+  ))
 }
 
 /** The section crossing the reading line, plus headings visible below it. */

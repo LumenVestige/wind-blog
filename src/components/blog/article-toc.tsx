@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import gsap from 'gsap'
 import { cn } from '@/lib/utils'
 import { readingHeadingIds, scrollTocItemIntoView } from '@/lib/toc-scroll'
 
@@ -38,7 +39,22 @@ export function ArticleToc({ toc, variant = 'chirpy' }: {
   useEffect(() => {
     const card = cardRef.current
     const link = card?.querySelector<HTMLElement>(`[data-toc-id="${CSS.escape(reading.activeId)}"]`)
-    if (card && link) scrollTocItemIntoView(card, link)
+    if (!card || !link) return
+    const stop = () => gsap.killTweensOf(card, 'scrollTop')
+    scrollTocItemIntoView(card, link, (top) => {
+      stop()
+      if (reducedMotion()) card.scrollTop = top
+      else gsap.to(card, { scrollTop: top, duration: 0.4, ease: 'power3.out', overwrite: 'auto' })
+    })
+    card.addEventListener('wheel', stop, { passive: true })
+    card.addEventListener('touchstart', stop, { passive: true })
+    card.addEventListener('pointerdown', stop, { passive: true })
+    return () => {
+      stop()
+      card.removeEventListener('wheel', stop)
+      card.removeEventListener('touchstart', stop)
+      card.removeEventListener('pointerdown', stop)
+    }
   }, [reading.activeId, open])
 
   useLayoutEffect(() => {
