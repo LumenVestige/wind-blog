@@ -2,10 +2,10 @@
 # 在服务器 /root 执行：~/upgrade-wind-blog.sh
 # 从阿里云杭州镜像仓库拉取新版本，升级两个实例，删除本机旧的 wind-blog 镜像。
 # 首次使用前登录一次：
-#   docker login --username=sanenchen registry-vpc.cn-hangzhou.aliyuncs.com
+#   docker login --username=sanenchen registry.cn-hangzhou.aliyuncs.com
 set -eu
 
-REGISTRY="${REGISTRY:-registry-vpc.cn-hangzhou.aliyuncs.com/sanenchen/wind-blog}"
+REGISTRY="${REGISTRY:-registry.cn-hangzhou.aliyuncs.com/sanenchen/wind-blog}"
 TAG="${1:-latest}"
 ROOT="${BLOG_ROOT:-/root/blog}"
 IMAGE="$REGISTRY:$TAG"
