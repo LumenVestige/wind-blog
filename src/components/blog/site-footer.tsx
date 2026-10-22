@@ -29,7 +29,7 @@ export function BlogSiteFooter({
             <span className="mx-1">·</span>
             <Link href="/">Wind Blog</Link>
             <span className="mx-1">·</span>
-            <span>{COMMIT.slice(0, 5)}</span>
+            <span>{COMMIT.slice(0, 7)}</span>
           </p>
           {icpNumber ? <p><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icpNumber}</a></p> : null}
         </div>
@@ -51,7 +51,7 @@ export function BlogSiteFooter({
           <span className="mx-1.5">·</span>
           <Link href="/">Wind Blog</Link>
           <span className="mx-1.5">·</span>
-          <span>{COMMIT.slice(0, 5)}</span>
+          <span>{COMMIT.slice(0, 7)}</span>
         </p>
         {icpNumber ? <p><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icpNumber}</a></p> : null}
       </footer>
@@ -63,7 +63,7 @@ export function BlogSiteFooter({
       <span className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
         <span>主题适配自 Wind Blog</span>
         <span aria-hidden>·</span>
-        <span>{COMMIT.slice(0, 5)}</span>
+        <span>{COMMIT.slice(0, 7)}</span>
         <span aria-hidden>·</span>
         <span>
           © {year} {displayName}
