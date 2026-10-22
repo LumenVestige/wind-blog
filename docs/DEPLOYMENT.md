@@ -46,6 +46,38 @@ docker compose restart sec
 docker compose up -d sec
 ```
 
+## GitHub Actions 发布
+
+`main` 每次提交都会执行 `.github/workflows/release.yml`：在 GitHub 上编译 Dockerfile，并推送
+
+```text
+registry.cn-hangzhou.aliyuncs.com/sanenchen/wind-blog:<commit sha>
+registry.cn-hangzhou.aliyuncs.com/sanenchen/wind-blog:latest
+```
+
+仓库 Secrets 需要配置：
+
+| 名称 | 值 |
+| --- | --- |
+| `ACR_USERNAME` | `sanenchen` |
+| `ACR_PASSWORD` | 阿里云镜像仓库访问凭证密码，不是阿里云登录密码 |
+
+服务器在杭州 VPC 内，使用内网地址。先登录一次：
+
+```bash
+docker login --username=sanenchen registry-vpc.cn-hangzhou.aliyuncs.com
+install -m 755 /root/blog/app/deploy/upgrade-wind-blog.sh /root/upgrade-wind-blog.sh
+```
+
+之后升级并删除旧镜像：
+
+```bash
+~/upgrade-wind-blog.sh            # 拉取 latest
+~/upgrade-wind-blog.sh <commit>   # 拉取指定提交
+```
+
+脚本会更新 `/root/blog/.env` 的 `WIND_BLOG_IMAGE`，重建 `sec` 和 `syc`。升级失败时恢复上一版镜像。
+
 ## 发布更新
 
 当前服务器约 1.9GB 内存、无 swap，只用于运行实例。此机器请使用下文“上传构建产物”流程，不执行 Next 编译。每个博客容器限制 384MB 内存，避免应用进程耗尽宿主机资源。
