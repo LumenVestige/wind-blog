@@ -146,7 +146,7 @@
 
 .markdown-body .md-code-block pre.code-hl code.hljs {
   /* 关键块宽随最长行，才能让 pre 出现横向滚动条（勿 min-width:0 压扁） */
-  display: block;
+  display: table;
   width: max-content;
   min-width: 100%;
   padding: 0.65rem 0 0.85rem;
@@ -159,19 +159,18 @@
 }
 
 .markdown-body .md-code-row {
-  display: flex;
-  align-items: flex-start;
-  /* 行宽跟内容走，禁止被 flex 压成容器宽后裁切（否则 scrollWidth≈clientWidth） */
-  width: max-content;
-  min-width: 100%;
+  /* 共用列宽，行号位数变化时分隔线和正文起点仍保持一致。 */
+  display: table-row;
 }
 
 .markdown-body .md-code-ln {
-  flex: 0 0 auto;
+  display: table-cell;
+  width: 1px;
   min-width: 2.4em;
   padding: 0 0.75rem 0 0.9rem;
-  margin-right: 0.75rem;
   border-right: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  white-space: nowrap;
+  vertical-align: top;
   text-align: right;
   user-select: none;
   opacity: 0.42;
@@ -180,8 +179,10 @@
 }
 
 .markdown-body .md-code-src {
-  flex: 0 0 auto;
+  display: table-cell;
+  vertical-align: top;
   min-width: min-content;
+  padding-left: 0.75rem;
   padding-right: 1rem;
   /* 原代码格式：不软换行；长行横向滚动（PC + 移动端一致） */
   white-space: pre;
