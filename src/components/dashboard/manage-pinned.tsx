@@ -54,10 +54,11 @@ function ArticlePicker({
 }) {
   const [q, setQ] = useState(''),
     [keyword, setKeyword] = useState(''),
-    [page, setPage] = useState(1)
+    [page, setPage] = useState(1),
+    [pageSize, setPageSize] = useState(10)
   const query = useAdminQuery<{ list: Article[]; total: number }>(
     '/api/user/blog/article/mine',
-    { keyword, page, pageSize: 10 },
+    { keyword, page, pageSize },
   )
   const eligible =
     query.data?.list.filter((item) => !pinnedIds.has(item.id)) || []
@@ -122,10 +123,14 @@ function ArticlePicker({
       )}
       <AdminPagination
         page={page}
-        pageSize={10}
+        pageSize={pageSize}
         total={query.data?.total || 0}
         disabled={query.loading}
         onChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size)
+          setPage(1)
+        }}
       />
     </div>
   )

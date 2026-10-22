@@ -1,5 +1,12 @@
 import Link from 'next/link'
-import { Calendar, ChevronRight, Eye, FolderOpen, Heart, MessageCircle } from 'lucide-react'
+import {
+  Calendar,
+  ChevronRight,
+  Eye,
+  FolderOpen,
+  Heart,
+  MessageCircle,
+} from 'lucide-react'
 import { siteOwner } from '@/server/tenant'
 import { listByUsername } from '@/server/blog/articles'
 import { listCategoriesPublic } from '@/server/blog/categories'
@@ -11,7 +18,9 @@ import { MarkdownSummary } from '@/components/blog/markdown-summary'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { blogQuery, formatDateSlash, pageSizeFor } from '@/lib/blog-present'
+import { blogQuery, formatDateSlash } from '@/lib/blog-present'
+import { DataPagination } from '@/components/ui/data-pagination'
+import { parsePage, parsePageSize } from '@/lib/pagination'
 import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -37,9 +46,9 @@ export default async function BlogHomePage({
   const categoryId = Number(one(sp.categoryId)) || undefined
   const tag = one(sp.tag) || undefined
   const keyword = one(sp.q) || one(sp.keyword) || undefined
-  const page = Math.max(1, Number(one(sp.page)) || 1)
-  const pageSize = pageSizeFor(themeId)
-  const res = listByUsername(username, {
+  let page = parsePage(one(sp.page))
+  const pageSize = parsePageSize(one(sp.pageSize))
+  let res = listByUsername(username, {
     page,
     pageSize,
     categoryId,
@@ -47,8 +56,20 @@ export default async function BlogHomePage({
     keyword,
     pinnedFirst: true,
   })
+  if (page > Math.max(1, Math.ceil(res.total / pageSize))) {
+    page = Math.max(1, Math.ceil(res.total / pageSize))
+    res = listByUsername(username, {
+      page,
+      pageSize,
+      categoryId,
+      tag,
+      keyword,
+      pinnedFirst: true,
+    })
+  }
   const categories = listCategoriesPublic(username)
-  const catName = (id?: number | null) => categories.find((c) => c.id === id)?.name
+  const catName = (id?: number | null) =>
+    categories.find((c) => c.id === id)?.name
   const previewOf = (a: (typeof res.list)[number]) => ({
     slug: a.slug,
     title: a.title,
@@ -56,7 +77,6 @@ export default async function BlogHomePage({
     publishedLabel: formatDateSlash(a.publishedAt || a.createdAt),
     categoryName: catName(a.categoryId) || '',
   })
-  const pages = Math.max(1, Math.ceil(res.total / pageSize))
   const activeCat = categoryId ? catName(categoryId) : undefined
   const baseQuery = { q: keyword, categoryId, tag }
 
@@ -77,41 +97,15 @@ export default async function BlogHomePage({
       )
     ) : null
 
-  const pager =
-    pages > 1 ? (
-      <div className={themeId === 'mizuki' ? 'mz-pagination' : 'chirpy-pagination'}>
-        {page > 1 ? (
-          <Link
-            href={blogQuery(username, { ...baseQuery, page: page - 1 })}
-            className={themeId === 'mizuki' ? 'mz-page-btn' : 'chirpy-page-btn'}
-          >
-            上一页
-          </Link>
-        ) : (
-          <span className={cn(themeId === 'mizuki' ? 'mz-page-btn' : 'chirpy-page-btn', 'opacity-40')}>
-            上一页
-          </span>
-        )}
-        <span className={cn(themeId === 'mizuki' ? 'mz-page-btn' : 'chirpy-page-btn', 'is-active')}>
-          {page}
-        </span>
-        <span className={themeId === 'mizuki' ? 'text-sm text-[var(--mz-text-50)]' : 'self-center text-sm text-[var(--text-muted-color)]'}>
-          / {pages}
-        </span>
-        {page < pages ? (
-          <Link
-            href={blogQuery(username, { ...baseQuery, page: page + 1 })}
-            className={themeId === 'mizuki' ? 'mz-page-btn' : 'chirpy-page-btn'}
-          >
-            下一页
-          </Link>
-        ) : (
-          <span className={cn(themeId === 'mizuki' ? 'mz-page-btn' : 'chirpy-page-btn', 'opacity-40')}>
-            下一页
-          </span>
-        )}
-      </div>
-    ) : null
+  const pager = (
+    <DataPagination
+      page={page}
+      total={res.total}
+      pageSize={pageSize}
+      href={blogQuery(username, baseQuery)}
+      label="文章列表分页"
+    />
+  )
 
   if (themeId === 'chirpy') {
     return (
@@ -128,11 +122,19 @@ export default async function BlogHomePage({
           </div>
         )}
         {res.list.length === 0 ? (
-          <div className="chirpy-empty">{keyword || categoryId || tag ? '没有找到匹配的文章，请调整筛选条件。' : '还没有公开文章'}</div>
+          <div className="chirpy-empty">
+            {keyword || categoryId || tag
+              ? '没有找到匹配的文章，请调整筛选条件。'
+              : '还没有公开文章'}
+          </div>
         ) : (
           <div id="post-list" className="chirpy-post-list">
             {res.list.map((a) => (
-              <ArticleLink key={a.id} preview={previewOf(a)} className="chirpy-card">
+              <ArticleLink
+                key={a.id}
+                preview={previewOf(a)}
+                className="chirpy-card"
+              >
                 <div className="chirpy-card-body">
                   <h2 className="chirpy-card-title">{a.title}</h2>
                   {a.summary ? (
@@ -143,16 +145,24 @@ export default async function BlogHomePage({
                   <div className="chirpy-post-meta">
                     <div className="meta-left">
                       <Calendar className="inline" />
-                      <time>{formatDateSlash(a.publishedAt || a.createdAt)}</time>
-                      {a.pinned ? <Badge variant="secondary">置顶</Badge> : null}
+                      <time>
+                        {formatDateSlash(a.publishedAt || a.createdAt)}
+                      </time>
+                      {a.pinned ? (
+                        <Badge variant="secondary">置顶</Badge>
+                      ) : null}
                       {catName(a.categoryId) ? (
                         <>
                           <FolderOpen className="meta-sep inline" />
-                          <span className="categories">{catName(a.categoryId)}</span>
+                          <span className="categories">
+                            {catName(a.categoryId)}
+                          </span>
                         </>
                       ) : null}
                       {a.visibility === 'password' ? (
-                        <span className="meta-sep text-xs opacity-70">密码</span>
+                        <span className="meta-sep text-xs opacity-70">
+                          密码
+                        </span>
                       ) : null}
                     </div>
                   </div>
@@ -172,16 +182,32 @@ export default async function BlogHomePage({
         {intro}
         {(keyword || activeCat || tag) && (
           <div className="mz-filter-bar">
-            {keyword ? <span className="text-sm text-[var(--mz-text-50)]">搜索：{keyword}</span> : null}
-            {activeCat ? <span className="text-sm text-[var(--mz-text-50)]">分类：{activeCat}</span> : null}
-            {tag ? <span className="text-sm text-[var(--mz-text-50)]">标签：{tag}</span> : null}
+            {keyword ? (
+              <span className="text-sm text-[var(--mz-text-50)]">
+                搜索：{keyword}
+              </span>
+            ) : null}
+            {activeCat ? (
+              <span className="text-sm text-[var(--mz-text-50)]">
+                分类：{activeCat}
+              </span>
+            ) : null}
+            {tag ? (
+              <span className="text-sm text-[var(--mz-text-50)]">
+                标签：{tag}
+              </span>
+            ) : null}
             <Link href={`/`} className="mz-tag">
               清除筛选
             </Link>
           </div>
         )}
         {res.list.length === 0 ? (
-          <div className="mz-empty">{keyword || categoryId || tag ? '没有找到匹配的文章，请调整筛选条件。' : '还没有公开文章'}</div>
+          <div className="mz-empty">
+            {keyword || categoryId || tag
+              ? '没有找到匹配的文章，请调整筛选条件。'
+              : '还没有公开文章'}
+          </div>
         ) : (
           <div className="mz-post-list">
             {res.list.map((a) => (
@@ -195,7 +221,9 @@ export default async function BlogHomePage({
                   <div className="mz-post-meta">
                     <span className="inline-flex items-center gap-1">
                       <Calendar />
-                      <time>{formatDateSlash(a.publishedAt || a.createdAt)}</time>
+                      <time>
+                        {formatDateSlash(a.publishedAt || a.createdAt)}
+                      </time>
                     </span>
                     {a.pinned ? <Badge variant="secondary">置顶</Badge> : null}
                     {catName(a.categoryId) ? (
@@ -204,7 +232,9 @@ export default async function BlogHomePage({
                         {catName(a.categoryId)}
                       </span>
                     ) : null}
-                    {a.visibility === 'password' ? <span className="text-xs opacity-70">密码</span> : null}
+                    {a.visibility === 'password' ? (
+                      <span className="text-xs opacity-70">密码</span>
+                    ) : null}
                   </div>
                   {a.summary ? (
                     <div className="mz-post-excerpt">
@@ -240,7 +270,11 @@ export default async function BlogHomePage({
         <div className="flex flex-wrap items-start gap-4">
           {avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatar} alt="" className="size-16 rounded-full border object-cover" />
+            <img
+              src={avatar}
+              alt=""
+              className="size-16 rounded-full border object-cover"
+            />
           ) : (
             <div className="flex size-16 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
               {name.slice(0, 1).toUpperCase()}
@@ -249,7 +283,9 @@ export default async function BlogHomePage({
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold tracking-tight">{name}</h1>
             <p className="text-sm text-muted-foreground">@{username}</p>
-            <p className="mt-2 text-sm text-muted-foreground">共 {res.total} 篇文章</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              共 {res.total} 篇文章
+            </p>
           </div>
         </div>
       </section>
@@ -258,8 +294,15 @@ export default async function BlogHomePage({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <form action={`/`} className="flex flex-1 gap-2">
-          {categoryId ? <input type="hidden" name="categoryId" value={categoryId} /> : null}
-          <Input name="q" defaultValue={keyword || ''} placeholder="搜索文章标题…" className="max-w-sm" />
+          {categoryId ? (
+            <input type="hidden" name="categoryId" value={categoryId} />
+          ) : null}
+          <Input
+            name="q"
+            defaultValue={keyword || ''}
+            placeholder="搜索文章标题…"
+            className="max-w-sm"
+          />
           <Button type="submit" variant="secondary">
             搜索
           </Button>
@@ -270,7 +313,9 @@ export default async function BlogHomePage({
               href={blogQuery(username, { q: keyword })}
               className={cn(
                 'rounded-full border px-2.5 py-0.5 text-xs transition',
-                !categoryId ? 'border-primary bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted',
+                !categoryId
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted',
               )}
             >
               全部
@@ -308,7 +353,11 @@ export default async function BlogHomePage({
                 {a.coverUrl ? (
                   <div className="aspect-[16/9] overflow-hidden bg-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={a.coverUrl} alt="" className="size-full object-cover" />
+                    <img
+                      src={a.coverUrl}
+                      alt=""
+                      className="size-full object-cover"
+                    />
                   </div>
                 ) : null}
                 <div className="flex flex-1 flex-col gap-2 p-4">
@@ -316,7 +365,9 @@ export default async function BlogHomePage({
                     <time>{formatDateSlash(a.publishedAt || a.createdAt)}</time>
                     {a.pinned ? <Badge variant="secondary">置顶</Badge> : null}
                     {a.visibility === 'password' ? (
-                      <span className="rounded bg-muted px-1.5 py-0.5">密码</span>
+                      <span className="rounded bg-muted px-1.5 py-0.5">
+                        密码
+                      </span>
                     ) : null}
                   </div>
                   <h2 className="line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary">
@@ -349,31 +400,7 @@ export default async function BlogHomePage({
         </ul>
       )}
 
-      {pages > 1 && (
-        <div className="flex justify-center gap-2 pt-2">
-          {page > 1 ? (
-            <Button variant="outline" size="sm" asChild>
-              <Link href={blogQuery(username, { ...baseQuery, page: page - 1 })}>上一页</Link>
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" disabled>
-              上一页
-            </Button>
-          )}
-          <span className="flex items-center text-sm text-muted-foreground">
-            {page} / {pages}
-          </span>
-          {page < pages ? (
-            <Button variant="outline" size="sm" asChild>
-              <Link href={blogQuery(username, { ...baseQuery, page: page + 1 })}>下一页</Link>
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" disabled>
-              下一页
-            </Button>
-          )}
-        </div>
-      )}
+      {pager}
     </div>
   )
 }

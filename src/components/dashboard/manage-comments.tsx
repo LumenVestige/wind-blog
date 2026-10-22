@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Check, Search, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { parsePage, parsePageSize } from '@/lib/pagination'
 import { api } from '@/lib/api-client'
 import { formatDateTime } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -33,16 +34,25 @@ export function ManageComments() {
   const params = useSearchParams(),
     router = useRouter(),
     status = params.get('status') === 'approved' ? 'approved' : 'pending',
-    page = Math.max(1, Number(params.get('page')) || 1),
+    page = parsePage(params.get('page')),
+    pageSize = parsePageSize(params.get('pageSize')),
     keyword = params.get('q') || ''
   const [q, setQ] = useState(keyword),
     [busy, setBusy] = useState<number | null>(null),
     [target, setTarget] = useState<Comment | null>(null)
   const query = useAdminQuery<{ list: Comment[]; total: number }>(
     '/api/manage/comments',
-    { status, keyword, page, pageSize: 20 },
+    { status, keyword, page, pageSize },
   )
   useEffect(() => setQ(keyword), [keyword])
+  useEffect(() => {
+    if (query.loading || query.error || !query.data) return
+    const last = Math.max(1, Math.ceil(query.data.total / pageSize))
+    if (page <= last) return
+    const next = new URLSearchParams(params)
+    next.set('page', String(last))
+    router.replace('/manage/comments?' + next)
+  }, [query.loading, query.error, query.data, page, pageSize, params, router])
   function navigate(patch: Record<string, string>) {
     const next = new URLSearchParams(params)
     for (const [key, value] of Object.entries(patch)) {
@@ -174,10 +184,13 @@ export function ManageComments() {
           )}
           <AdminPagination
             page={page}
-            pageSize={20}
+            pageSize={pageSize}
             total={query.data?.total || 0}
-            disabled={query.loading}
+            disabled={query.loading || !!query.error}
             onChange={(page) => navigate({ page: String(page) })}
+            onPageSizeChange={(size) =>
+              navigate({ pageSize: String(size), page: '1' })
+            }
           />
         </CardContent>
       </Card>

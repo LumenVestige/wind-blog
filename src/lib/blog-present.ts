@@ -15,12 +15,6 @@ export function formatDateLong(sec?: number): string {
   return d.toLocaleString('zh-CN')
 }
 
-export function pageSizeFor(themeId: string): number {
-  if (themeId === 'chirpy') return 10
-  if (themeId === 'mizuki') return 8
-  return 12
-}
-
 export function blogQuery(
   username: string,
   query: Record<string, string | number | undefined>,

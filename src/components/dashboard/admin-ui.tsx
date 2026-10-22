@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react'
+import { Inbox } from 'lucide-react'
 import {
   Card,
   CardHeader,
@@ -19,7 +19,10 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { api } from '@/lib/api-client'
-import { Button } from '@/components/ui/button'
+import {
+  DataPagination,
+  type DataPaginationProps,
+} from '@/components/ui/data-pagination'
 import { cn } from '@/lib/utils'
 export function AdminHeading({
   title,
@@ -125,47 +128,8 @@ export function AdminStatus({
     </Badge>
   )
 }
-export function AdminPagination({
-  page,
-  total,
-  pageSize,
-  onChange,
-  disabled,
-}: {
-  page: number
-  total: number
-  pageSize: number
-  onChange: (page: number) => void
-  disabled?: boolean
-}) {
-  const pages = Math.max(1, Math.ceil(total / pageSize))
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 pt-5">
-      <span className="text-xs text-muted-foreground">
-        共 {total} 项 · 第 {page} / {pages} 页
-      </span>
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={disabled || page <= 1}
-          onClick={() => onChange(page - 1)}
-        >
-          <ChevronLeft data-icon="inline-start" />
-          上一页
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={disabled || page >= pages}
-          onClick={() => onChange(page + 1)}
-        >
-          下一页
-          <ChevronRight data-icon="inline-end" />
-        </Button>
-      </div>
-    </div>
-  )
+export function AdminPagination(props: DataPaginationProps) {
+  return <DataPagination {...props} />
 }
 /** Ignore stale responses after search changes or navigation. */
 export function useAdminQuery<T>(

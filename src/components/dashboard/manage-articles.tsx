@@ -33,6 +33,7 @@ import {
   AdminStatus,
   useAdminQuery,
 } from './admin-ui'
+import { parsePage, parsePageSize } from '@/lib/pagination'
 import { api } from '@/lib/api-client'
 import { formatDate } from '@/lib/utils'
 interface Article {
@@ -56,7 +57,8 @@ export function ManageArticles({ username }: { username: string }) {
     )
       ? params.get('status')!
       : 'all',
-    page = Math.max(1, Number(params.get('page')) || 1)
+    page = parsePage(params.get('page')),
+    pageSize = parsePageSize(params.get('pageSize'))
   const [query, setQuery] = useState(keyword),
     [target, setTarget] = useState<Article | null>(null),
     [busy, setBusy] = useState(false)
@@ -65,11 +67,19 @@ export function ManageArticles({ username }: { username: string }) {
     total: number
   }>('/api/user/blog/article/mine', {
     page,
-    pageSize: 15,
+    pageSize,
     keyword,
     status: status === 'all' ? undefined : status,
   })
   useEffect(() => setQuery(keyword), [keyword])
+  useEffect(() => {
+    if (loading || error || !data) return
+    const last = Math.max(1, Math.ceil(data.total / pageSize))
+    if (page <= last) return
+    const next = new URLSearchParams(params)
+    next.set('page', String(last))
+    router.replace('/manage/articles?' + next)
+  }, [loading, error, data, page, pageSize, params, router])
   function navigate(patch: Record<string, string>) {
     const next = new URLSearchParams(params)
     for (const [key, value] of Object.entries(patch)) {
@@ -266,9 +276,12 @@ export function ManageArticles({ username }: { username: string }) {
           <AdminPagination
             page={page}
             total={data?.total || 0}
-            pageSize={15}
-            disabled={loading}
+            pageSize={pageSize}
+            disabled={loading || !!error}
             onChange={(page) => navigate({ page: String(page) })}
+            onPageSizeChange={(size) =>
+              navigate({ pageSize: String(size), page: '1' })
+            }
           />
         </CardContent>
       </Card>
