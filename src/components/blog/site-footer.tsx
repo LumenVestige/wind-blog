@@ -6,10 +6,12 @@ export function BlogSiteFooter({
   themeId = 'simple',
   displayName,
   username,
+  icpNumber = '',
 }: {
   themeId?: 'mizuki' | 'chirpy' | 'simple'
   displayName: string
   username?: string
+  icpNumber?: string
 }) {
   const year = new Date().getFullYear()
   const home = username ? `/` : '/'
@@ -27,6 +29,7 @@ export function BlogSiteFooter({
             <Link href="/">Wind Blog</Link>
             <span className="mx-1">·</span>
             <Link href="/archives">文章归档</Link>
+            {icpNumber ? <><span className="mx-1">·</span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icpNumber}</a></> : null}
           </p>
         </div>
       </footer>
@@ -48,6 +51,7 @@ export function BlogSiteFooter({
           <Link href="/">Wind Blog</Link>
           <span className="mx-1.5">·</span>
           <Link href="/archives">文章归档</Link>
+          {icpNumber ? <><span className="mx-1.5">·</span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icpNumber}</a></> : null}
         </p>
       </footer>
     )
@@ -67,6 +71,7 @@ export function BlogSiteFooter({
         <span>
           © {year} {displayName}
         </span>
+        {icpNumber ? <><span aria-hidden>·</span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">{icpNumber}</a></> : null}
       </span>
     </footer>
   )

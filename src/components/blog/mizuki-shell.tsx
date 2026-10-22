@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Archive,
   ArrowUp,
-  ExternalLink,
   FolderOpen,
   Home,
   Info,
@@ -141,13 +140,6 @@ export function MizukiShell({
                 {s.label}
               </a>
             ))}
-            {data.isOwner && (
-              <Link href={`/manage`} className="mz-nav-link">
-                <Settings className="size-3.5 opacity-70" />
-                管理
-                <ExternalLink className="size-3 opacity-50" />
-              </Link>
-            )}
           </nav>
 
           <div className="mz-nav-actions">
@@ -204,12 +196,6 @@ export function MizukiShell({
                 {p.label}
               </Link>
             ))}
-            {data.isOwner && (
-              <Link href={`/manage`} className="mz-nav-link" onClick={() => setMenuOpen(false)}>
-                <Settings className="size-3.5 opacity-70" />
-                博客管理
-              </Link>
-            )}
             {data.isOwner ? null : (
               <Link href={`/login?next=${encodeURIComponent(pathname || '/')}`} className="mz-nav-link" onClick={() => setMenuOpen(false)}>
                 <LogIn className="size-3.5 opacity-70" />
@@ -321,7 +307,7 @@ export function MizukiShell({
         </div>
       </div>
 
-      <BlogSiteFooter themeId="mizuki" displayName={data.displayName} username={data.username} />
+      <BlogSiteFooter themeId="mizuki" displayName={data.displayName} username={data.username} icpNumber={data.icpNumber} />
 
       <button
         type="button"

@@ -45,15 +45,6 @@ export function SimpleShell({
             <span className="truncate">{data.siteName}</span>
           </Link>
           <div className="ml-auto flex items-center gap-1.5">
-            {data.isOwner && (
-              <Link
-                href={`/manage`}
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
-              >
-                <Settings className="size-3.5" />
-                <span className="hidden sm:inline">管理</span>
-              </Link>
-            )}
             <ThemeToggle variant="cycle" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" />
           </div>
         </div>
@@ -88,7 +79,7 @@ export function SimpleShell({
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
       {data.socialLinks.length > 0 && <nav aria-label="社交链接" className="mx-auto flex flex-wrap justify-center gap-4 py-4">{data.socialLinks.map((link, i) => <a key={i} href={link.url} aria-label={socialAriaLabel(link)} title={link.label || link.type} target="_blank" rel="noreferrer"><SocialIcon type={link.type} /></a>)}</nav>}
-      <BlogSiteFooter themeId="simple" displayName={data.displayName} username={data.username} />
+      <BlogSiteFooter themeId="simple" displayName={data.displayName} username={data.username} icpNumber={data.icpNumber} />
     </div>
   )
 }

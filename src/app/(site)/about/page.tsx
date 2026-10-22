@@ -93,11 +93,7 @@ export default async function AboutPage() {
         <div className="chirpy-prose">
           {cfg.subtitle ? <p>{cfg.subtitle}</p> : null}
           <p>
-            这是 <strong>{name}</strong> 的个人博客。你可以在
-            <Link href={`/`}>首页</Link>
-            浏览全部文章，或前往
-            <Link href="/archives">文章归档</Link>
-            看看其他作者。
+            这是 <strong>{name}</strong> 的个人博客。
           </p>
         </div>
       </article>
@@ -118,11 +114,7 @@ export default async function AboutPage() {
         <div className="mz-prose">
           {cfg.subtitle ? <p>{cfg.subtitle}</p> : null}
           <p>
-            这是 <strong>{name}</strong> 的个人博客。你可以在
-            <Link href={`/`}>首页</Link>
-            浏览全部文章，或前往
-            <Link href="/archives">文章归档</Link>
-            看看其他作者。
+            这是 <strong>{name}</strong> 的个人博客。
           </p>
         </div>
       </article>

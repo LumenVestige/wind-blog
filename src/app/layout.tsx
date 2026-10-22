@@ -1,5 +1,8 @@
 import { siteName } from '@/server/tenant'
 import { publicBase } from '@/server/metadata'
+import { siteOwner } from '@/server/tenant'
+import { getSetting } from '@/lib/settings'
+import { expandUrl } from '@/server/images'
 import type { Metadata } from 'next'
 import './globals.css'
 import 'katex/dist/katex.min.css'
@@ -11,7 +14,13 @@ import { Toaster } from '@/components/ui/sonner'
 
 export async function generateMetadata(): Promise<Metadata> {
   const name = siteName()
-  return { metadataBase: await publicBase(), title: { default: name, template: `%s · ${name}` }, description: '一个独立的个人博客' }
+  const custom = expandUrl(getSetting('favicon_url', ''))
+  const avatar = expandUrl(siteOwner().avatar || '')
+  const icon = custom || avatar || '/favicon.svg'
+  const icons = custom || avatar
+    ? { icon, apple: icon }
+    : { icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }, { url: '/favicon.png', type: 'image/png' }], apple: '/apple-touch-icon.png' }
+  return { metadataBase: await publicBase(), title: { default: name, template: `%s · ${name}` }, description: '一个独立的个人博客', icons }
 }
 
 export default function RootLayout({

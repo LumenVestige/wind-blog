@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Archive,
   ArrowUp,
-  ExternalLink,
   FolderOpen,
   Home,
   Info,
@@ -217,19 +216,6 @@ export function ChirpyShell({
                 </span>
               </a>
             ))}
-            {data.isOwner && (
-              <Link
-                href={`/manage`}
-                className="chirpy-nav-item block"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <span className="chirpy-nav-link">
-                  <Settings />
-                  <span>博客管理</span>
-                  <ExternalLink className="ml-auto size-3 opacity-50" />
-                </span>
-              </Link>
-            )}
           </ul>
         </nav>
 
@@ -411,7 +397,7 @@ export function ChirpyShell({
 
           {!searchMode && (
             <div className="px-4">
-              <BlogSiteFooter themeId="chirpy" displayName={data.displayName} username={data.username} />
+              <BlogSiteFooter themeId="chirpy" displayName={data.displayName} username={data.username} icpNumber={data.icpNumber} />
             </div>
           )}
         </div>

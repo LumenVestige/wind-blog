@@ -20,6 +20,7 @@ import type { AuthUser } from '@/lib/jwt'
 import { saveUpyun, upyunStatus } from '@/lib/settings'
 import { getOwner } from '@/server/tenant'
 import { get, run, toBool } from '@/db'
+import { expandUrl } from '@/server/images'
 import {
   createArticle,
   deleteArticle,
@@ -814,7 +815,7 @@ export { toBool }
 
 export const siteSettingsGetH: Handler = async (ctx) => {
   await requireSiteOwner(ctx.req)
-  return ok({ siteName: getSetting('site_name', 'Wind Blog'), commentsEnabled: getSetting('comments_enabled', '1') === '1', likesEnabled: getSetting('likes_enabled', '1') === '1', upyunConfigured: upyunStatus().configured })
+  return ok({ siteName: getSetting('site_name', 'Wind Blog'), faviconUrl: expandUrl(getSetting('favicon_url', '')), icpNumber: getSetting('icp_number', ''), commentsEnabled: getSetting('comments_enabled', '1') === '1', likesEnabled: getSetting('likes_enabled', '1') === '1', upyunConfigured: upyunStatus().configured })
 }
 export const siteSettingsSaveH: Handler = async (ctx) => {
   await requireSiteOwner(ctx.req)
@@ -822,6 +823,12 @@ export const siteSettingsSaveH: Handler = async (ctx) => {
   if (body.siteName !== undefined) { const name = str(body.siteName).trim(); if (!name || name.length > 64) throw new ApiError('站点名称需为 1–64 字', 1, 400); values.site_name = name }
   if (body.commentsEnabled !== undefined) values.comments_enabled = bool(body.commentsEnabled) ? '1' : '0'
   if (body.likesEnabled !== undefined) values.likes_enabled = bool(body.likesEnabled) ? '1' : '0'
+  if (body.faviconUrl !== undefined) {
+    const url = str(body.faviconUrl).trim()
+    if (url && !/^https?:\/\//i.test(url) && !url.startsWith('/')) throw new ApiError('图标地址需为 http(s) 或站内路径', 1, 400)
+    values.favicon_url = url.slice(0, 1024)
+  }
+  if (body.icpNumber !== undefined) values.icp_number = str(body.icpNumber).trim().slice(0, 64)
   setSettings(values)
   return ok({ success: true })
 }

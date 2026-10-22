@@ -13,6 +13,7 @@ export interface BlogShellData {
   socialLinks: ShellSocialLink[]
   showFriends: boolean
   isOwner: boolean
+  icpNumber: string
   recentPosts: { id: number; slug: string; title: string }[]
   categories: { id: number; name: string; articleCount: number }[]
   pages: { slug: string; label: string }[]

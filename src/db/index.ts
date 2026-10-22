@@ -99,6 +99,8 @@ export function parseJson<T>(s: unknown, fallback: T): T {
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   site_name: 'Wind Blog',
+  favicon_url: '',
+  icp_number: '',
   upyun_bucket: '',
   upyun_operator: '',
   upyun_password: '',

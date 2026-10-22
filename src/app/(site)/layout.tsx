@@ -7,6 +7,7 @@ import { listByUsername } from '@/server/blog/articles'
 import { expandUrl } from '@/server/images'
 import { getViewer } from '@/server/session'
 import { isInitialized, siteOwner, siteName } from '@/server/tenant'
+import { getSetting } from '@/lib/settings'
 import { MizukiShell } from '@/components/blog/mizuki-shell'
 import { ChirpyShell } from '@/components/blog/chirpy-shell'
 import { SimpleShell } from '@/components/blog/simple-shell'
@@ -47,6 +48,7 @@ export default async function BlogLayout({ children }: { children: React.ReactNo
     socialLinks: cfg.socialLinks,
     showFriends: !!cfg.friendsMd.trim(),
     isOwner: !!viewer && (viewer.id === author.id || viewer.isAdmin),
+    icpNumber: getSetting('icp_number', ''),
     recentPosts,
     categories,
     pages,
