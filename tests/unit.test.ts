@@ -6,7 +6,7 @@ import {
   verifyAccessPassword,
   verifyClientPassword,
 } from '@/lib/password'
-import { isAsciiSlug, isValidSlug, isValidUsername, slugify, uniqueSlug } from '@/lib/slug'
+import { isValidSlug, isValidUsername, slugify, uniqueSlug } from '@/lib/slug'
 import {
   buildSummary,
   extractHeadings,
@@ -48,9 +48,8 @@ describe('password', () => {
 describe('slug', () => {
   it('slugifies titles', () => {
     expect(slugify('Hello World!')).toBe('hello-world')
-    expect(slugify('  中文 标题 ')).toBe('中文-标题')
-    expect(isAsciiSlug('hello-world')).toBe(true)
-    expect(isAsciiSlug('中文-标题')).toBe(false)
+    expect(slugify('Agent 系列 Part2. MCP与Skills')).toBe('agent-part2-mcp-skills')
+    expect(slugify('  中文 标题 ')).toBe('post')
     expect(slugify('')).toBe('post')
   })
   it('validates slugs and usernames', () => {

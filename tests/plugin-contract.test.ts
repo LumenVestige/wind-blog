@@ -233,7 +233,7 @@ describe('Obsidian plugin compatibility', () => {
       syncToMainProfile: true,
     })
     expect(created.id).toBeGreaterThan(0)
-    expect(created.slug).toBe('from-obsidian')
+    expect(created.slug).toMatch(/^from-obsidian-[a-z0-9]{6}$/)
 
     const mine = await client.articleMine()
     expect(mine.map((a) => a.id)).toContain(created.id)

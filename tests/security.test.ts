@@ -150,10 +150,10 @@ describe('audit security and behavior regressions', () => {
   })
 
   it('stores an ascii slug when the plugin publishes a CJK title', async () => {
-    const article = await create({ title: 'Golang 中的切片扩容问题', content: 'body' })
-    expect(article.slug).toMatch(/^post-[a-z0-9]+$/)
+    const article = await create({ title: 'Agent 系列 Part2. MCP与Skills', content: 'body' })
+    expect(article.slug).toMatch(/^agent-part2-mcp-skills-[a-z0-9]{6}$/)
     const bySlug = await call(`user/blog/article/get?id=${article.id}`)
-    expect(bySlug.json.data.title).toBe('Golang 中的切片扩容问题')
+    expect(bySlug.json.data.title).toBe('Agent 系列 Part2. MCP与Skills')
   })
 
   it('disables raw HTML execution in the lightweight preview', () => {

@@ -5,7 +5,7 @@ import type { AuthUser } from '@/lib/jwt'
 import { ApiError } from '@/lib/api'
 import { buildSummary, extractImageUrls } from '@/lib/markdown'
 import { hashAccessPassword, verifyAccessPasswordAsync } from '@/lib/password'
-import { isAsciiSlug, isValidSlug, slugify, uniqueSlug } from '@/lib/slug'
+import { isValidSlug, randomSlugSuffix, slugify, uniqueSlug } from '@/lib/slug'
 import { boundedInt, isoToUnix } from '@/lib/utils'
 import {
   categoryExistsForUser,
@@ -230,20 +230,19 @@ function resolveSlug(
   title: string,
   excludeId = 0,
 ): string {
-  let base = (requested || '').trim().toLowerCase()
-  if (base) {
-    if (!isValidSlug(base)) base = slugify(base)
-    if (!isAsciiSlug(base)) base = ''
-    else if (slugExists(userId, base, excludeId)) {
-      base = uniqueSlug(base, (s) => slugExists(userId, s, excludeId))
-    }
-    if (base) return base
+  const requestedSlug = (requested || '').trim().toLowerCase()
+  if (excludeId && !requestedSlug) {
+    const current = get<{ slug: string }>('SELECT slug FROM blog_articles WHERE id = ?', excludeId)
+    if (current?.slug) return current.slug
   }
-  const fromTitle = slugify(title)
-  if (isAsciiSlug(fromTitle)) {
-    return uniqueSlug(fromTitle, (s) => slugExists(userId, s, excludeId))
+  if (requestedSlug && isValidSlug(requestedSlug)) {
+    return uniqueSlug(requestedSlug, (s) => slugExists(userId, s, excludeId))
   }
-  return uniqueSlug(`post-${Date.now().toString(36)}`, (s) => slugExists(userId, s, excludeId))
+  let base = requestedSlug ? slugify(requestedSlug) : ''
+  if (!base || base === 'post') base = slugify(title)
+  if (!base || base === 'post') base = 'post'
+  const withSuffix = `${base}-${randomSlugSuffix()}`.slice(0, 96).replace(/-+$/, '')
+  return uniqueSlug(withSuffix, (s) => slugExists(userId, s, excludeId))
 }
 
 export interface WriteReq {

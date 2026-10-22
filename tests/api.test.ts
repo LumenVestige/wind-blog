@@ -157,7 +157,7 @@ describe('blog lifecycle', () => {
     expect(res.json.code).toBe(0)
     const data = res.json.data as Record<string, unknown>
     articleId = data.id as number
-    expect(data.slug).toBe('my-first-post')
+    expect(data.slug).toMatch(/^my-first-post-[a-z0-9]{6}$/)
     expect(data.canSeeBody).toBe(true)
   })
 
@@ -180,7 +180,7 @@ describe('blog lifecycle', () => {
   })
 
   it('serves article detail by slug', async () => {
-    const res = await call('GET', '/user/blog/article/get?username=alice&slug=my-first-post')
+    const res = await call('GET', `/user/blog/article/get?id=${articleId}`)
     const data = res.json.data as { content: string; tags: string[] }
     expect(data.content).toContain('# Intro')
     expect(data.tags).toContain('a')

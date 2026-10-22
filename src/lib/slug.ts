@@ -1,18 +1,16 @@
-/** Slugify a title into lowercase letters/digits/hyphens. CJK is kept for explicit titles. */
+import crypto from 'node:crypto'
+
+/** Keep ASCII letters and digits from a title. CJK and punctuation become separators, matching the old site. */
 export function slugify(input: string): string {
   const s = (input || '')
     .trim()
     .toLowerCase()
-    .replace(/['"`]/g, '')
-    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+    .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-')
-  return s.slice(0, 96).replace(/-+$/, '') || 'post'
-}
-
-/** Public article path. ASCII slugs stay readable; anything else is percent-encoded and breaks plugin links. */
-export function isAsciiSlug(slug: string): boolean {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)
+    .slice(0, 60)
+    .replace(/-+$/, '')
+  return s || 'post'
 }
 
 /** Validate a user-supplied slug (lowercase letters, digits, hyphen). */
@@ -26,6 +24,13 @@ export function isValidUsername(username: string): boolean {
 
 export function isValidEmail(email: string): boolean {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+const SLUG_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
+
+export function randomSlugSuffix(length = 6): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(length))
+  return Array.from(bytes, (b) => SLUG_ALPHABET[b % SLUG_ALPHABET.length]).join('')
 }
 
 /** Ensure a slug is unique for a user by appending -2, -3, ... */
