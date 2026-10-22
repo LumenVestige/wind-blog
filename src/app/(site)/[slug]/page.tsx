@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { getSetting } from '@/lib/settings'
 import { publicBase } from '@/server/metadata'
 import { visitorIdentity } from '@/server/visitor'
@@ -14,18 +15,25 @@ import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { getViewer } from '@/server/session'
 import { get } from '@/db'
 import { extractHeadings, renderMarkdown, renderSummaryMarkdown } from '@/lib/markdown'
+import { isoToUnix } from '@/lib/utils'
 import { formatDateLong } from '@/lib/blog-present'
-import { ArticleView, type ArticleViewData } from '@/components/blog/article-view'
+import { ArticleBodyContent, ArticleView, type ArticleViewData } from '@/components/blog/article-view'
 import type { TocItem } from '@/components/blog/article-toc'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ArticlePage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
-  const { slug } = await params
+function ArticleBodyFallback() {
+  return (
+    <div className="space-y-3 rounded-xl border bg-card p-6" aria-busy="true" aria-live="polite">
+      <p className="text-sm text-muted-foreground">正文加载中…</p>
+      <div className="h-4 animate-pulse rounded bg-muted" />
+      <div className="h-4 w-11/12 animate-pulse rounded bg-muted" />
+      <div className="h-4 w-4/5 animate-pulse rounded bg-muted" />
+    </div>
+  )
+}
+
+async function loadArticle(slug: string) {
   const author = siteOwner()
   const username = author.username
   const themeId = siteConfigData(ensureSiteConfig(author.id)).themeId
@@ -37,6 +45,11 @@ export default async function ArticlePage({
   const token = (await cookies()).get(cookieName(`wind_unlock_${row.id}`))?.value || ''
   const requiresPassword = row.visibility === 'password' && !owner &&
     !verifyUnlockToken(token, row.id, row.password_hash)
+  return { author, username, themeId, row, viewer, owner, requiresPassword }
+}
+
+async function ArticleBody({ slug }: { slug: string }) {
+  const { username, themeId, row, viewer, owner, requiresPassword } = await loadArticle(slug)
   if (!requiresPassword && row.visibility !== 'private') {
     row.view_count = recordView(row.id)
   }
@@ -59,24 +72,17 @@ export default async function ArticlePage({
   })
   const categories = listCategoriesPublic(username)
   const categoryName = categories.find((c) => c.id === row.category_id)?.name || ''
-
   const related = requiresPassword
     ? []
     : listByUsername(
         username,
-        {
-          page: 1,
-          pageSize: 8,
-          categoryId: row.category_id || undefined,
-          pinnedFirst: true,
-        },
+        { page: 1, pageSize: 8, categoryId: row.category_id || undefined, pinnedFirst: true },
         viewer?.id || 0,
         viewer?.isAdmin || false,
       )
         .list.filter((a) => a.id !== row.id)
         .slice(0, 2)
         .map((a) => ({ id: a.id, slug: a.slug, title: a.title, summary: a.summary, summaryHtml: renderSummaryMarkdown(a.summary) }))
-
   const headings = requiresPassword
     ? []
     : extractHeadings(info.content || '').filter((h) => h.level >= 2 && h.level <= 4)
@@ -86,7 +92,6 @@ export default async function ArticlePage({
       : info.content
         ? [{ id: 'article-top', text: row.title, level: 1 }]
         : []
-
   const article: ArticleViewData = {
     id: row.id,
     slug: row.slug,
@@ -103,7 +108,6 @@ export default async function ArticlePage({
     requiresPassword,
     userId: row.user_id,
   }
-
   return (
     <ArticleView
       themeId={themeId}
@@ -116,6 +120,60 @@ export default async function ArticlePage({
       likesEnabled={getSetting('likes_enabled', '1') === '1'}
       viewerId={viewer?.id || 0}
       isAdmin={!!viewer?.isAdmin}
+      bodyOnly
+      bodySlot={(
+        <ArticleBodyContent
+          themeId={themeId}
+          html={article.html}
+          toc={toc}
+          locked={article.requiresPassword}
+          articleId={article.id}
+        />
+      )}
+    />
+  )
+}
+
+export default async function ArticlePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  const { username, themeId, row, owner } = await loadArticle(slug)
+  const tags = getArticleTags([row.id]).get(row.id) || []
+  const categoryName = listCategoriesPublic(username).find((c) => c.id === row.category_id)?.name || ''
+  const shell: ArticleViewData = {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    content: row.summary || '',
+    html: '',
+    tags,
+    categoryName,
+    publishedLabel: formatDateLong(isoToUnix(row.published_at || row.created_at)),
+    viewCount: row.view_count,
+    likeCount: row.like_count,
+    liked: false,
+    commentCount: row.comment_count,
+    requiresPassword: false,
+    userId: row.user_id,
+  }
+  return (
+    <ArticleView
+      themeId={themeId}
+      username={username}
+      isOwner={owner}
+      article={shell}
+      related={[]}
+      toc={[]}
+      viewerId={0}
+      isAdmin={false}
+      bodySlot={(
+        <Suspense fallback={<ArticleBodyFallback />}>
+          <ArticleBody slug={slug} />
+        </Suspense>
+      )}
     />
   )
 }

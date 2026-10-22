@@ -258,6 +258,19 @@
   margin: 1em 0;
 }
 
+.markdown-body video.md-video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75em 0;
+  border-radius: 0.5rem;
+  background: #000;
+}
+
+.markdown-body video.md-video[hidden] {
+  display: none;
+}
+
 .markdown-body img {
   /* 默认不居中；可用 |center 或预览工具条设置。
    * 不要写 width:auto —— 会盖掉 HTML width 属性，导致 ![|114](url) 定宽失效。

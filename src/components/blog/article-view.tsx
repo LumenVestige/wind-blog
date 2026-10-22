@@ -31,6 +31,55 @@ export interface ArticleViewData {
   userId: number
 }
 
+export function ArticleBodyContent({
+  themeId,
+  html,
+  toc,
+  locked,
+  articleId,
+  children,
+}: {
+  themeId: 'mizuki' | 'chirpy' | 'simple'
+  html: string
+  toc: TocItem[]
+  locked: boolean
+  articleId: number
+  children?: React.ReactNode
+}) {
+  const isChirpy = themeId === 'chirpy'
+  const isMizuki = themeId === 'mizuki'
+  const mobileToc =
+    !locked && toc.length > 0 ? (
+      <details className={cn("mb-6 rounded-lg border p-3", isChirpy ? "chirpy-toc-mobile xl:hidden" : isMizuki ? "lg:hidden" : "")}>
+        <summary className="cursor-pointer select-none font-semibold text-[var(--label-color)]">文章内容</summary>
+        <ul className="chirpy-toc-list mt-2">
+          {toc.map((item) => (
+            <li key={item.id} className="chirpy-toc-item" style={{ paddingLeft: `${Math.max(0, item.level - 1) * 0.7}rem` }}>
+              <a href={item.id === 'article-top' ? '#' : `#${item.id}`} className="chirpy-toc-link">{item.text}</a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    ) : null
+  if (locked) {
+    return (
+      <div className={isChirpy ? 'rounded-[10px] border border-[var(--main-border-color)] bg-[var(--card-bg)] p-6' : isMizuki ? 'mz-section-card' : 'space-y-4 rounded-xl border p-6'}>
+        <p className="mb-3 text-sm text-muted-foreground">这是一篇密码保护的文章。</p>
+        <UnlockForm articleId={articleId} />
+      </div>
+    )
+  }
+  return (
+    <>
+      <div className={isChirpy ? 'chirpy-prose content' : isMizuki ? 'mz-prose' : 'rounded-xl border bg-card p-6 shadow-sm'} id="article-body">
+        {mobileToc}
+        <MarkdownView html={html} className={isChirpy || isMizuki ? '' : undefined} />
+      </div>
+      {children}
+    </>
+  )
+}
+
 export function ArticleView({
   themeId,
   username,
@@ -38,6 +87,8 @@ export function ArticleView({
   article,
   related,
   toc,
+  bodySlot,
+  bodyOnly = false,
   viewerId,
   isAdmin, commentsEnabled = true, likesEnabled = true,
 }: {
@@ -47,6 +98,8 @@ export function ArticleView({
   article: ArticleViewData
   related: { id: number; slug: string; title: string; summary: string; summaryHtml: string }[]
   toc: TocItem[]
+  bodySlot?: React.ReactNode
+  bodyOnly?: boolean
   viewerId: number
   isAdmin: boolean
   commentsEnabled?: boolean
@@ -110,7 +163,7 @@ export function ArticleView({
       </details>
     ) : null
 
-  const body = locked ? (
+  const body = bodySlot ?? (locked ? (
     <div
       className={
         isChirpy
@@ -138,7 +191,7 @@ export function ArticleView({
       {mobileToc}
       <MarkdownView html={article.html} />
     </div>
-  )
+  ))
 
   const likeBlock = !locked && likesEnabled ? (
     <LikeButton
@@ -297,6 +350,18 @@ export function ArticleView({
       </div>
     ) : null
 
+  if (bodyOnly) {
+    return (
+      <>
+        {bodySlot ?? body}
+        {likeBlock}
+        {shareBlock}
+        {relatedBlock}
+        {comments}
+      </>
+    )
+  }
+
   if (isChirpy) {
     return (
       <article className="chirpy-article px-1 pt-4">
@@ -306,10 +371,10 @@ export function ArticleView({
           {tags}
         </header>
         {body}
-        {likeBlock}
-        {shareBlock}
-        {relatedBlock}
-        {comments}
+        {!bodySlot ? likeBlock : null}
+        {!bodySlot ? shareBlock : null}
+        {!bodySlot ? relatedBlock : null}
+        {!bodySlot ? comments : null}
       </article>
     )
   }
@@ -324,11 +389,11 @@ export function ArticleView({
             {tags}
           </header>
           {body}
-          {likeBlock}
-          {shareBlock}
+          {!bodySlot ? likeBlock : null}
+          {!bodySlot ? shareBlock : null}
         </article>
-        {relatedBlock}
-        {comments}
+        {!bodySlot ? relatedBlock : null}
+        {!bodySlot ? comments : null}
       </div>
     )
   }
@@ -370,10 +435,10 @@ export function ArticleView({
         </div>
       </header>
       {body}
-      {likeBlock}
-      {shareBlock}
-      {relatedBlock}
-      {comments}
+      {!bodySlot ? likeBlock : null}
+      {!bodySlot ? shareBlock : null}
+      {!bodySlot ? relatedBlock : null}
+      {!bodySlot ? comments : null}
     </article>
   )
 }

@@ -95,6 +95,13 @@ describe('markdown', () => {
     const kept = renderMarkdown('<mark>高亮</mark> 与 <kbd>Ctrl</kbd>')
     expect(kept).toContain('<mark>高亮</mark>')
     expect(kept).toContain('<kbd>Ctrl</kbd>')
+    const video = renderMarkdown(
+      '<video controls src="http://192.168.3.201:3000/a/video.mkv" type="video/x-matroska"></video>\n\n<video src="javascript:alert(1)"></video>',
+    )
+    expect(video).toContain('<video')
+    expect(video).toContain('src="http://192.168.3.201:3000/a/video.mkv"')
+    expect(video).toContain('controls')
+    expect(video).not.toContain('javascript:')
   })
   it('builds a plain-text summary', () => {
     expect(buildSummary('## 标题\n\n这是一段**正文**。', 100)).toContain('这是一段正文')

@@ -18,10 +18,17 @@ export function MarkdownView({
     const root = ref.current
     if (!root) return
     const unbindCopy = bindMarkdownCodeCopy(root)
+    const videos = Array.from(root.querySelectorAll('video'))
+    const hideVideo = (event: Event) => {
+      const video = event.currentTarget
+      if (video instanceof HTMLVideoElement) video.hidden = true
+    }
+    for (const video of videos) video.addEventListener('error', hideVideo)
     let cancelled = false
     void bindMarkdownMermaid(root, undefined, () => cancelled)
     return () => {
       cancelled = true
+      for (const video of videos) video.removeEventListener('error', hideVideo)
       unbindCopy()
     }
   }, [html])

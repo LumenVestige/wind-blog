@@ -19,7 +19,7 @@ const ALLOWED_HTML_TAGS = new Set([
   'div', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'kbd',
   'input', 'li', 'mark', 'ol', 'p', 'pre', 's', 'section', 'span', 'strong',
   'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead',
-  'tr', 'u', 'ul',
+  'tr', 'u', 'ul', 'video', 'source',
 ])
 
 /** 把非白名单标签的 `<` 转义，避免 marked 当 HTML 解析后被 sanitize 丢弃。 */
@@ -393,6 +393,9 @@ export function sanitizeHtml(html: string): string {
         (tag === 'a' && ['href', 'target', 'rel'].includes(name)) ||
         (tag === 'img' &&
           ['src', 'alt', 'width', 'height', 'loading', 'style'].includes(name)) ||
+        (tag === 'video' &&
+          ['src', 'controls', 'poster', 'preload', 'playsinline', 'width', 'height'].includes(name)) ||
+        (tag === 'source' && ['src', 'type'].includes(name)) ||
         (['td', 'th'].includes(tag) && ['colspan', 'rowspan', 'align'].includes(name)) ||
         (name === 'style' &&
           (Boolean(el.closest('.katex')) ||
@@ -426,6 +429,16 @@ export function sanitizeHtml(html: string): string {
       const src = el.getAttribute('src') || ''
       if (!safeURL(src, true)) el.remove()
       else el.setAttribute('loading', 'lazy')
+    }
+    if (tag === 'video' || tag === 'source') {
+      const src = el.getAttribute('src') || ''
+      if (src && !safeURL(src, true)) el.removeAttribute('src')
+      if (tag === 'video') {
+        el.setAttribute('controls', '')
+        el.setAttribute('preload', 'metadata')
+        el.setAttribute('playsinline', '')
+        el.classList.add('md-video')
+      }
     }
     if (tag === 'input') {
       if ((el.getAttribute('type') || '').toLowerCase() !== 'checkbox') {
