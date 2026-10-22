@@ -1,0 +1,151 @@
+import { describe, it, expect, beforeAll } from 'vitest'
+import {
+  hashAccessPassword,
+  hashClientPassword,
+  sha256Hex,
+  verifyAccessPassword,
+  verifyClientPassword,
+} from '@/lib/password'
+import { isAsciiSlug, isValidSlug, isValidUsername, slugify, uniqueSlug } from '@/lib/slug'
+import {
+  buildSummary,
+  extractHeadings,
+  extractImageKeys,
+  extractImageUrls,
+  renderMarkdown,
+  renderSummaryMarkdown,
+} from '@/lib/markdown'
+import { signToken, verifyToken } from '@/lib/jwt'
+import { makeUnlockToken, verifyUnlockToken } from '@/server/blog/articles'
+import { migrationVisibility, parseArgs, rewriteImages } from '../scripts/migrate'
+
+beforeAll(() => {
+  process.env.JWT_SECRET = 'unit-test-secret-0123456789abcdef'
+})
+
+describe('password', () => {
+  it('hashes and verifies client password hashes', () => {
+    const clientHash = sha256Hex('hunter2')
+    const stored = hashClientPassword(clientHash)
+    expect(stored).not.toBe(clientHash)
+    expect(verifyClientPassword(stored, clientHash)).toBe(true)
+    expect(verifyClientPassword(stored, sha256Hex('wrong'))).toBe(false)
+  })
+
+  it('rejects malformed client hashes', () => {
+    expect(() => hashClientPassword('not-a-hash')).toThrow()
+    expect(verifyClientPassword('x', 'zzz')).toBe(false)
+  })
+
+  it('hashes and verifies article access passwords', () => {
+    const stored = hashAccessPassword('open-sesame')
+    expect(verifyAccessPassword(stored, 'open-sesame')).toBe(true)
+    expect(verifyAccessPassword(stored, 'nope')).toBe(false)
+    expect(verifyAccessPassword('', 'x')).toBe(false)
+  })
+})
+
+describe('slug', () => {
+  it('slugifies titles', () => {
+    expect(slugify('Hello World!')).toBe('hello-world')
+    expect(slugify('  中文 标题 ')).toBe('中文-标题')
+    expect(isAsciiSlug('hello-world')).toBe(true)
+    expect(isAsciiSlug('中文-标题')).toBe(false)
+    expect(slugify('')).toBe('post')
+  })
+  it('validates slugs and usernames', () => {
+    expect(isValidSlug('abc-123')).toBe(true)
+    expect(isValidSlug('Bad Slug')).toBe(false)
+    expect(isValidUsername('alice_01')).toBe(true)
+    expect(isValidUsername('a')).toBe(false)
+  })
+  it('resolves unique slugs', () => {
+    const taken = new Set(['post', 'post-2'])
+    expect(uniqueSlug('post', (s) => taken.has(s))).toBe('post-3')
+  })
+})
+
+describe('markdown', () => {
+  it('renders markdown to sanitized html with heading anchors', () => {
+    const html = renderMarkdown('# Title\n\n<script>alert(1)</script>\n\n**bold**')
+    expect(html).toContain('id="title"')
+    expect(html).toContain('<strong>bold</strong>')
+    expect(html).not.toContain('<script>')
+    const rich = renderMarkdown(
+      '![图|120|center](https://cdn.test/a.png)\n\n> [!note] 提示\n> 正文\n\n$$E=mc^2$$',
+    )
+    expect(rich).toContain('data-md-align="center"')
+    expect(rich).toContain('width="120"')
+    expect(rich).toContain('obsidian-callout')
+    expect(rich).toContain('katex')
+    const summary = renderSummaryMarkdown('最大 $10^{500}$ 与 **数位**')
+    expect(summary).toContain('class="katex"')
+    expect(summary).toContain('数位')
+    expect(summary).not.toContain('<strong>')
+    expect(summary).not.toContain('$')
+  })
+  it('builds a plain-text summary', () => {
+    expect(buildSummary('## 标题\n\n这是一段**正文**。', 100)).toContain('这是一段正文')
+  })
+  it('extracts headings, images and object keys', () => {
+    const src = '# A\n\n## B\n\n![x](https://cdn.test/blog/1/abc.png)\n\n<img src="/x/y.png">'
+    expect(extractHeadings(src).map((h) => h.id)).toEqual(['a', 'b'])
+    expect(extractImageUrls(src)).toContain('https://cdn.test/blog/1/abc.png')
+    const keys = extractImageKeys(src)
+    expect(keys).toContain('/blog/1/abc.png')
+    expect(keys).toContain('/x/y.png')
+  })
+})
+
+describe('jwt', () => {
+  it('signs and verifies tokens', async () => {
+    const token = await signToken({ id: 7, username: 'alice', isAdmin: false })
+    const user = await verifyToken(token)
+    expect(user).toEqual({ id: 7, username: 'alice', isAdmin: false })
+    expect(await verifyToken('garbage')).toBeNull()
+  })
+})
+
+describe('unlock token', () => {
+  it('round-trips and rejects tampering', () => {
+    const token = makeUnlockToken(42)
+    expect(verifyUnlockToken(token, 42)).toBe(true)
+    expect(verifyUnlockToken(token, 43)).toBe(false)
+    expect(verifyUnlockToken(token + 'x', 42)).toBe(false)
+  })
+})
+
+describe('migrate helpers', () => {
+  it('keeps target passwords only when an existing password article can supply one', () => {
+    expect(migrationVisibility('password', 'keep')).toBe('private')
+    expect(migrationVisibility('password', 'keep', 'public')).toBe('private')
+    expect(migrationVisibility('password', 'keep', 'password')).toBe('password')
+    expect(migrationVisibility('public', 'keep')).toBe('public')
+  })
+  it('parses CLI args and defaults', () => {
+    const args = parseArgs([
+      '--old-url',
+      'https://old.test',
+      '--old-username',
+      'alice',
+      '--old-password',
+      'pw',
+      '--new-url',
+      'https://new.test',
+      '--dry-run',
+      '--rewrite-domain',
+      'https://old.cdn=https://new.cdn',
+    ])
+    expect(args.oldUrl).toBe('https://old.test')
+    expect(args.newUsername).toBe('alice')
+    expect(args.newPassword).toBe('pw')
+    expect(args.dryRun).toBe(true)
+    expect(args.rewriteDomain).toEqual(['https://old.cdn', 'https://new.cdn'])
+  })
+  it('rewrites image hosts', () => {
+    const out = rewriteImages('![a](https://old.cdn/blog/1/x.png)', {
+      rewriteDomain: ['https://old.cdn', 'https://new.cdn'],
+    })
+    expect(out).toBe('![a](https://new.cdn/blog/1/x.png)')
+  })
+})

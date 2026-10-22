@@ -1,0 +1,20 @@
+export interface ShellSocialLink {
+  type: string
+  url: string
+  label?: string
+}
+
+export interface BlogShellData {
+  siteName: string
+  username: string
+  displayName: string
+  avatar: string
+  subtitle: string
+  socialLinks: ShellSocialLink[]
+  showFriends: boolean
+  isOwner: boolean
+  recentPosts: { id: number; slug: string; title: string }[]
+  categories: { id: number; name: string; articleCount: number }[]
+  pages: { slug: string; label: string }[]
+  staticSites: { slug: string; label: string; publicPath: string }[]
+}

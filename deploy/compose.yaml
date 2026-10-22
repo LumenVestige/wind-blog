@@ -1,0 +1,45 @@
+services:
+  sec:
+    image: ${WIND_BLOG_IMAGE:-wind-blog:latest}
+    container_name: wind-blog-sec
+    restart: unless-stopped
+    env_file: ./sec/.env
+    ports:
+      - "127.0.0.1:3101:3000"
+    volumes:
+      - ./sec/data:/data
+    init: true
+    mem_limit: 384m
+    mem_reservation: 128m
+    cpus: 0.75
+    pids_limit: 128
+    environment:
+      NODE_OPTIONS: --max-old-space-size=256
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+  syc:
+    image: ${WIND_BLOG_IMAGE:-wind-blog:latest}
+    container_name: wind-blog-syc
+    restart: unless-stopped
+    env_file: ./syc/.env
+    ports:
+      - "127.0.0.1:3102:3000"
+    volumes:
+      - ./syc/data:/data
+    init: true
+    mem_limit: 384m
+    mem_reservation: 128m
+    cpus: 0.75
+    pids_limit: 128
+    environment:
+      NODE_OPTIONS: --max-old-space-size=256
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
