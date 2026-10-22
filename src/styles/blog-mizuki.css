@@ -334,14 +334,6 @@
 @media (min-width: 1024px) {
   .mz-sidebar {
     display: flex;
-    position: sticky;
-    /*
-     * 始终贴在导航下方，禁止负 top 钻进顶栏被挡住。
-     * 长侧栏：限高 + 内部滚动。
-     */
-    top: calc(var(--mz-nav-h) + 0.75rem);
-    max-height: calc(100svh - var(--mz-nav-h) - 1.5rem);
-    overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
     align-self: start;

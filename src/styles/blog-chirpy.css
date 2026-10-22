@@ -639,14 +639,6 @@
 @media (min-width: 992px) {
   .chirpy-panel {
     display: block;
-    position: sticky;
-    /*
-     * 固定贴在顶栏下（勿再用 100svh-100%：top 的 % 相对包含块≈视口，
-     * 会算成恒为负的 -0.75rem，一滚「文章内容」就钻进顶栏）。
-     * 长大纲：限高 + 内部滚动。
-     */
-    top: calc(var(--chirpy-topbar-h) + 0.75rem);
-    max-height: calc(100svh - var(--chirpy-topbar-h) - 1.5rem);
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -729,14 +721,12 @@
 }
 
 .toc-card {
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
-}
-
-.toc-card.is-pinned {
   position: sticky;
   top: 5.5rem;
   z-index: 5;
-  box-shadow: 0 10px 28px rgb(0 0 0 / 12%);
+  max-height: calc(100svh - 7rem);
+  overflow-y: auto;
+  transition: box-shadow 0.25s ease;
 }
 
 .toc-item {

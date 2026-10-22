@@ -1,5 +1,4 @@
 export const metadata = { title: '静态页' }
-import Link from 'next/link'
 import { siteOwner } from '@/server/tenant'
 import { listStaticPublic } from '@/server/blog/static-sites'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
@@ -29,7 +28,7 @@ export default async function StaticSitesPage() {
           return (
             <li key={site.id} className="flex gap-3">
               <time className="w-12 shrink-0 text-sm text-muted-foreground">{label}</time>
-              <Link href={site.publicPath} className="hover:text-primary">{site.title}</Link>
+              <a href={site.publicPath} target="_blank" rel="noreferrer" className="hover:text-primary">{site.title}</a>
             </li>
           )
         })}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import Viewer from 'viewerjs'
 import { bindMarkdownCodeCopy } from '@/lib/markdown-code-copy'
 import { bindMarkdownMermaid } from '@/lib/markdown-mermaid'
 import { cn } from '@/lib/utils'
@@ -18,6 +19,7 @@ export function MarkdownView({
     const root = ref.current
     if (!root) return
     const unbindCopy = bindMarkdownCodeCopy(root)
+    const viewer = root.querySelector('img') ? new Viewer(root, { navbar: false, title: false, toolbar: true }) : null
     const videos = Array.from(root.querySelectorAll('video'))
     const hideVideo = (event: Event) => {
       const video = event.currentTarget
@@ -29,6 +31,7 @@ export function MarkdownView({
     return () => {
       cancelled = true
       for (const video of videos) video.removeEventListener('error', hideVideo)
+      viewer?.destroy()
       unbindCopy()
     }
   }, [html])

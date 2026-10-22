@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface TocItem {
@@ -19,9 +19,7 @@ export function ArticleToc({
   variant?: 'chirpy' | 'mizuki'
 }) {
   const [activeId, setActiveId] = useState(toc[0]?.id || 'article-top')
-  const [pinned, setPinned] = useState(false)
   const [open, setOpen] = useState<Record<string, boolean>>({})
-  const rootRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     if (toc.length === 0) return
@@ -39,6 +37,7 @@ export function ArticleToc({
         if (last) current = last.id
       }
       setActiveId((prev) => (prev === current ? prev : current))
+      document.querySelector(`[data-toc-id="${CSS.escape(current)}"]`)?.scrollIntoView({ block: 'nearest' })
     }
     resolveActive()
     window.addEventListener('scroll', resolveActive, { passive: true })
@@ -48,15 +47,6 @@ export function ArticleToc({
       window.removeEventListener('resize', resolveActive)
     }
   }, [toc])
-
-  useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
-    const update = () => setPinned(root.getBoundingClientRect().top <= 88)
-    update()
-    window.addEventListener('scroll', update, { passive: true })
-    return () => window.removeEventListener('scroll', update)
-  }, [])
 
   const minLevel = Math.min(...toc.map((item) => item.level))
   function visible(index: number) {
@@ -88,7 +78,7 @@ export function ArticleToc({
 
   if (variant === 'mizuki') {
     return (
-      <div ref={rootRef as React.RefObject<HTMLDivElement>} className={cn('mz-widget toc-card', pinned && 'is-pinned')} id="toc-wrapper" aria-label="目录">
+      <div className="mz-widget toc-card" id="toc-wrapper" aria-label="目录">
         <h2 className="mz-widget-title">目录</h2>
         <ul className="mz-panel-list">
           {toc.map((item, index) => visible(index) && (
@@ -113,7 +103,7 @@ export function ArticleToc({
   }
 
   return (
-    <section ref={rootRef} className={cn('chirpy-toc toc-card mb-6', pinned && 'is-pinned')} id="toc-wrapper" aria-label="目录">
+    <section className="chirpy-toc toc-card mb-6" id="toc-wrapper" aria-label="目录">
       <h2 className="chirpy-panel-heading">目录</h2>
       <nav className="mt-2">
         <ul className="chirpy-toc-list">
