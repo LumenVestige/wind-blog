@@ -1,4 +1,6 @@
 FROM node:26-bookworm-slim AS build
+ARG GIT_SHA=dev
+ENV NEXT_PUBLIC_GIT_SHA=$GIT_SHA
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./

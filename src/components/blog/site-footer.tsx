@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 const MIZUKI_GITHUB = 'https://github.com/LyraVoid/Mizuki'
+const COMMIT = process.env.NEXT_PUBLIC_GIT_SHA || 'dev'
 
 export function BlogSiteFooter({
   themeId = 'simple',
@@ -28,9 +29,9 @@ export function BlogSiteFooter({
             <span className="mx-1">·</span>
             <Link href="/">Wind Blog</Link>
             <span className="mx-1">·</span>
-            <Link href="/archives">文章归档</Link>
-            {icpNumber ? <><span className="mx-1">·</span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icpNumber}</a></> : null}
+            <span>{COMMIT.slice(0, 5)}</span>
           </p>
+          {icpNumber ? <p><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icpNumber}</a></p> : null}
         </div>
       </footer>
     )
@@ -50,9 +51,9 @@ export function BlogSiteFooter({
           <span className="mx-1.5">·</span>
           <Link href="/">Wind Blog</Link>
           <span className="mx-1.5">·</span>
-          <Link href="/archives">文章归档</Link>
-          {icpNumber ? <><span className="mx-1.5">·</span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icpNumber}</a></> : null}
+          <span>{COMMIT.slice(0, 5)}</span>
         </p>
+        {icpNumber ? <p><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icpNumber}</a></p> : null}
       </footer>
     )
   }
@@ -60,19 +61,15 @@ export function BlogSiteFooter({
   return (
     <footer className="border-t py-6 text-center text-xs text-muted-foreground">
       <span className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-        <Link href="/archives" className="hover:text-foreground">
-          文章归档
-        </Link>
+        <span>主题适配自 Wind Blog</span>
         <span aria-hidden>·</span>
-        <Link href="/" className="hover:text-foreground">
-          Wind Blog
-        </Link>
+        <span>{COMMIT.slice(0, 5)}</span>
         <span aria-hidden>·</span>
         <span>
           © {year} {displayName}
         </span>
-        {icpNumber ? <><span aria-hidden>·</span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">{icpNumber}</a></> : null}
       </span>
+      {icpNumber ? <p className="mt-1"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">{icpNumber}</a></p> : null}
     </footer>
   )
 }
