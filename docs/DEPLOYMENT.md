@@ -61,6 +61,7 @@ registry.cn-hangzhou.aliyuncs.com/sanenchen/wind-blog:latest
 | --- | --- |
 | `ACR_USERNAME` | `sanenchen` |
 | `ACR_PASSWORD` | 阿里云镜像仓库访问凭证密码，不是阿里云登录密码 |
+| `DEPLOY_SCRIPT` | 镜像推送成功后执行的部署脚本。可使用 `$IMAGE_TAG`（本次提交 sha） |
 
 服务器在杭州 VPC 内，使用内网地址。先登录一次：
 
