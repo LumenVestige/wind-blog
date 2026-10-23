@@ -1,6 +1,5 @@
 import Link from 'next/link'
 
-const MIZUKI_GITHUB = 'https://github.com/LyraVoid/Mizuki'
 const COMMIT = process.env.NEXT_PUBLIC_GIT_SHA || 'dev'
 
 export function BlogSiteFooter({
@@ -42,18 +41,13 @@ export function BlogSiteFooter({
       <footer className="mz-footer" aria-label="站点信息">
         <p>
           © {year} <Link href={home}>{displayName}</Link>
+          {icpNumber ? (
+            <>
+              <span className="mx-1.5">·</span>
+              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icpNumber}</a>
+            </>
+          ) : null}
         </p>
-        <p className="mz-credit">
-          主题适配自{' '}
-          <a href={MIZUKI_GITHUB} target="_blank" rel="noopener noreferrer">
-            LyraVoid/Mizuki
-          </a>
-          <span className="mx-1.5">·</span>
-          <Link href="/">Wind Blog</Link>
-          <span className="mx-1.5">·</span>
-          <span>{COMMIT.slice(0, 7)}</span>
-        </p>
-        {icpNumber ? <p><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{icpNumber}</a></p> : null}
       </footer>
     )
   }

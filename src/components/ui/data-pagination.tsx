@@ -27,6 +27,8 @@ export interface DataPaginationProps {
   disabled?: boolean
   className?: string
   label?: string
+  /** Page-size options; defaults to PAGE_SIZES. */
+  pageSizes?: readonly number[]
 }
 
 export function DataPagination({
@@ -39,6 +41,7 @@ export function DataPagination({
   disabled,
   className,
   label = '列表分页',
+  pageSizes = PAGE_SIZES,
 }: DataPaginationProps) {
   const router = useRouter()
   const id = useId()
@@ -144,7 +147,7 @@ export function DataPagination({
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                {Array.from(new Set([pageSize, ...PAGE_SIZES]))
+                {Array.from(new Set([pageSize, ...pageSizes]))
                   .sort((a, b) => a - b)
                   .map((size) => (
                     <SelectItem key={size} value={String(size)}>

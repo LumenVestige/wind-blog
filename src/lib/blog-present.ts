@@ -8,6 +8,13 @@ export function formatDateSlash(sec?: number): string {
   return `${y}/${m}/${day}`
 }
 
+export function formatDateCn(sec?: number): string {
+  if (!sec) return ''
+  const d = new Date(sec * 1000)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+}
+
 export function formatDateLong(sec?: number): string {
   if (!sec) return ''
   const d = new Date(sec * 1000)

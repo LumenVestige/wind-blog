@@ -7,6 +7,7 @@ import { renderMarkdown, extractHeadings } from '@/lib/markdown'
 import { formatDateLong } from '@/lib/blog-present'
 import { ArticleBodyContent, ArticleView, type ArticleViewData } from '@/components/blog/article-view'
 import { readArticlePreview } from '@/components/blog/article-link'
+import { ArticleNav } from '@/components/blog/article-nav'
 import type { TocItem } from '@/components/blog/article-toc'
 
 type ArticlePayload = {
@@ -99,6 +100,7 @@ export function InstantArticle({
   )
 
   return (
+    <>
     <ArticleView
       themeId={themeId}
       username={article?.username || username}
@@ -110,5 +112,9 @@ export function InstantArticle({
       isAdmin={false}
       bodySlot={body}
     />
+    {themeId === 'mizuki' && article ? (
+      <ArticleNav username={article.username || username} slug={slug} />
+    ) : null}
+    </>
   )
 }

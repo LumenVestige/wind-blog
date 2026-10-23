@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import {
   Calendar,
-  ChevronRight,
   Eye,
   FolderOpen,
   Heart,
@@ -13,14 +12,15 @@ import { listCategoriesPublic } from '@/server/blog/categories'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { expandUrl } from '@/server/images'
 import { ArticleLink } from '@/components/blog/article-link'
+import { FeedSearch } from '@/components/blog/feed-search'
 import { Markdown } from '@/components/blog/markdown'
 import { MarkdownSummary } from '@/components/blog/markdown-summary'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { blogQuery, formatDateSlash } from '@/lib/blog-present'
+import { blogQuery, formatDateCn, formatDateSlash } from '@/lib/blog-present'
 import { DataPagination } from '@/components/ui/data-pagination'
-import { parsePage, parsePageSize } from '@/lib/pagination'
+import { FEED_PAGE_SIZES, parsePage, parsePageSize } from '@/lib/pagination'
 import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -46,14 +46,17 @@ export default async function BlogHomePage({
   const categoryId = Number(one(sp.categoryId)) || undefined
   const tag = one(sp.tag) || undefined
   const keyword = one(sp.q) || one(sp.keyword) || undefined
+  const sort = one(sp.sort) === 'hot' ? 'hot' : undefined
   let page = parsePage(one(sp.page))
-  const pageSize = parsePageSize(one(sp.pageSize))
+  const pageSize = parsePageSize(one(sp.pageSize), 12, FEED_PAGE_SIZES)
   let res = listByUsername(username, {
     page,
     pageSize,
     categoryId,
     tag,
     keyword,
+    sort,
+    titleOnly: true,
     pinnedFirst: true,
   })
   if (page > Math.max(1, Math.ceil(res.total / pageSize))) {
@@ -64,6 +67,8 @@ export default async function BlogHomePage({
       categoryId,
       tag,
       keyword,
+      sort,
+      titleOnly: true,
       pinnedFirst: true,
     })
   }
@@ -78,7 +83,7 @@ export default async function BlogHomePage({
     categoryName: catName(a.categoryId) || '',
   })
   const activeCat = categoryId ? catName(categoryId) : undefined
-  const baseQuery = { q: keyword, categoryId, tag }
+  const baseQuery = { q: keyword, categoryId, tag, sort }
 
   const intro =
     cfg.homeIntroMd.trim() && !keyword && !categoryId && !tag ? (
@@ -104,6 +109,7 @@ export default async function BlogHomePage({
       pageSize={pageSize}
       href={blogQuery(username, baseQuery)}
       label="文章列表分页"
+      pageSizes={FEED_PAGE_SIZES}
     />
   )
 
@@ -177,31 +183,32 @@ export default async function BlogHomePage({
   }
 
   if (themeId === 'mizuki') {
+    const tabs = [
+      { key: undefined, label: '最新' },
+      { key: 'hot', label: '热门' },
+    ] as const
     return (
       <div>
         {intro}
-        {(keyword || activeCat || tag) && (
-          <div className="mz-filter-bar">
-            {keyword ? (
-              <span className="text-sm text-[var(--mz-text-50)]">
-                搜索：{keyword}
-              </span>
-            ) : null}
-            {activeCat ? (
-              <span className="text-sm text-[var(--mz-text-50)]">
-                分类：{activeCat}
-              </span>
-            ) : null}
-            {tag ? (
-              <span className="text-sm text-[var(--mz-text-50)]">
-                标签：{tag}
-              </span>
-            ) : null}
-            <Link href={`/`} className="mz-tag">
-              清除筛选
-            </Link>
-          </div>
-        )}
+        <div className="mz-feed-toolbar">
+          <nav className="mz-feed-tabs" aria-label="文章排序">
+            {tabs.map((t) => (
+              <Link
+                key={t.label}
+                href={blogQuery(username, { ...baseQuery, sort: t.key })}
+                className={cn('mz-feed-tab', sort === t.key && 'is-active')}
+                aria-current={sort === t.key ? 'page' : undefined}
+              >
+                {t.label}
+              </Link>
+            ))}
+          </nav>
+          <FeedSearch
+            keyword={keyword || ''}
+            clearHref={blogQuery(username, { categoryId, tag, sort })}
+            hidden={{ categoryId, tag, sort }}
+          />
+        </div>
         {res.list.length === 0 ? (
           <div className="mz-empty">
             {keyword || categoryId || tag
@@ -209,52 +216,55 @@ export default async function BlogHomePage({
               : '还没有公开文章'}
           </div>
         ) : (
-          <div className="mz-post-list">
-            {res.list.map((a) => (
-              <ArticleLink
-                key={a.id}
-                preview={previewOf(a)}
-                className={cn('mz-post-card', a.coverUrl && 'has-cover')}
-              >
-                <div className="mz-post-body">
-                  <h2 className="mz-post-title">{a.title}</h2>
-                  <div className="mz-post-meta">
-                    <span className="inline-flex items-center gap-1">
-                      <Calendar />
-                      <time>
-                        {formatDateSlash(a.publishedAt || a.createdAt)}
-                      </time>
-                    </span>
-                    {a.pinned ? <Badge variant="secondary">置顶</Badge> : null}
-                    {catName(a.categoryId) ? (
-                      <span className="inline-flex items-center gap-1">
-                        <FolderOpen />
-                        {catName(a.categoryId)}
+          <div className="mz-feed-grid">
+            {res.list.map((a) => {
+              return (
+                <ArticleLink
+                  key={a.id}
+                  preview={previewOf(a)}
+                  className="mz-feed-card"
+                >
+                  <div className="mz-feed-body">
+                    <h2 className="mz-feed-title">{a.title}</h2>
+                    {a.summary ? (
+                      <div className="mz-feed-excerpt">
+                        <MarkdownSummary content={a.summary} />
+                      </div>
+                    ) : null}
+                    <div className="mz-feed-stats">
+                      <span>
+                        <Calendar />
+                        <time>{formatDateCn(a.publishedAt || a.createdAt)}</time>
                       </span>
-                    ) : null}
-                    {a.visibility === 'password' ? (
-                      <span className="text-xs opacity-70">密码</span>
-                    ) : null}
-                  </div>
-                  {a.summary ? (
-                    <div className="mz-post-excerpt">
-                      <MarkdownSummary content={a.summary} />
+                      <span>
+                        <Eye />
+                        {a.viewCount}
+                      </span>
+                      <span>
+                        <Heart />
+                        {a.likeCount}
+                      </span>
+                      <span>
+                        <MessageCircle />
+                        {a.commentCount}
+                      </span>
+                      {a.pinned && !sort ? (
+                        <Badge variant="secondary">置顶</Badge>
+                      ) : null}
+                      {a.visibility === 'password' ? (
+                        <span className="opacity-70">密码</span>
+                      ) : null}
                     </div>
-                  ) : null}
-                  {!a.coverUrl ? (
-                    <span className="mz-post-enter" aria-hidden>
-                      <ChevronRight className="size-7" />
+                  </div>
+                  {a.coverUrl ? (
+                    <span className="mz-feed-cover">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={a.coverUrl} alt="" loading="lazy" />
                     </span>
                   ) : null}
-                </div>
-                {a.coverUrl ? (
-                  <span className="mz-post-cover">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={a.coverUrl} alt="" />
-                  </span>
-                ) : null}
-              </ArticleLink>
-            ))}
+                </ArticleLink>
+              )
+            })}
           </div>
         )}
         {pager}

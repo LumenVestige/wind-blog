@@ -210,6 +210,37 @@ export function getArticleBySlug(
   )
 }
 
+export interface AdjacentArticle {
+  slug: string
+  title: string
+}
+
+/**
+ * 按发布时间相邻的公开文章：prev 为更早一篇，next 为更新一篇。
+ * 只取访客可见的文章，避免向读者暴露私密或未审核的标题。
+ */
+export function adjacentArticles(row: ArticleRow): {
+  prev: AdjacentArticle | null
+  next: AdjacentArticle | null
+} {
+  const at = row.published_at || row.created_at
+  const base = `SELECT a.slug, a.title FROM blog_articles a
+    WHERE a.user_id = ? AND a.id != ?
+      AND a.visibility IN ('public','password') AND a.moderation_status = 'approved'`
+  const when = 'COALESCE(a.published_at, a.created_at)'
+  const prev = get<AdjacentArticle>(
+    `${base} AND (${when} < ? OR (${when} = ? AND a.id < ?))
+     ORDER BY ${when} DESC, a.id DESC LIMIT 1`,
+    row.user_id, row.id, at, at, row.id,
+  )
+  const next = get<AdjacentArticle>(
+    `${base} AND (${when} > ? OR (${when} = ? AND a.id > ?))
+     ORDER BY ${when} ASC, a.id ASC LIMIT 1`,
+    row.user_id, row.id, at, at, row.id,
+  )
+  return { prev: prev || null, next: next || null }
+}
+
 const RESERVED_SLUGS = new Set(['about', 'archives', 'blog', 'blog-plaza', 'categories', 'dashboard', 'friends', 'login', 'manage', 'p', 'register', 'setup', 'static', 'api'])
 
 function slugExists(userId: number, slug: string, excludeId = 0): boolean {
@@ -437,6 +468,10 @@ export interface ListOptions {
   keyword?: string
   tag?: string
   pinnedFirst?: boolean
+  /** latest（默认）按发布时间；hot 按阅读量。 */
+  sort?: 'latest' | 'hot'
+  /** 关键字只匹配标题，不匹配摘要。 */
+  titleOnly?: boolean
 }
 
 export function listMine(
@@ -533,9 +568,14 @@ export function listByUsername(
     params.push(Number(opts.categoryId))
   }
   if (opts.keyword) {
-    where.push(isOwner || isAdmin ? '(a.title LIKE ? OR a.summary LIKE ?)' : "(a.title LIKE ? OR (a.visibility = 'public' AND a.summary LIKE ?))")
     const k = `%${opts.keyword}%`
-    params.push(k, k)
+    if (opts.titleOnly) {
+      where.push('a.title LIKE ?')
+      params.push(k)
+    } else {
+      where.push(isOwner || isAdmin ? '(a.title LIKE ? OR a.summary LIKE ?)' : "(a.title LIKE ? OR (a.visibility = 'public' AND a.summary LIKE ?))")
+      params.push(k, k)
+    }
   }
   if (opts.tag) {
     where.push(
@@ -551,9 +591,11 @@ export function listByUsername(
       `SELECT COUNT(*) AS c FROM blog_articles a WHERE ${whereSql}`,
       ...params,
     )?.c || 0
-  const order = opts.pinnedFirst && !activeFilter
-    ? '(a.pinned_at IS NOT NULL) DESC, a.pin_order ASC, a.published_at DESC, a.id DESC'
-    : 'a.published_at DESC, a.id DESC'
+  const order = opts.sort === 'hot'
+    ? 'a.view_count DESC, a.published_at DESC, a.id DESC'
+    : opts.pinnedFirst && !activeFilter
+      ? '(a.pinned_at IS NOT NULL) DESC, a.pin_order ASC, a.published_at DESC, a.id DESC'
+      : 'a.published_at DESC, a.id DESC'
   const rows = all<ArticleRow>(
     `SELECT ${ARTICLE_LIST_SELECT} FROM blog_articles a JOIN users u ON u.id = a.user_id
      WHERE ${whereSql} ORDER BY ${order} LIMIT ? OFFSET ?`,

@@ -1,8 +1,14 @@
 export const PAGE_SIZES = [10, 20, 50, 100] as const
+/** Two-column feed: multiples of 12 keep the last row full. */
+export const FEED_PAGE_SIZES = [12, 24, 48] as const
 
-export function parsePageSize(value: unknown, fallback = 10): number {
+export function parsePageSize(
+  value: unknown,
+  fallback = 10,
+  sizes: readonly number[] = PAGE_SIZES,
+): number {
   const size = Number(value)
-  return (PAGE_SIZES as readonly number[]).includes(size) ? size : fallback
+  return sizes.includes(size) ? size : fallback
 }
 
 export function parsePage(value: unknown): number {

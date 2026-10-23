@@ -22,6 +22,7 @@ import { getOwner } from '@/server/tenant'
 import { get, run, toBool } from '@/db'
 import { expandUrl } from '@/server/images'
 import {
+  adjacentArticles,
   createArticle,
   deleteArticle,
   getArticleById,
@@ -275,6 +276,14 @@ export const articleMineH: Handler = async (ctx) => {
     keyword: str(q.get('keyword')) || undefined,
   })
   return okRaw({ data })
+}
+
+export const articleAdjacentH: Handler = async (ctx) => {
+  const q = getQuery(ctx.req)
+  const row = getArticleBySlug(str(q.get('username')), str(q.get('slug')))
+  if (!row) throw new ApiError('文章不存在', 1, 404)
+  assertArticleVisible(row, await viewer(ctx))
+  return ok(adjacentArticles(row))
 }
 
 export const articleGetH: Handler = async (ctx) => {
