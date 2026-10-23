@@ -2,6 +2,7 @@ import { get, parseJson, run, toBool } from '@/db'
 import { ApiError } from '@/lib/api'
 import { isoToUnix } from '@/lib/utils'
 import { getSetting, setSetting } from '@/lib/settings'
+import { getOwner } from '../tenant'
 import { expandUrl } from '../images'
 
 export type ThemeId = 'mizuki' | 'chirpy' | 'simple'
@@ -68,6 +69,17 @@ export function ensureSiteConfig(userId: number): SiteConfigRow {
     'SELECT * FROM blog_site_configs WHERE user_id = ?',
     userId,
   )!
+}
+
+/** The site's default light/dark preference, readable before the site is set up. */
+export function defaultColorScheme(): ColorScheme {
+  const owner = getOwner()
+  if (!owner) return 'system'
+  const row = get<{ color_scheme: string }>(
+    'SELECT color_scheme FROM blog_site_configs WHERE user_id = ?',
+    owner.id,
+  )
+  return normalizeScheme(row?.color_scheme)
 }
 
 export function siteConfigData(row: SiteConfigRow) {

@@ -14,6 +14,8 @@ import '@/styles/blog-chirpy.css'
 import '@/styles/blog-motion.css'
 import '@/styles/motion.css'
 import { Toaster } from '@/components/ui/sonner'
+import { ThemeScript } from '@/components/blog/theme-script'
+import { defaultColorScheme } from '@/server/blog/site'
 
 export async function generateMetadata(): Promise<Metadata> {
   const name = siteName()
@@ -33,6 +35,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <ThemeScript scheme={defaultColorScheme()} />
+      </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
         <Toaster richColors position="top-center" />
