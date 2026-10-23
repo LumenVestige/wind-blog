@@ -467,6 +467,8 @@ export interface ListOptions {
   categoryId?: number
   keyword?: string
   tag?: string
+  /** 多个标签（精确匹配，需全部命中）。 */
+  tags?: string[]
   pinnedFirst?: boolean
   /** latest（默认）按发布时间；hot 按阅读量。 */
   sort?: 'latest' | 'hot'
@@ -584,7 +586,16 @@ export function listByUsername(
     )
     params.push(author.id, `%${opts.tag}%`)
   }
-  const activeFilter = !!(opts.categoryId || opts.keyword || opts.tag)
+  // 多标签精确匹配，且为「与」：文章需同时带有每个标签。
+  const tagFilters = [...new Set((opts.tags || []).map((t) => t.trim().toLowerCase()).filter(Boolean))]
+  for (const t of tagFilters) {
+    where.push(
+      `a.id IN (SELECT at.article_id FROM blog_article_tags at JOIN blog_tags t ON t.id = at.tag_id
+                WHERE t.user_id = ? AND t.name_lower = ?)`,
+    )
+    params.push(author.id, t)
+  }
+  const activeFilter = !!(opts.categoryId || opts.keyword || opts.tag || tagFilters.length)
   const whereSql = where.join(' AND ')
   const total =
     get<{ c: number }>(

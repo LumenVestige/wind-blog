@@ -16,6 +16,7 @@ export interface BlogShellData {
   icpNumber: string
   recentPosts: { id: number; slug: string; title: string; publishedAt: number; viewCount: number }[]
   categories: { id: number; name: string; articleCount: number }[]
+  tags: { name: string; count: number }[]
   pages: { slug: string; label: string }[]
   staticSites: { slug: string; label: string; publicPath: string }[]
 }

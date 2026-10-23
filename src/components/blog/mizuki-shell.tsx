@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { MotionSurface } from '@/components/motion/motion-surface'
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import {
   Archive,
   ArrowUp,
@@ -21,6 +21,7 @@ import { formatDateCn } from '@/lib/blog-present'
 import { cn } from '@/lib/utils'
 import { ThemeInit, ThemeToggle } from './theme-toggle'
 import { BlogSiteFooter } from './site-footer'
+import { CategoryFilterList, CategoryLinks, TagFilterList, TagLinks } from './category-filter-list'
 import { BlogChrome } from './blog-chrome'
 import { useIsDark } from './use-is-dark'
 import { useBlogRouteScroll } from './use-blog-route-scroll'
@@ -253,14 +254,18 @@ export function MizukiShell({
             {articleTitle == null && data.categories.length > 0 && (
               <div className="mz-widget">
                 <h2 className="mz-widget-title">分类</h2>
-                <div className="flex flex-wrap gap-1.5">
-                  {data.categories.map((c) => (
-                    <Link key={c.id} href={`/?categoryId=${c.id}`} className="mz-tag">
-                      {c.name}
-                      {c.articleCount != null ? ` · ${c.articleCount}` : ''}
-                    </Link>
-                  ))}
-                </div>
+                <Suspense fallback={<CategoryLinks categories={data.categories} />}>
+                  <CategoryFilterList categories={data.categories} />
+                </Suspense>
+              </div>
+            )}
+
+            {articleTitle == null && data.tags.length > 0 && (
+              <div className="mz-widget">
+                <h2 className="mz-widget-title">标签</h2>
+                <Suspense fallback={<TagLinks tags={data.tags} />}>
+                  <TagFilterList tags={data.tags} />
+                </Suspense>
               </div>
             )}
             {panel}

@@ -5,6 +5,8 @@ import {
   FolderOpen,
   Heart,
   MessageCircle,
+  Tag,
+  X,
 } from 'lucide-react'
 import { siteOwner } from '@/server/tenant'
 import { listByUsername } from '@/server/blog/articles'
@@ -44,7 +46,17 @@ export default async function BlogHomePage({
 
   const themeId = cfg.themeId
   const categoryId = Number(one(sp.categoryId)) || undefined
-  const tag = one(sp.tag) || undefined
+  // Several tags can be active at once (`?tag=a&tag=b`); articles must have all.
+  const tags = [
+    ...new Set(
+      ([] as string[])
+        .concat(sp.tag ?? [])
+        .map((t) => t.trim())
+        .filter(Boolean),
+    ),
+  ]
+  // Single-tag value kept for the legacy layouts below.
+  const tag = tags[0]
   const keyword = one(sp.q) || one(sp.keyword) || undefined
   const sort = one(sp.sort) === 'hot' ? 'hot' : undefined
   let page = parsePage(one(sp.page))
@@ -53,7 +65,7 @@ export default async function BlogHomePage({
     page,
     pageSize,
     categoryId,
-    tag,
+    tags,
     keyword,
     sort,
     titleOnly: true,
@@ -65,7 +77,7 @@ export default async function BlogHomePage({
       page,
       pageSize,
       categoryId,
-      tag,
+      tags,
       keyword,
       sort,
       titleOnly: true,
@@ -83,7 +95,7 @@ export default async function BlogHomePage({
     categoryName: catName(a.categoryId) || '',
   })
   const activeCat = categoryId ? catName(categoryId) : undefined
-  const baseQuery = { q: keyword, categoryId, tag, sort }
+  const baseQuery = { q: keyword, categoryId, tag: tags, sort }
 
   const intro =
     cfg.homeIntroMd.trim() && !keyword && !categoryId && !tag ? (
@@ -191,22 +203,55 @@ export default async function BlogHomePage({
       <div>
         {intro}
         <div className="mz-feed-toolbar">
-          <nav className="mz-feed-tabs" aria-label="文章排序">
-            {tabs.map((t) => (
-              <Link
-                key={t.label}
-                href={blogQuery(username, { ...baseQuery, sort: t.key })}
-                className={cn('mz-feed-tab', sort === t.key && 'is-active')}
-                aria-current={sort === t.key ? 'page' : undefined}
-              >
-                {t.label}
-              </Link>
+          <div className="mz-feed-toolbar-start">
+            <nav className="mz-feed-tabs" aria-label="文章排序">
+              {tabs.map((t) => (
+                <Link
+                  key={t.label}
+                  href={blogQuery(username, { ...baseQuery, sort: t.key })}
+                  className={cn('mz-feed-tab', sort === t.key && 'is-active')}
+                  aria-current={sort === t.key ? 'page' : undefined}
+                >
+                  {t.label}
+                </Link>
+              ))}
+            </nav>
+            {categoryId ? (
+              <span className="mz-feed-filter">
+                <FolderOpen aria-hidden />
+                <span className="truncate">{activeCat || `分类 ${categoryId}`}</span>
+                <Link
+                  href={blogQuery(username, { ...baseQuery, categoryId: undefined })}
+                  className="mz-feed-filter-clear"
+                  aria-label={`取消分类筛选：${activeCat || categoryId}`}
+                  title="取消分类筛选"
+                >
+                  <X />
+                </Link>
+              </span>
+            ) : null}
+            {tags.map((t) => (
+              <span key={t} className="mz-feed-filter">
+                <Tag aria-hidden />
+                <span className="truncate">{t}</span>
+                <Link
+                  href={blogQuery(username, {
+                    ...baseQuery,
+                    tag: tags.filter((x) => x !== t),
+                  })}
+                  className="mz-feed-filter-clear"
+                  aria-label={`取消标签筛选：${t}`}
+                  title="取消标签筛选"
+                >
+                  <X />
+                </Link>
+              </span>
             ))}
-          </nav>
+          </div>
           <FeedSearch
             keyword={keyword || ''}
-            clearHref={blogQuery(username, { categoryId, tag, sort })}
-            hidden={{ categoryId, tag, sort }}
+            clearHref={blogQuery(username, { ...baseQuery, q: undefined })}
+            hidden={{ categoryId, tag: tags, sort }}
           />
         </div>
         {res.list.length === 0 ? (

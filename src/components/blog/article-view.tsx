@@ -331,7 +331,7 @@ export function ArticleView({
 
   const tags =
     article.tags.length > 0 ? (
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className={isMizuki ? 'mz-article-tags' : 'mt-3 flex flex-wrap gap-1.5'}>
         {article.tags.map((t) => (
           <Link
             key={t}

@@ -599,6 +599,32 @@
     background var(--mz-duration) var(--mz-ease);
 }
 
+/* All tags: scroll inside the widget instead of stretching the sidebar. */
+.mz-tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  max-height: 15rem;
+  overflow-y: auto;
+  margin-right: -0.4rem;
+  padding-right: 0.4rem;
+}
+
+.mz-tag-cloud::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mz-tag-cloud::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--mz-text-50) 35%, transparent);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .mz-tag-cloud {
+    scrollbar-width: thin;
+  }
+}
+
 .mz-tag:hover,
 .mz-tag.is-active {
   color: var(--mz-primary);
@@ -835,6 +861,59 @@
   [data-blog-theme='mizuki'] {
     --mz-page-width: min(104rem, 70vw);
   }
+}
+
+.mz-feed-toolbar-start {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+/* Active tag filter, shown next to the sort tabs. */
+.mz-feed-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 14rem;
+  height: 2rem;
+  padding: 0 0.3rem 0 0.7rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--mz-primary);
+  background: var(--mz-btn-bg);
+  animation: mz-fade-in 200ms var(--mz-ease) backwards;
+}
+
+.mz-feed-filter > svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+}
+
+.mz-feed-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  color: var(--mz-text-50);
+  transition:
+    color var(--mz-duration) var(--mz-ease),
+    background var(--mz-duration) var(--mz-ease);
+}
+
+.mz-feed-filter-clear:hover {
+  color: var(--mz-primary);
+  background: var(--mz-btn-bg-hover);
+}
+
+.mz-feed-filter-clear svg {
+  width: 0.8rem;
+  height: 0.8rem;
 }
 
 .mz-feed-tabs {
@@ -1232,6 +1311,18 @@
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
   border-bottom: 1px dashed var(--mz-line);
+}
+
+/* Tags sit just under the meta divider, with clear space before the body. */
+.mz-article-meta:has(+ .mz-article-tags) {
+  margin-bottom: 0.75rem;
+}
+
+.mz-article-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
 }
 
 .mz-article-meta a {

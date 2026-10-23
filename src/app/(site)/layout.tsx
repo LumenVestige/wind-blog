@@ -3,6 +3,7 @@ import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { listPagesPublic } from '@/server/blog/pages'
 import { listStaticPublic } from '@/server/blog/static-sites'
 import { listCategoriesPublic } from '@/server/blog/categories'
+import { listTagsPublic } from '@/server/blog/tags'
 import { listByUsername } from '@/server/blog/articles'
 import { expandUrl } from '@/server/images'
 import { getViewer } from '@/server/session'
@@ -55,6 +56,7 @@ export default async function BlogLayout({ children }: { children: React.ReactNo
     icpNumber: getSetting('icp_number', ''),
     recentPosts,
     categories,
+    tags: listTagsPublic(username, 500),
     pages,
     staticSites,
   }

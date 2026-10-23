@@ -22,14 +22,19 @@ export function formatDateLong(sec?: number): string {
   return d.toLocaleString('zh-CN')
 }
 
+export type BlogQueryValue = string | number | undefined | readonly (string | number)[]
+
 export function blogQuery(
   username: string,
-  query: Record<string, string | number | undefined>,
+  query: Record<string, BlogQueryValue>,
 ): string {
   const q = new URLSearchParams()
   for (const [k, v] of Object.entries(query)) {
-    if (v === undefined || v === '' || v === 0) continue
-    q.set(k, String(v))
+    // Arrays become repeated params (`?categoryId=1&categoryId=2`).
+    for (const item of Array.isArray(v) ? v : [v]) {
+      if (item === undefined || item === '' || item === 0) continue
+      q.append(k, String(item))
+    }
   }
   const s = q.toString()
   return s ? `/?${s}` : `/`
