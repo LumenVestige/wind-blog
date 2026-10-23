@@ -111,7 +111,8 @@ export function ArticleView({
   const isMizuki = themeId === 'mizuki'
   const locked = article.requiresPassword
   const base = ''
-  const editHref = `/manage/edit/${article.id}`
+  // `from=article` makes the editor return here after saving.
+  const editHref = `/manage/edit/${article.id}?from=article`
 
   useEffect(() => {
     if (!chrome) return

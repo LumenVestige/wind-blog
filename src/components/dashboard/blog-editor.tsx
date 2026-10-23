@@ -71,9 +71,12 @@ type Article = {
 export function BlogEditor({
   articleId,
   username,
+  returnTo = 'list',
 }: {
   articleId?: number
   username: string
+  /** Where to go after saving: the article page or the admin article list. */
+  returnTo?: 'article' | 'list'
 }) {
   const [value, setValue] = useState<Draft>(empty)
   const [baseline, setBaseline] = useState(JSON.stringify(empty))
@@ -185,7 +188,7 @@ export function BlogEditor({
     }
     setSaving(true)
     try {
-      await api.post(
+      const saved = await api.post<{ slug: string }>(
         `/api/user/blog/article/${articleId ? 'update' : 'create'}`,
         {
           id: articleId,
@@ -220,7 +223,13 @@ export function BlogEditor({
             ? '已更新'
             : '已发布',
       )
-      router.push('/manage/articles')
+      // Opened from an article page → back to it (slug may have changed);
+      // opened from the admin → back to the article list.
+      router.push(
+        returnTo === 'article' && saved?.slug
+          ? `/${encodeURIComponent(saved.slug)}`
+          : '/manage/articles',
+      )
       router.refresh()
     } catch (e) {
       setError(e)
