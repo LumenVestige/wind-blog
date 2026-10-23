@@ -143,7 +143,16 @@ export default async function ArticlePage({
   const { slug } = await params
   const author = siteOwner()
   const themeId = siteConfigData(ensureSiteConfig(author.id)).themeId
-  return <InstantArticle themeId={themeId} username={author.username} categoryName="" />
+  const viewer = await getViewer()
+  return (
+    <InstantArticle
+      themeId={themeId}
+      username={author.username}
+      categoryName=""
+      viewerId={viewer?.id || 0}
+      isAdmin={!!viewer?.isAdmin}
+    />
+  )
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

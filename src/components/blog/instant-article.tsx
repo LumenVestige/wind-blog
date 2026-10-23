@@ -33,10 +33,14 @@ export function InstantArticle({
   themeId,
   username,
   categoryName,
+  viewerId = 0,
+  isAdmin = false,
 }: {
   themeId: 'mizuki' | 'chirpy' | 'simple'
   username: string
   categoryName: string
+  viewerId?: number
+  isAdmin?: boolean
 }) {
   const params = useParams<{ slug: string }>()
   const slug = params.slug
@@ -83,6 +87,7 @@ export function InstantArticle({
     ? extractHeadings(article.content).filter((h) => h.level <= 4)
     : []
   const toc: TocItem[] = headings.map((h) => ({ id: h.id, text: h.text, level: h.level }))
+  const isOwner = viewerId > 0 && (article?.userId === viewerId || isAdmin)
   const body = article ? (
     <ArticleBodyContent
       themeId={themeId}
@@ -112,12 +117,12 @@ export function InstantArticle({
     <ArticleView
       themeId={themeId}
       username={article?.username || username}
-      isOwner={false}
+      isOwner={isOwner}
       article={shell}
       related={[]}
       toc={toc}
-      viewerId={0}
-      isAdmin={false}
+      viewerId={viewerId}
+      isAdmin={isAdmin}
       bodySlot={body}
     />
     {themeId === 'mizuki' && article ? (
