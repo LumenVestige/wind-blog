@@ -1612,7 +1612,7 @@
   /* Pinned to the viewport bottom on short pages (shell is a 100svh column). */
   margin-top: auto;
   margin-bottom: 0.75rem;
-  padding: 0.5rem 1rem 0;
+  padding: 1rem 1rem 0.25rem;
   text-align: center;
   font-size: 0.75rem;
   color: var(--mz-text-50);
