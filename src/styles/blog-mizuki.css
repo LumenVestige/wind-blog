@@ -1375,7 +1375,7 @@
 .mz-footer {
   /* Pinned to the viewport bottom on short pages (shell is a 100svh column). */
   margin-top: auto;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
   padding: 1.75rem 1rem 0;
   text-align: center;
   font-size: 0.75rem;
