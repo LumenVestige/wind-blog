@@ -797,9 +797,9 @@
 }
 
 .mz-feed-tab {
-  padding: 0.4rem 1.1rem;
+  padding: 0.35rem 1rem;
   border-radius: calc(var(--mz-radius-sm) - 0.25rem);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: var(--mz-text-50);
   text-decoration: none;
@@ -833,7 +833,7 @@
   border: 1px solid var(--mz-line);
   background: var(--mz-card-bg);
   color: var(--mz-text-90);
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   outline: none;
   transition: border-color var(--mz-duration) var(--mz-ease);
 }
@@ -876,7 +876,7 @@
 .mz-feed-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1rem;
+  gap: 0.7rem;
 }
 
 @media (min-width: 768px) {
@@ -888,7 +888,7 @@
 .mz-feed-card {
   display: flex;
   gap: 1rem;
-  padding: 1rem 1.2rem;
+  padding: 0.9rem 1.2rem;
   background: var(--mz-card-bg);
   border: 1px solid var(--mz-line);
   border-radius: var(--mz-radius-sm);
@@ -918,14 +918,14 @@
   flex: 1;
   min-width: 0;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .mz-feed-title {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  line-height: 1.45;
+  line-height: 1.4;
   color: var(--mz-text-90);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -939,8 +939,8 @@
 }
 
 .mz-feed-excerpt {
-  font-size: 0.95rem;
-  line-height: 1.65;
+  font-size: 0.875rem;
+  line-height: 1.63;
   color: var(--mz-text-50);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -952,10 +952,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem 1.1rem;
+  gap: 0.4rem 1rem;
   margin-top: auto;
   padding-top: 0.25rem;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: var(--mz-text-50);
 }
 
@@ -966,14 +966,14 @@
 }
 
 .mz-feed-stats svg {
-  width: 1rem;
-  height: 1rem;
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 .mz-feed-cover {
   display: block;
-  width: 7.5rem;
-  height: 7.5rem;
+  width: 6.75rem;
+  height: 6.75rem;
   flex-shrink: 0;
   align-self: center;
   overflow: hidden;
@@ -1373,7 +1373,10 @@
 }
 
 .mz-footer {
-  padding: 1.75rem 1rem 1.5rem;
+  /* Pinned to the viewport bottom on short pages (shell is a 100svh column). */
+  margin-top: auto;
+  margin-bottom: 1.25rem;
+  padding: 1.75rem 1rem 0;
   text-align: center;
   font-size: 0.75rem;
   color: var(--mz-text-50);
