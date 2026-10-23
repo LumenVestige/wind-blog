@@ -43,17 +43,55 @@ export function MizukiShell({
   const dark = useIsDark()
 
   const [menuOpen, setMenuOpen] = useState(false)
+  const [compactNav, setCompactNav] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<{ id: number; slug: string; title: string; summary?: string }[]>([])
   const [showTop, setShowTop] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const navInnerRef = useRef<HTMLDivElement>(null)
+  const brandRef = useRef<HTMLAnchorElement>(null)
+  const navLinksRef = useRef<HTMLElement>(null)
+  const navActionsRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     setMenuOpen(false)
     setSearchOpen(false)
   }, [pathname])
+
+  useEffect(() => {
+    if (!compactNav) setMenuOpen(false)
+  }, [compactNav])
+
+  useEffect(() => {
+    const inner = navInnerRef.current
+    if (!inner) return
+    const measure = () => {
+      const brand = brandRef.current
+      const links = navLinksRef.current
+      const actions = navActionsRef.current
+      if (!brand || !links || !actions) return
+      const style = getComputedStyle(inner)
+      const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+      const available = inner.clientWidth - padding
+      const menuButton = menuButtonRef.current
+      const menuWidth =
+        menuButton && getComputedStyle(menuButton).display !== 'none' ? menuButton.offsetWidth : 0
+      const required = brand.offsetWidth + links.scrollWidth + actions.offsetWidth - menuWidth + 24
+      setCompactNav(required > available)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    const targets = [inner, brandRef.current, navLinksRef.current, navActionsRef.current]
+    targets.forEach((el) => el && observer.observe(el))
+    window.addEventListener('resize', measure)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 360)
@@ -112,12 +150,12 @@ export function MizukiShell({
   return (
     <BlogChrome>
       {({ panel }) => (
-    <div data-blog-theme="mizuki" className={cn('mz-shell', dark && 'dark')}>
+    <div data-blog-theme="mizuki" className={cn('mz-shell', dark && 'dark', compactNav && 'is-compact')}>
       <ThemeInit scheme={scheme} />
       <div className="mz-top-row">
       <header className="mz-navbar" aria-label="导航">
-        <div className="mz-nav-inner">
-          <Link href="/" className="mz-brand">
+        <div className="mz-nav-inner" ref={navInnerRef}>
+          <Link href="/" className="mz-brand" ref={brandRef}>
             {data.avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={data.avatar} alt="" className="mz-brand-avatar" width={28} height={28} />
@@ -127,7 +165,7 @@ export function MizukiShell({
             <span className="truncate">{data.siteName}</span>
           </Link>
 
-          <nav className="mz-nav-links" aria-label="博客导航">
+          <nav className="mz-nav-links" aria-label="博客导航" ref={navLinksRef}>
             {navItems.map((it) => (
               <Link key={it.href} href={it.href} className={cn('mz-nav-link', active(it.href, it.end) && 'is-active')}>
                 <it.icon className="size-3.5 opacity-70" />
@@ -142,7 +180,7 @@ export function MizukiShell({
 
           </nav>
 
-          <div className="mz-nav-actions">
+          <div className="mz-nav-actions" ref={navActionsRef}>
             <button
               type="button"
               className="mz-icon-btn"
@@ -163,9 +201,10 @@ export function MizukiShell({
             )}
             <button
               type="button"
-              className="mz-icon-btn md:hidden"
+              className="mz-icon-btn mz-menu-btn"
               aria-label="菜单"
               aria-expanded={menuOpen}
+              ref={menuButtonRef}
               onClick={() => setMenuOpen((v) => !v)}
             >
               <Menu className="size-4" />
