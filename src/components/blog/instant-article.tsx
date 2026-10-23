@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { renderMarkdown, extractHeadings } from '@/lib/markdown'
 import { formatDateLong } from '@/lib/blog-present'
@@ -91,11 +92,18 @@ export function InstantArticle({
       articleId={article.id}
     />
   ) : (
-    <div className="space-y-4 py-8" aria-busy="true" aria-live="polite">
-      <p className="text-center text-sm text-muted-foreground">
-        {failed ? '完整页面加载失败' : '正在进入完整页面…'}
-      </p>
-      {!failed ? <div className="mx-auto h-1 w-40 overflow-hidden rounded bg-muted"><span className="block h-full w-1/2 animate-pulse bg-primary" /></div> : null}
+    <div className="flex justify-center py-10" aria-busy={!failed} aria-live="polite">
+      {failed ? (
+        <p className="text-sm text-muted-foreground">完整页面加载失败</p>
+      ) : (
+        <>
+          <Loader2
+            className="size-8 animate-spin text-[var(--mz-primary,currentColor)] motion-reduce:animate-none"
+            aria-hidden
+          />
+          <span className="sr-only">加载中</span>
+        </>
+      )}
     </div>
   )
 

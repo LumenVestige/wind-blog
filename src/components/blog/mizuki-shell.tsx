@@ -7,6 +7,8 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Archive,
   ArrowUp,
+  Calendar,
+  Eye,
   FolderOpen,
   Home,
   Info,
@@ -15,6 +17,7 @@ import {
   Settings,
   Users,
 } from 'lucide-react'
+import { formatDateCn } from '@/lib/blog-present'
 import { cn } from '@/lib/utils'
 import { ThemeInit, ThemeToggle } from './theme-toggle'
 import { BlogSiteFooter } from './site-footer'
@@ -22,6 +25,9 @@ import { BlogChrome } from './blog-chrome'
 import { useIsDark } from './use-is-dark'
 import { useBlogRouteScroll } from './use-blog-route-scroll'
 import type { BlogShellData } from './shell-types'
+
+/** Characters kept after the ellipsis in sidebar titles. */
+const RECENT_TAIL = 6
 
 export function MizukiShell({
   data,
@@ -214,11 +220,32 @@ export function MizukiShell({
               <div className="mz-widget">
                 <h2 className="mz-widget-title">最近更新</h2>
                 <ul className="mz-panel-list">
-                  {data.recentPosts.slice(0, 3).map((a) => (
-                    <li key={a.id}>
-                      <Link href={`${base}/${a.slug}`}>{a.title}</Link>
-                    </li>
-                  ))}
+                  {data.recentPosts.slice(0, 5).map((a) => {
+                    // Middle ellipsis: the head shrinks, the tail stays visible.
+                    const chars = Array.from(a.title)
+                    const head = chars.slice(0, -RECENT_TAIL).join('')
+                    const tail = chars.slice(-RECENT_TAIL).join('')
+                    return (
+                      <li key={a.id}>
+                        <Link href={`${base}/${a.slug}`} className="mz-recent-item" title={a.title}>
+                          <span className="mz-recent-title">
+                            <span className="mz-recent-head">{head}</span>
+                            <span className="mz-recent-tail">{tail}</span>
+                          </span>
+                          <span className="mz-recent-meta">
+                            <span>
+                              <Calendar />
+                              {formatDateCn(a.publishedAt)}
+                            </span>
+                            <span>
+                              <Eye />
+                              {a.viewCount}
+                            </span>
+                          </span>
+                        </Link>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             )}

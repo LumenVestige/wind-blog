@@ -216,7 +216,11 @@ export default async function BlogHomePage({
               : '还没有公开文章'}
           </div>
         ) : (
-          <div className="mz-feed-grid">
+          <div
+            className="mz-feed-grid"
+            // Size rows for a full page so a short last page keeps card height.
+            style={{ '--mz-feed-rows': Math.ceil(pageSize / 2) } as React.CSSProperties}
+          >
             {res.list.map((a) => {
               return (
                 <ArticleLink
@@ -226,11 +230,9 @@ export default async function BlogHomePage({
                 >
                   <div className="mz-feed-body">
                     <h2 className="mz-feed-title">{a.title}</h2>
-                    {a.summary ? (
-                      <div className="mz-feed-excerpt">
-                        <MarkdownSummary content={a.summary} />
-                      </div>
-                    ) : null}
+                    <div className="mz-feed-excerpt">
+                      {a.summary ? <MarkdownSummary content={a.summary} /> : null}
+                    </div>
                     <div className="mz-feed-stats">
                       <span>
                         <Calendar />

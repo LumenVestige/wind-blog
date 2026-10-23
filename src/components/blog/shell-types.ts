@@ -14,7 +14,7 @@ export interface BlogShellData {
   showFriends: boolean
   isOwner: boolean
   icpNumber: string
-  recentPosts: { id: number; slug: string; title: string }[]
+  recentPosts: { id: number; slug: string; title: string; publishedAt: number; viewCount: number }[]
   categories: { id: number; name: string; articleCount: number }[]
   pages: { slug: string; label: string }[]
   staticSites: { slug: string; label: string; publicPath: string }[]
