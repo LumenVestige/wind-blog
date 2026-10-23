@@ -30,6 +30,9 @@ import type { BlogShellData } from './shell-types'
 /** Characters kept after the ellipsis in sidebar titles. */
 const RECENT_TAIL = 6
 
+/** Pages that render without the right-hand sidebar. */
+const SIDEBARLESS_PATHS = new Set(['/archives', '/about'])
+
 export function MizukiShell({
   data,
   scheme,
@@ -109,7 +112,12 @@ export function MizukiShell({
 
   return (
     <BlogChrome>
-      {({ panel, articleTitle }) => (
+      {({ panel, articleTitle }) => {
+        // Archive and about pages use the full width. Articles keep only their
+        // outline, and an article without one has nothing left for the rail.
+        const showSidebar =
+          !SIDEBARLESS_PATHS.has(pathname) && (articleTitle == null || !!panel)
+        return (
     <div data-blog-theme="mizuki" className={cn('mz-shell', dark && 'dark', compactNav && 'is-compact')}>
       <ThemeInit scheme={scheme} />
       <div className="mz-top-row">
@@ -204,8 +212,7 @@ export function MizukiShell({
         <div
           className={cn(
             'mz-grid',
-            // An article without an outline has nothing left for the sidebar.
-            (articleTitle == null || panel) && 'has-sidebar',
+            showSidebar && 'has-sidebar',
             articleTitle != null && 'is-article',
           )}
         >
@@ -213,7 +220,7 @@ export function MizukiShell({
             {children}
           </main>
 
-          {(articleTitle == null || panel) && (
+          {showSidebar && (
           <aside className="mz-sidebar" aria-label="侧栏">
             {/* Article pages keep only the outline (passed in as `panel`). */}
             {articleTitle == null && data.recentPosts.length > 0 && (
@@ -284,7 +291,8 @@ export function MizukiShell({
         <ArrowUp className="size-4" />
       </button>
     </div>
-      )}
+        )
+      }}
     </BlogChrome>
   )
 }
