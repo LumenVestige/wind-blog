@@ -10,7 +10,6 @@ import {
   FolderOpen,
   Home,
   Info,
-  Menu,
   Search,
   LogIn,
   Settings,
@@ -42,7 +41,6 @@ export function MizukiShell({
   const base = ''
   const dark = useIsDark()
 
-  const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<{ id: number; slug: string; title: string; summary?: string }[]>([])
@@ -51,7 +49,6 @@ export function MizukiShell({
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setMenuOpen(false)
     setSearchOpen(false)
   }, [pathname])
 
@@ -161,49 +158,9 @@ export function MizukiShell({
                 <LogIn className="size-4" />
               </Link>
             )}
-            <button
-              type="button"
-              className="mz-icon-btn md:hidden"
-              aria-label="菜单"
-              onClick={() => setMenuOpen((v) => !v)}
-            >
-              <Menu className="size-4" />
-            </button>
           </div>
         </div>
       </header>
-
-        <div className={cn('mz-mobile-menu', menuOpen && 'is-open')}>
-          <div className="mz-mobile-panel">
-            {navItems.map((it) => (
-              <Link
-                key={it.href}
-                href={it.href}
-                onClick={() => setMenuOpen(false)}
-                className={cn('mz-nav-link', active(it.href, it.end) && 'is-active')}
-              >
-                <it.icon className="size-3.5 opacity-70" />
-                {it.label}
-              </Link>
-            ))}
-            {data.pages.map((p) => (
-              <Link
-                key={p.slug}
-                href={`${base}/p/${p.slug}`}
-                className="mz-nav-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                {p.label}
-              </Link>
-            ))}
-            {data.isOwner ? null : (
-              <Link href={`/login?next=${encodeURIComponent(pathname || '/')}`} className="mz-nav-link" onClick={() => setMenuOpen(false)}>
-                <LogIn className="size-3.5 opacity-70" />
-                登录
-              </Link>
-            )}
-          </div>
-        </div>
 
         {searchOpen && (
           <div className="relative z-60">

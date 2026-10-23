@@ -4,6 +4,7 @@ out
 build
 dist
 coverage
+.idea
 
 # data
 data/*.db
