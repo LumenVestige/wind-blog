@@ -1733,3 +1733,108 @@
 [data-blog-theme='mizuki'] ::selection {
   background: var(--mz-selection);
 }
+
+/* ---------- article loading placeholder ---------- */
+
+.mz-skeleton {
+  border-radius: 0.375rem;
+  background: linear-gradient(90deg, var(--mz-btn-bg) 0%, var(--mz-btn-bg-hover) 50%, var(--mz-btn-bg) 100%);
+  background-size: 200% 100%;
+  animation: mz-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.mz-skeleton-title {
+  height: clamp(1.9rem, 3.6vw, 2.5rem);
+  width: min(70%, 28rem);
+  margin: 0 0 0.75rem;
+}
+
+.mz-skeleton-meta {
+  display: inline-block;
+  /* 0.85rem meta text: thin bar, padded back to the text line height. */
+  height: 0.6rem;
+  margin: 0.3rem 0;
+  border-radius: 999px;
+}
+
+/* Bars follow .mz-prose metrics: 1rem text on a 1.75 line box. */
+.mz-article-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1.05em;
+  padding-top: 0.5em;
+  font-size: 1rem;
+}
+
+.mz-skeleton-line {
+  height: 0.7em;
+  border-radius: 999px;
+}
+
+.mz-skeleton-heading {
+  height: 1em;
+  width: 38%;
+  margin: 1em 0 0.4em;
+  border-radius: 999px;
+}
+
+@keyframes mz-skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* Loading card fills the viewport below the navbar, leaving room for prev/next. */
+.mz-article.is-loading {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--mz-nav-h) - 9rem);
+  min-height: 24rem;
+  overflow: hidden;
+}
+
+.mz-article.is-loading .mz-article-skeleton {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Lines overflow on purpose; don't let flex squash them to zero height. */
+.mz-article-skeleton > * {
+  flex-shrink: 0;
+}
+
+/* A line that doesn't fit whole wraps into a second column pushed fully out
+   of view, so the clipped edge never shows a sliver of a bar. */
+.mz-article.is-loading .mz-article-skeleton,
+.mz-toc-skeleton {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  column-gap: 100%;
+}
+
+/* Same height as .mz-article.is-loading so both cards end level. */
+.mz-toc-loading {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--mz-nav-h) - 9rem);
+  min-height: 24rem;
+  overflow: hidden;
+}
+
+.mz-toc-skeleton {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 1.1em;
+  overflow: hidden;
+  font-size: 0.875rem;
+}
+
+.mz-toc-skeleton > * {
+  flex-shrink: 0;
+}

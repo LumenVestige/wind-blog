@@ -80,6 +80,24 @@ export function ArticleBodyContent({
   )
 }
 
+// Overflows any viewport; the card clips it to the article card's height.
+const TOC_SKELETON_WIDTHS = Array.from({ length: 3 }, () => [
+  '82%', '64%', '74%', '58%', '88%', '68%', '52%', '78%', '60%', '70%', '84%', '56%', '72%', '62%',
+]).flat()
+
+function ArticleTocSkeleton() {
+  return (
+    <section className="toc-card mz-widget mz-toc-loading" aria-hidden>
+      <h2 className="mz-widget-title">目录</h2>
+      <div className="mz-toc-skeleton">
+        {TOC_SKELETON_WIDTHS.map((w, i) => (
+          <span key={i} className="mz-skeleton mz-skeleton-line" style={{ width: w, marginLeft: i % 3 ? '0.8rem' : 0 }} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export function ArticleView({
   themeId,
   username,
@@ -89,6 +107,7 @@ export function ArticleView({
   toc,
   bodySlot,
   bodyOnly = false,
+  loading = false,
   viewerId,
   isAdmin, commentsEnabled = true, likesEnabled = true,
 }: {
@@ -100,6 +119,8 @@ export function ArticleView({
   toc: TocItem[]
   bodySlot?: React.ReactNode
   bodyOnly?: boolean
+  /** Full article not fetched yet: Mizuki header renders placeholders. */
+  loading?: boolean
   viewerId: number
   isAdmin: boolean
   commentsEnabled?: boolean
@@ -122,6 +143,10 @@ export function ArticleView({
 
   useEffect(() => {
     if (!chrome) return
+    if (loading && themeId === 'mizuki') {
+      chrome.setPanel(<ArticleTocSkeleton />)
+      return () => chrome.setPanel(null)
+    }
     if ((themeId !== 'chirpy' && themeId !== 'mizuki') || locked || toc.length === 0) {
       chrome.setPanel(null)
       return
@@ -130,7 +155,7 @@ export function ArticleView({
       <ArticleToc toc={toc} variant={themeId === 'mizuki' ? 'mizuki' : 'chirpy'} />,
     )
     return () => chrome.setPanel(null)
-  }, [chrome, themeId, locked, toc])
+  }, [chrome, themeId, locked, toc, loading])
 
   async function copyLink() {
     try {
@@ -383,10 +408,24 @@ export function ArticleView({
   if (isMizuki) {
     return (
       <div className="space-y-4">
-        <article className="mz-article">
+        <article className={cn('mz-article', loading && 'is-loading')}>
           <header>
-            <h1>{article.title}</h1>
-            <div className="mz-article-meta">{meta}</div>
+            {article.title ? (
+              <h1>{article.title}</h1>
+            ) : loading ? (
+              <div className="mz-skeleton mz-skeleton-title" aria-hidden />
+            ) : (
+              <h1 />
+            )}
+            {loading ? (
+              <div className="mz-article-meta" aria-hidden>
+                {[4.5, 6, 3.5, 4, 3, 3].map((w, i) => (
+                  <span key={i} className="mz-skeleton mz-skeleton-meta" style={{ width: `${w}rem` }} />
+                ))}
+              </div>
+            ) : (
+              <div className="mz-article-meta">{meta}</div>
+            )}
             {tags}
           </header>
           {body}

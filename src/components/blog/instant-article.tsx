@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { renderMarkdown, extractHeadings } from '@/lib/markdown'
 import { formatDateLong } from '@/lib/blog-present'
@@ -29,6 +28,39 @@ type ArticlePayload = {
   username: string
 }
 
+// Enough paragraphs to overflow any viewport; the card clips them at full height.
+const SKELETON_LINES = Array.from({ length: 5 }, () => [
+  null, '100%', '96%', '88%', '100%', '72%', '100%', '92%', '97%', '60%',
+]).flat().slice(1)
+
+function ArticleBodySkeleton() {
+  return (
+    <div className="mz-article-skeleton" aria-busy="true" aria-live="polite">
+      <span className="sr-only">正文加载中</span>
+      {SKELETON_LINES.map((w, i) =>
+        w ? (
+          <div key={i} className="mz-skeleton mz-skeleton-line" style={{ width: w }} aria-hidden />
+        ) : (
+          <div key={i} className="mz-skeleton mz-skeleton-heading" aria-hidden />
+        ),
+      )}
+    </div>
+  )
+}
+
+function ArticleNavSkeleton() {
+  return (
+    <nav className="mz-article-nav" aria-hidden>
+      {['', ' is-next'].map((side) => (
+        <div key={side} className={`mz-article-nav-item${side}`}>
+          <span className="mz-skeleton mz-skeleton-meta" style={{ width: '3.5rem' }} />
+          <span className="mz-skeleton mz-skeleton-line" style={{ width: '70%' }} />
+        </div>
+      ))}
+    </nav>
+  )
+}
+
 export function InstantArticle({
   themeId,
   username,
@@ -50,6 +82,8 @@ export function InstantArticle({
 
   useEffect(() => {
     let cancelled = false
+    setArticle(null)
+    setFailed(false)
     api
       .get<ArticlePayload>('/api/user/blog/article/get', { username, slug })
       .then((data) => {
@@ -96,20 +130,12 @@ export function InstantArticle({
       locked={article.requiresPassword}
       articleId={article.id}
     />
-  ) : (
-    <div className="flex justify-center py-10" aria-busy={!failed} aria-live="polite">
-      {failed ? (
-        <p className="text-sm text-muted-foreground">完整页面加载失败</p>
-      ) : (
-        <>
-          <Loader2
-            className="size-8 animate-spin text-[var(--mz-primary,currentColor)] motion-reduce:animate-none"
-            aria-hidden
-          />
-          <span className="sr-only">加载中</span>
-        </>
-      )}
+  ) : failed ? (
+    <div className="flex justify-center py-10" aria-live="polite">
+      <p className="text-sm text-muted-foreground">完整页面加载失败</p>
     </div>
+  ) : (
+    <ArticleBodySkeleton />
   )
 
   return (
@@ -124,9 +150,12 @@ export function InstantArticle({
       viewerId={viewerId}
       isAdmin={isAdmin}
       bodySlot={body}
+      loading={!article && !failed}
     />
     {themeId === 'mizuki' && article ? (
       <ArticleNav username={article.username || username} slug={slug} />
+    ) : themeId === 'mizuki' && !failed ? (
+      <ArticleNavSkeleton />
     ) : null}
     </>
   )
