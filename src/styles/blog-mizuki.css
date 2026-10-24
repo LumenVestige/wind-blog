@@ -844,9 +844,9 @@
 }
 
 /* Home sidebar: end level with the last row of cards (the pager below the
-   feed is 3.5rem tall) and let the tag widget take the leftover height,
-   scrolling inside. Its flex-basis of 0 keeps the long tag list from
-   stretching the grid row. */
+   feed is 3.5rem tall). Widgets keep their natural height, so a short tag
+   list wraps its content instead of stretching the card; only once it reaches
+   the tag cloud's max-height does it scroll inside. */
 @media (min-width: 1024px) {
   .mz-grid:has(.mz-feed-grid) .mz-sidebar {
     margin-bottom: 3.5rem;
@@ -854,20 +854,6 @@
 
   .mz-grid:has(.mz-feed-grid) .mz-sidebar > .mz-widget {
     flex-shrink: 0;
-  }
-
-  .mz-grid:has(.mz-feed-grid) .mz-sidebar > .mz-widget:has(.mz-tag-cloud) {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 8rem;
-  }
-
-  .mz-grid:has(.mz-feed-grid) .mz-tag-cloud {
-    flex: 1 1 0;
-    min-height: 0;
-    max-height: none;
-    align-content: flex-start;
   }
 }
 

@@ -19,6 +19,7 @@ import { isoToUnix } from '@/lib/utils'
 import { formatDateLong } from '@/lib/blog-present'
 import { ArticleBodyContent, ArticleView, type ArticleViewData } from '@/components/blog/article-view'
 import { InstantArticle } from '@/components/blog/instant-article'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { TocItem } from '@/components/blog/article-toc'
 
 export const dynamic = 'force-dynamic'
@@ -27,9 +28,9 @@ function ArticleBodyFallback() {
   return (
     <div className="space-y-3 rounded-xl border bg-card p-6" aria-busy="true" aria-live="polite">
       <p className="text-sm text-muted-foreground">正文加载中…</p>
-      <div className="h-4 animate-pulse rounded bg-muted" />
-      <div className="h-4 w-11/12 animate-pulse rounded bg-muted" />
-      <div className="h-4 w-4/5 animate-pulse rounded bg-muted" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-11/12" />
+      <Skeleton className="h-4 w-4/5" />
     </div>
   )
 }
