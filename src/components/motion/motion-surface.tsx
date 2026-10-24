@@ -189,7 +189,8 @@ function Surface({ mode }: { mode: 'blog' | 'admin' }) {
       )
       const rect = active?.getBoundingClientRect()
       if (!rect || !rect.width || rect.bottom < 0 || rect.top > innerHeight) {
-        indicator.current.style.opacity = '0'
+        // Fade out in place so leaving a nav section doesn't blink the bar.
+        gsap.to(indicator.current, { opacity: 0, duration: 0.18, ease: 'power1.out', overwrite: true })
         return
       }
       const hostRect = navHost.getBoundingClientRect()
