@@ -8,6 +8,7 @@ import { formatDateLong } from '@/lib/blog-present'
 import { ArticleBodyContent, ArticleView, type ArticleViewData } from '@/components/blog/article-view'
 import { readArticlePreview } from '@/components/blog/article-link'
 import { ArticleNav } from '@/components/blog/article-nav'
+import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
 import type { TocItem } from '@/components/blog/article-toc'
 
 type ArticlePayload = {
@@ -34,8 +35,9 @@ const SKELETON_LINES = Array.from({ length: 5 }, () => [
 ]).flat().slice(1)
 
 function ArticleBodySkeleton() {
+  const ref = useFadeOutOnUnmount<HTMLDivElement>()
   return (
-    <div className="mz-article-skeleton" aria-busy="true" aria-live="polite">
+    <div ref={ref} className="mz-article-skeleton" aria-busy="true" aria-live="polite">
       <span className="sr-only">正文加载中</span>
       {SKELETON_LINES.map((w, i) =>
         w ? (
@@ -49,8 +51,9 @@ function ArticleBodySkeleton() {
 }
 
 function ArticleNavSkeleton() {
+  const ref = useFadeOutOnUnmount<HTMLElement>()
   return (
-    <nav className="mz-article-nav" aria-hidden>
+    <nav ref={ref} className="mz-article-nav" aria-hidden>
       {['', ' is-next'].map((side) => (
         <div key={side} className={`mz-article-nav-item${side}`}>
           <span className="mz-skeleton mz-skeleton-meta" style={{ width: '3.5rem' }} />

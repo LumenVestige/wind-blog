@@ -1726,7 +1726,9 @@
   border-radius: 0.375rem;
   background: linear-gradient(90deg, var(--mz-btn-bg) 0%, var(--mz-btn-bg-hover) 50%, var(--mz-btn-bg) 100%);
   background-size: 200% 100%;
-  animation: mz-skeleton-shimmer 1.4s ease-in-out infinite;
+  animation:
+    mz-skeleton-shimmer 1.4s ease-in-out infinite,
+    mz-fade-in 200ms var(--mz-enter-ease) backwards;
 }
 
 .mz-skeleton-title {

@@ -12,6 +12,7 @@ import { UnlockForm } from '@/components/blog/unlock-form'
 import { CommentSection } from '@/components/blog/comment-section'
 import { ArticleToc, type TocItem } from '@/components/blog/article-toc'
 import { useBlogChrome } from '@/components/blog/blog-chrome'
+import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
 import { estimateReadMinutes } from '@/lib/blog-present'
 
 export interface ArticleViewData {
@@ -86,8 +87,9 @@ const TOC_SKELETON_WIDTHS = Array.from({ length: 3 }, () => [
 ]).flat()
 
 function ArticleTocSkeleton() {
+  const ref = useFadeOutOnUnmount<HTMLElement>()
   return (
-    <section className="toc-card mz-widget mz-toc-loading" aria-hidden>
+    <section ref={ref} className="toc-card mz-widget mz-toc-loading" aria-hidden>
       <h2 className="mz-widget-title">目录</h2>
       <div className="mz-toc-skeleton">
         {TOC_SKELETON_WIDTHS.map((w, i) => (
@@ -95,6 +97,22 @@ function ArticleTocSkeleton() {
         ))}
       </div>
     </section>
+  )
+}
+
+function ArticleTitleSkeleton() {
+  const ref = useFadeOutOnUnmount<HTMLDivElement>()
+  return <div ref={ref} className="mz-skeleton mz-skeleton-title" aria-hidden />
+}
+
+function ArticleMetaSkeleton() {
+  const ref = useFadeOutOnUnmount<HTMLDivElement>()
+  return (
+    <div ref={ref} className="mz-article-meta" aria-hidden>
+      {[4.5, 6, 3.5, 4, 3, 3].map((w, i) => (
+        <span key={i} className="mz-skeleton mz-skeleton-meta" style={{ width: `${w}rem` }} />
+      ))}
+    </div>
   )
 }
 
@@ -413,16 +431,12 @@ export function ArticleView({
             {article.title ? (
               <h1>{article.title}</h1>
             ) : loading ? (
-              <div className="mz-skeleton mz-skeleton-title" aria-hidden />
+              <ArticleTitleSkeleton />
             ) : (
               <h1 />
             )}
             {loading ? (
-              <div className="mz-article-meta" aria-hidden>
-                {[4.5, 6, 3.5, 4, 3, 3].map((w, i) => (
-                  <span key={i} className="mz-skeleton mz-skeleton-meta" style={{ width: `${w}rem` }} />
-                ))}
-              </div>
+              <ArticleMetaSkeleton />
             ) : (
               <div className="mz-article-meta">{meta}</div>
             )}
