@@ -1175,7 +1175,7 @@ html:has([data-blog-theme='mizuki']) {
   line-height: 1.63;
   color: var(--mz-text-50);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
