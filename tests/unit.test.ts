@@ -114,6 +114,13 @@ describe('markdown', () => {
     expect(keys).toContain('/blog/1/abc.png')
     expect(keys).toContain('/x/y.png')
   })
+  it('strips nested link headings without leaking URLs', () => {
+    const [heading] = extractHeadings(
+      '# [[AtCoder abc465_d] X to Y](https://vjudge.net/problem/AtCoder-abc465d)',
+    )
+    expect(heading.text).toBe('[AtCoder abc465_d] X to Y')
+    expect(heading.id).toBe('atcoder-abc465_d-x-to-y')
+  })
 })
 
 describe('jwt', () => {

@@ -720,11 +720,12 @@ function makeHeadingIdAssigner() {
 
 /** 去掉标题行内常见 Markdown 标记，便于展示与生成 id。 */
 function stripMdInline(s: string): string {
-  return s
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+  return stripMdLinksAndImages(s)
     .replace(/`([^`]+)`/g, '$1')
-    .replace(/[*_~]+/g, '')
+    .replace(/[*~]+/g, '')
+    // Strip `_emphasis_` but keep intraword underscores (`abc465_d`).
+    .replace(/(^|[^A-Za-z0-9])_{1,2}(?=\S)/g, '$1')
+    .replace(/_{1,2}(?![A-Za-z0-9])/g, '')
     .replace(/<[^>]+>/g, '')
     .replace(/\\([\\`*_{}[\]()#+\-.!])/g, '$1')
     .trim()
