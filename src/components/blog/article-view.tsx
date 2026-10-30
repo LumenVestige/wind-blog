@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 
 import Link from '@/components/blog/blog-navigation'
 import { useEffect, useState } from 'react'
-import { BookOpen, CalendarDays, CalendarClock, Clock, Eye, Hash, Heart, Link2, MessageCircle } from 'lucide-react'
+import { Clock, Eye, Heart, Link2, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { MarkdownView } from '@/components/blog/markdown-view'
@@ -13,7 +13,9 @@ import { CommentSection } from '@/components/blog/comment-section'
 import { ArticleToc, type TocItem } from '@/components/blog/article-toc'
 import { useBlogChrome } from '@/components/blog/blog-chrome'
 import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
-import { estimateReadMinutes, formatDateSlash } from '@/lib/blog-present'
+import { estimateReadMinutes } from '@/lib/blog-present'
+import { MizukiArticleHeader } from './article-header'
+import { MizukiArticleCard } from './article-card-surface'
 
 export interface ArticleViewData {
   id: number
@@ -104,21 +106,6 @@ function ArticleTocSkeleton() {
   )
 }
 
-function ArticleTitleSkeleton() {
-  const ref = useFadeOutOnUnmount<HTMLDivElement>()
-  return <div ref={ref} className="mz-skeleton mz-skeleton-title" aria-hidden />
-}
-
-function ArticleMetaSkeleton() {
-  const ref = useFadeOutOnUnmount<HTMLDivElement>()
-  return (
-    <div ref={ref} className="mz-article-meta" aria-hidden>
-      {[4.5, 6, 3.5, 4, 3, 3].map((w, i) => (
-        <span key={i} className="mz-skeleton mz-skeleton-meta" style={{ width: `${w}rem` }} />
-      ))}
-    </div>
-  )
-}
 
 export function ArticleView({
   themeId,
@@ -437,65 +424,12 @@ export function ArticleView({
   if (isMizuki) {
     return (
       <div className="space-y-4">
-        <article className={cn('mz-article', loading && 'is-loading')}>
-          <header className="mz-article-header">
-            {article.title ? (
-              <h1>{article.title}</h1>
-            ) : loading ? (
-              <ArticleTitleSkeleton />
-            ) : (
-              <h1 />
-            )}
-            <div className="mz-article-info">
-            {loading && !article.publishedAt ? (
-              <ArticleMetaSkeleton />
-            ) : (
-              <div className="mz-article-meta">
-                <span className="mz-meta-item" title="发布时间">
-                  <span className="mz-meta-icon"><CalendarDays aria-hidden="true" /></span>
-                  <span className="sr-only">发布于</span>
-                  <time dateTime={article.publishedAt ? new Date(article.publishedAt * 1000).toISOString() : undefined}>
-                    {article.publishedAt ? formatDateSlash(article.publishedAt).replaceAll('/', '-') : article.publishedLabel}
-                  </time>
-                </span>
-                {article.updatedAt ? (
-                  <span className="mz-meta-item" title="更新时间">
-                    <span className="mz-meta-icon"><CalendarClock aria-hidden="true" /></span>
-                    <span className="sr-only">更新于</span>
-                    <time dateTime={new Date(article.updatedAt * 1000).toISOString()}>{formatDateSlash(article.updatedAt).replaceAll('/', '-')}</time>
-                  </span>
-                ) : null}
-                <span className="mz-meta-item">
-                  <span className="mz-meta-icon"><BookOpen aria-hidden="true" /></span>
-                  <span className="sr-only">分类：</span>
-                  {article.categoryId ? <Link href={`/archives?categoryId=${article.categoryId}`}>{article.categoryName || '未分类'}</Link> : <span>{article.categoryName || '未分类'}</span>}
-                </span>
-                <span className="mz-meta-item mz-meta-tags">
-                  <span className="mz-meta-icon"><Hash aria-hidden="true" /></span>
-                  <span className="sr-only">标签：</span>
-                  <span className="mz-meta-tag-list">
-                    {article.tags.length ? article.tags.map((tag, index) => (
-                      <span key={tag}>{index > 0 && <span className="mz-meta-separator" aria-hidden="true">/</span>}<Link href={`/archives?tag=${encodeURIComponent(tag)}`}>{tag}</Link></span>
-                    )) : '无标签'}
-                  </span>
-                </span>
-              </div>
-            )}
-            {!loading && (
-              <div className="mz-article-details">
-                <span><Clock aria-hidden="true" />约 {article.readMinutes ?? estimateReadMinutes(article.content)} 分钟</span>
-                <span><Eye aria-hidden="true" /><span className="sr-only">阅读</span>{article.viewCount}</span>
-                <span><Heart aria-hidden="true" /><span className="sr-only">喜欢</span>{article.likeCount}</span>
-                <span><MessageCircle aria-hidden="true" /><span className="sr-only">评论</span>{article.commentCount}</span>
-                {isOwner ? <Link href={editHref}>编辑文章</Link> : null}
-              </div>
-            )}
-            </div>
-          </header>
+        <MizukiArticleCard pathname={`/${encodeURIComponent(article.slug)}`} loading={loading}>
+          <MizukiArticleHeader article={{ ...article, readMinutes: article.readMinutes ?? estimateReadMinutes(article.content) }} loading={loading} isOwner={isOwner} editHref={editHref} />
           {body}
           {!bodySlot ? likeBlock : null}
           {!bodySlot ? shareBlock : null}
-        </article>
+        </MizukiArticleCard>
         {!bodySlot ? relatedBlock : null}
         {!bodySlot ? comments : null}
       </div>

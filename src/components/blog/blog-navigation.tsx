@@ -8,25 +8,27 @@ import {
 } from 'react'
 import { canPrefetchArticle, createArticleIntent } from '@/lib/article-prefetch'
 import { warmArticleResources, warmPageLoadingResources } from '@/lib/article-resource-warmup'
-import { ARTICLE_ENTRANCE_EVENT } from '@/lib/blog-motion-events'
+import { ARTICLE_ENTRANCE_EVENT, BLOG_MOTION } from '@/lib/blog-motion-events'
 import { readArticlePreview, saveArticlePreview, type ArticlePreview } from '@/lib/article-preview'
 import { flushSync } from 'react-dom'
 import { isArticlePathname } from '@/lib/blog-route'
+import { ArticleHeading, ArticleHeadingMotion, type ArticleHeadingEntrance } from './article-heading'
+import { MizukiArticleCard } from './article-card-surface'
 
 type Navigate = (href: string, options?: { scroll?: boolean; replace?: boolean; articleSlug?: string }) => void
-type Fallback = { pathname: string; preview: ArticlePreview | null; exited: boolean }
+type Fallback = { pathname: string; preview: ArticlePreview | null; exited: boolean; feedOnly: boolean; feedTop: number }
 const Navigation = createContext<{ navigate: Navigate; pendingHref: string | null; fallback: Fallback | null } | null>(null)
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)'
 
 // A tiny built-in frame covers clicks that beat background chunk warmup.
-function ImmediateLoadingFrame({ preview }: Fallback) {
+function ImmediateLoadingFrame({ preview, pathname }: Fallback) {
   if (!preview) return <div className="mz-page-loading mz-inline-loading" role="status" aria-label="页面加载中" aria-busy="true">
     <div className="mz-loading-lines" aria-hidden="true">{[100, 92, 76].map((width) => <div key={width} className="mz-skeleton mz-skeleton-line" style={{ width: `${width}%` }} />)}</div>
   </div>
-  return <div className="mz-page-loading"><article className="mz-article is-loading" role="status" aria-label="页面加载中" aria-busy="true">
-    <header className="mz-article-header">{preview?.title ? <h1>{preview.title}</h1> : <div className="mz-skeleton mz-skeleton-title" />}</header>
+  return <div className="mz-page-loading"><MizukiArticleCard pathname={pathname} loading role="status" aria-label="页面加载中" aria-busy="true">
+    <header className="mz-article-header">{preview?.title ? <ArticleHeading title={preview.title} pathname={pathname} /> : <div className="mz-skeleton mz-skeleton-title" />}</header>
     <div className="mz-loading-lines" aria-hidden="true">{[100, 96, 80, 100, 90, 72].map((width, index) => <div key={index} className="mz-skeleton mz-skeleton-line" style={{ width: `${width}%` }} />)}</div>
-  </article></div>
+  </MizukiArticleCard></div>
 }
 const LoadingFrame = lazy(() => warmPageLoadingResources()
   .then((module) => ({ default: module.PageLoadingFrame }))
@@ -35,9 +37,11 @@ const LoadingFrame = lazy(() => warmPageLoadingResources()
 /** The actual route may still be streaming after the outgoing motion ends. */
 export function BlogPageContent({ children }: { children: ReactNode }) {
   const fallback = useContext(Navigation)?.fallback
-  return <div className={`mz-navigation-stage${fallback?.exited ? ' is-waiting' : ''}`}>
-    <div className="blog-page-transition" hidden={!!fallback?.exited}>{children}</div>
-    {fallback && <div className="mz-navigation-underlay" aria-hidden={!fallback.exited}>
+  const feedWaiting = !!fallback?.exited && fallback.feedOnly
+  return <div className={`mz-navigation-stage${fallback?.exited ? ' is-waiting' : ''}${feedWaiting ? ' is-feed-waiting' : ''}`}>
+    <div className="blog-page-transition" hidden={!!fallback?.exited && !fallback.feedOnly}>{children}</div>
+    {fallback && <div className="mz-navigation-underlay" aria-hidden={!fallback.exited}
+      style={fallback.feedOnly ? { top: fallback.feedTop } : undefined}>
       <Suspense fallback={<ImmediateLoadingFrame {...fallback} />}><LoadingFrame {...fallback} /></Suspense>
     </div>}
   </div>
@@ -70,6 +74,7 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
   const previousPath = useRef<string | null>(null)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   const [fallback, setFallback] = useState<Fallback | null>(null)
+  const [headingEntrance, setHeadingEntrance] = useState<ArticleHeadingEntrance | null>(null)
   const destination = useRef<{ href: string; exited: boolean; committed: boolean } | null>(null)
 
   const reset = useCallback(() => {
@@ -88,8 +93,10 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
   const enter = useCallback((animate = true) => {
     const feedOnly = previousPath.current === '/' && location.pathname === '/'
     previousPath.current = location.pathname
+    const requested = destination.current
     reset()
     if (!animate) return
+    if (!requested) setHeadingEntrance({ pathname: location.pathname, startedAt: performance.now() })
     document.querySelector<HTMLElement>('.mz-shell')?.setAttribute('data-blog-transitions', '')
     const content = document.querySelector<HTMLElement>('.mz-content')
     if (!content || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -99,14 +106,14 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     // opacity animations would keep ready content invisible for longer.
     const article = routeContent.querySelector('.mz-article > header')
     if (!article) animations.current.push(surface.animate(
-      [{ opacity: 0, translate: feedOnly ? '0 12px' : '0 32px' }, { opacity: 1, translate: '0 0' }],
-      { duration: 300, easing: EASE, fill: 'backwards' },
+      [{ opacity: 0, translate: feedOnly ? '0 6px' : '0 12px' }, { opacity: 1, translate: '0 0' }],
+      { duration: BLOG_MOTION.pageEnter, easing: EASE, fill: 'backwards' },
     ))
     if (!feedOnly) {
       const sidebar = document.querySelector<HTMLElement>('.mz-sidebar')
       if (sidebar) animations.current.push(sidebar.animate(
         [{ opacity: 0 }, { opacity: 1 }],
-        { duration: 300, delay: 50, easing: EASE, fill: 'backwards' },
+        { duration: BLOG_MOTION.pageEnter, delay: 50, easing: EASE, fill: 'backwards' },
       ))
     }
     if (article) window.dispatchEvent(new Event(ARTICLE_ENTRANCE_EVENT))
@@ -135,13 +142,13 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     const outsideBlog = /^\/(manage|dashboard|login|setup|api|user|_next)(\/|$)/.test(url.pathname)
     if (samePage && content && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       // Re-selecting the current tab can cancel an outgoing transition midway.
-      const fading = [...document.querySelectorAll<HTMLElement>('.mz-content, [data-feed-list], .mz-sidebar')]
+      const fading = [...document.querySelectorAll<HTMLElement>('.blog-page-transition, [data-feed-list], .mz-sidebar')]
         .map((element) => ({ element, opacity: getComputedStyle(element).opacity, translate: getComputedStyle(element).translate }))
         .filter((state) => Number(state.opacity) < 0.999)
       reset()
       for (const state of fading) animations.current.push(state.element.animate(
         [{ opacity: state.opacity, translate: state.translate === 'none' ? '0 0' : state.translate }, { opacity: 1, translate: '0 0' }],
-        { duration: 180, easing: EASE, fill: 'backwards' },
+        { duration: BLOG_MOTION.exit, easing: EASE, fill: 'backwards' },
       ))
       push()
       return
@@ -166,18 +173,23 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     const id = sequence.current
     let slug = options.articleSlug || url.pathname.slice(1)
     try { slug = decodeURIComponent(slug) } catch { /* A malformed URL still gets a loading frame. */ }
-    const frame: Fallback = { pathname: url.pathname, preview: isArticlePathname(url.pathname) ? readArticlePreview(slug) : null, exited: false }
+    const stage = routeContent?.closest('.mz-navigation-stage')
+    const frame: Fallback = { pathname: url.pathname, preview: isArticlePathname(url.pathname) ? readArticlePreview(slug) : null,
+      exited: false, feedOnly, feedTop: feedOnly && surface && stage ? surface.getBoundingClientRect().top - stage.getBoundingClientRect().top : 0 }
     // Prepare the fallback out of sight. aria-hidden alone is not visual hiding:
-    // CSS also gates this surface until the 180ms exit has actually finished.
+    // CSS also gates this surface until the exit has actually finished.
     flushSync(() => setFallback(frame))
     const completeExit = () => {
       if (sequence.current !== id || destination.current !== active || active.exited) return
       active.exited = true
       pendingNavigation.current = null
       if (active.committed) { enter(); return }
-      flushSync(() => setFallback({ ...frame, exited: true }))
-      animations.current.forEach((animation) => animation.cancel())
-      animations.current = []
+      flushSync(() => {
+        setHeadingEntrance({ pathname: url.pathname, startedAt: performance.now(), title: frame.preview?.title })
+        setFallback({ ...frame, exited: true })
+      })
+      // Keep outgoing surfaces at opacity zero while data is pending. Cancelling
+      // their fill here would flash the old sidebar back to full opacity.
       // The route was already prefetched during the exit. Committing it now
       // prevents fast responses from replacing the outgoing page mid-animation.
       push()
@@ -188,8 +200,8 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches || wasWaiting
     if (surface && !reduced) {
       const exit = surface.animate(
-        [from, { opacity: 0, translate: feedOnly ? '0 8px' : '0 16px' }],
-        { duration: 180, easing: EASE, fill: 'both' },
+        [from, { opacity: 0, translate: feedOnly ? '0 2px' : '0 4px' }],
+        { duration: BLOG_MOTION.exit, easing: EASE, fill: 'both' },
       )
       animations.current.push(exit)
       void exit.finished.then(completeExit).catch(() => { /* Superseded navigation. */ })
@@ -198,7 +210,7 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
       const sidebar = document.querySelector<HTMLElement>('.mz-sidebar')
       if (sidebar) animations.current.push(sidebar.animate(
         [{ opacity: 1 }, { opacity: 0 }],
-        { duration: 180, easing: EASE, fill: 'forwards' },
+        { duration: BLOG_MOTION.exit, easing: EASE, fill: 'forwards' },
       ))
     }
     // Failed or cancelled navigation must never strand the page at opacity zero.
@@ -228,8 +240,10 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({ navigate, pendingHref, fallback }), [navigate, pendingHref, fallback])
   return (
     <Navigation.Provider value={value}>
+      <ArticleHeadingMotion.Provider value={headingEntrance}>
       {children}
       <Suspense fallback={null}><RouteObserver onCommit={commit} /></Suspense>
+      </ArticleHeadingMotion.Provider>
     </Navigation.Provider>
   )
 }

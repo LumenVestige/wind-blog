@@ -79,7 +79,7 @@ describe('article viewport block entrance', () => {
     expect([...root.children]).toEqual(nodes)
     expect(root.querySelector('a')).toBe(link)
     expect(animate.mock.instances).toEqual(nodes.slice(0, 3))
-    expect(animate.mock.calls.map(([, options]) => options.delay)).toEqual([0, 35, 70])
+    expect(animate.mock.calls.map(([, options]) => options.delay)).toEqual([0, 45, 90])
     // Finish every geometry read before starting animations; no layout thrash.
     expect(Math.max(...measure.mock.invocationCallOrder)).toBeLessThan(Math.min(...animate.mock.invocationCallOrder))
     expect(root.lastElementChild?.getAttribute('style')).toBeNull()
@@ -189,12 +189,26 @@ describe('article viewport block entrance', () => {
     expect(animate).toHaveBeenCalledTimes(3)
   })
 
+  it('measures the restored history viewport only after scroll restoration finishes', () => {
+    const shell = root.closest('.mz-shell')!
+    shell.setAttribute('data-blog-transitions', '')
+    shell.setAttribute('data-blog-restoring', '')
+    cleanup = bindArticleBlockMotion(root)
+    window.dispatchEvent(new Event(ARTICLE_ENTRANCE_EVENT))
+    expect(measure).not.toHaveBeenCalled()
+    shell.removeAttribute('data-blog-restoring')
+    window.dispatchEvent(new Event(ARTICLE_ENTRANCE_EVENT))
+    expect(animate).toHaveBeenCalledTimes(3)
+  })
+
   it('cancels pending/active animations on unmount and when reduced motion is enabled', () => {
     root.closest('.mz-shell')!.setAttribute('data-blog-transitions', '')
+    root.closest('.mz-shell')!.setAttribute('data-blog-navigating', '')
     cleanup = bindArticleBlockMotion(root)
     cleanup()
     vi.advanceTimersByTime(16)
     expect(animate).not.toHaveBeenCalled()
+    root.closest('.mz-shell')!.removeAttribute('data-blog-navigating')
     start()
     reduced = true
     changeMotion!()

@@ -84,7 +84,8 @@ describe('route loading and exit animation handoff', () => {
     expect(document.querySelector('h1')?.textContent).toBe('Title one')
     expect(document.querySelector('.mz-article-skeleton')).not.toBeNull()
     expect(document.querySelector('.blog-page-transition')?.hasAttribute('hidden')).toBe(true)
-    expect(exit.cancel).toHaveBeenCalledOnce()
+    expect(exit.cancel).not.toHaveBeenCalled()
+    expect(motions[1].cancel).not.toHaveBeenCalled()
     route.pathname = '/one'
     location.pathname = '/one'
     await act(() => root!.render(page(createElement('article', { className: 'mz-article' },
@@ -93,6 +94,8 @@ describe('route loading and exit animation handoff', () => {
     expect(document.querySelector('[role="status"]')).toBeNull()
     expect(document.querySelector('h1')?.textContent).toBe('Title one')
     expect(document.querySelector('main')?.textContent).toContain('Ready body')
+    expect(exit.cancel).toHaveBeenCalledOnce()
+    expect(motions[1].cancel).toHaveBeenCalledOnce()
   })
 
   it('keeps a cached target out of the outgoing surface and presents it immediately after the exit', async () => {
@@ -133,6 +136,30 @@ describe('route loading and exit animation handoff', () => {
     await act(async () => { second.finish(); await Promise.resolve() })
     expect(document.querySelector('h1')?.textContent).toBe('Title two')
     expect(router.push).toHaveBeenCalledExactlyOnceWith('/two', { scroll: undefined })
+  })
+
+  it('keeps feed tabs and the search toolbar mounted during a slow sort change', async () => {
+    const { createRoot } = await import('react-dom/client')
+    const feed = () => createElement('section', null,
+      createElement('nav', { 'aria-label': 'Sort' }, 'Latest / Hot'),
+      createElement('input', { placeholder: 'Search' }),
+      createElement('div', { 'data-feed-list': '' }, 'Feed'))
+    await act(() => { root = createRoot(document.getElementById('root')!); root.render(page(feed())) })
+    const tabs = document.querySelector('nav')
+    const search = document.querySelector('input')
+    const first = motions.length
+    await act(() => navigate('/?sort=hot', { scroll: false }))
+    await act(async () => { motions[first].finish(); await Promise.resolve() })
+    expect(document.querySelector('.blog-page-transition')?.hasAttribute('hidden')).toBe(false)
+    expect(document.querySelector('.mz-navigation-stage')?.classList.contains('is-feed-waiting')).toBe(true)
+    expect(document.querySelector('nav')).toBe(tabs)
+    expect(document.querySelector('input')).toBe(search)
+    expect(document.querySelector('[role="status"]')).not.toBeNull()
+    route.search = 'sort=hot'; location.search = '?sort=hot'
+    await act(() => root!.render(page(feed())))
+    expect(document.querySelector('nav')).toBe(tabs)
+    expect(document.querySelector('input')).toBe(search)
+    expect(document.querySelector('.mz-navigation-underlay')).toBeNull()
   })
 
   it('immediately shows the loading surface when reduced motion bypasses the exit', async () => {

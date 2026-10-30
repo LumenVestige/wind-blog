@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from 'react'
 
-const FADE_OUT_MS = 180
+const FADE_OUT_MS = 220
 const useIsomorphicLayoutEffect =
   typeof window === 'undefined' ? useEffect : useLayoutEffect
 
@@ -44,6 +44,7 @@ export function useFadeOutOnUnmount<T extends HTMLElement>(duration = FADE_OUT_M
       const ghost = node.cloneNode(true) as HTMLElement
       ghost.removeAttribute('id')
       ghost.setAttribute('aria-hidden', 'true')
+      ghost.setAttribute('data-fade-out-ghost', '')
       ghost.inert = true
       // Preserve each bar's current appearance instead of restarting its entrance.
       const bars = node.querySelectorAll<HTMLElement>('.mz-skeleton, [data-slot="skeleton"]')
@@ -52,6 +53,13 @@ export function useFadeOutOnUnmount<T extends HTMLElement>(duration = FADE_OUT_M
         if (!source) return
         const current = getComputedStyle(source)
         Object.assign(bar.style, { animation: 'none', opacity: current.opacity, backgroundPosition: current.backgroundPosition })
+      })
+      // Loading containers can own a delayed entrance too. Freeze that progress
+      // instead of restarting their animation inside the fading copy.
+      const regions = node.querySelectorAll<HTMLElement>('.mz-article-skeleton')
+      ghost.querySelectorAll<HTMLElement>('.mz-article-skeleton').forEach((region, index) => {
+        const source = regions[index]
+        if (source) Object.assign(region.style, { animation: 'none', opacity: getComputedStyle(source).opacity })
       })
       Object.assign(ghost.style, {
         position: 'fixed',

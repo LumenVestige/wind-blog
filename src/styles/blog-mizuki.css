@@ -925,11 +925,11 @@ html:has([data-blog-theme='mizuki']) {
    list wraps its content instead of stretching the card; only once it reaches
    the tag cloud's max-height does it scroll inside. */
 @media (min-width: 1024px) {
-  .mz-grid:has(.mz-feed-grid) .mz-sidebar {
+  .mz-grid.is-home .mz-sidebar {
     margin-bottom: 3.5rem;
   }
 
-  .mz-grid:has(.mz-feed-grid) .mz-sidebar > .mz-widget {
+  .mz-grid.is-home .mz-sidebar > .mz-widget {
     flex-shrink: 0;
   }
 }
@@ -1116,22 +1116,22 @@ html:has([data-blog-theme='mizuki']) {
 /* Keep the outer page tall enough for its footer, while feed rows retain
    their natural content height and pagination follows the final card. */
 @media (min-width: 768px) {
-  .mz-shell:has(.mz-feed-grid) .mz-main-wrap,
-  .mz-shell:has(.mz-feed-grid) .mz-grid,
-  .mz-shell:has(.mz-feed-grid) .mz-content,
-  .mz-shell:has(.mz-feed-grid) .mz-content > .mz-navigation-stage,
-  .mz-shell:has(.mz-feed-grid) .mz-content > .mz-navigation-stage > .blog-page-transition,
-  .mz-shell:has(.mz-feed-grid) .mz-content > .mz-navigation-stage > .blog-page-transition > div {
+  .mz-shell.is-home .mz-main-wrap,
+  .mz-shell.is-home .mz-grid,
+  .mz-shell.is-home .mz-content,
+  .mz-shell.is-home .mz-content > .mz-navigation-stage,
+  .mz-shell.is-home .mz-content > .mz-navigation-stage > .blog-page-transition,
+  .mz-shell.is-home .mz-content > .mz-navigation-stage > .blog-page-transition > div {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
   }
 
-  .mz-shell:has(.mz-feed-grid) .mz-grid.has-sidebar {
+  .mz-shell.is-home .mz-grid.has-sidebar {
     display: grid;
   }
 
-  .mz-shell:has(.mz-feed-grid) .mz-content {
+  .mz-shell.is-home .mz-content {
     align-self: stretch;
   }
 

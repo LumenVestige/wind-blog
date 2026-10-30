@@ -27,18 +27,8 @@ export function ArticleLink({
     saveArticlePreview(preview)
   }
 
-  function rebound(node: HTMLAnchorElement) {
-    if (!node.classList.contains('mz-feed-card') || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    node.animate(
-      [{ scale: getComputedStyle(node).scale }, { scale: '1.012', offset: 0.55 }, { scale: '1' }],
-      { duration: 300, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-    )
-  }
-
   const link = (
-    <Link ref={linkRef} href={`/${preview.slug}`} articleSlug={preview.slug} className={className} onClick={open}
-      onPointerUp={(event) => { if (event.button === 0) rebound(event.currentTarget) }}
-      onKeyUp={(event) => { if (event.key === 'Enter') rebound(event.currentTarget) }}>
+    <Link ref={linkRef} href={`/${preview.slug}`} articleSlug={preview.slug} className={className} onClick={open}>
       {children}
     </Link>
   )

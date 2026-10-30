@@ -48,6 +48,9 @@
 .blog-page-transition .mz-cat-card {
   animation: none;
 }
+.blog-page-transition :is(.mz-pagination, .mz-feed-filter, .mz-article-nav) {
+  animation: none;
+}
 
 .mz-article-header > h1,
 .mz-article-header > .mz-article-info {
@@ -57,6 +60,16 @@
 /* Original blocks enter with native animations; never hide the article while
    preparing an entrance or add temporary text/line wrappers. */
 .mz-article > #article-body { animation: none; }
+.mz-article[data-article-card] { position: relative; isolation: isolate; background: transparent; box-shadow: none; }
+.mz-article-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--mz-card-bg);
+  box-shadow: var(--mz-shadow);
+  pointer-events: none;
+}
 
 /* Prepare loading UI without letting it show through the outgoing surface. */
 .mz-navigation-stage { position: relative; min-width: 0; }
@@ -68,19 +81,31 @@
 .mz-navigation-underlay > * { position: sticky; top: calc(var(--mz-nav-h) + 1rem); }
 .mz-navigation-stage.is-waiting > .mz-navigation-underlay { position: relative; }
 .mz-navigation-stage.is-waiting > .mz-navigation-underlay > * { position: static; }
+/* Sorting/filtering keeps the toolbar mounted and visible. Only the feed is
+   replaced; hiding its route ancestor would blink every tab and search field. */
+.mz-navigation-stage.is-feed-waiting > .blog-page-transition :is([data-feed-list], .mz-pagination) { visibility: hidden; }
+.mz-navigation-stage.is-feed-waiting > .mz-navigation-underlay { position: absolute; }
+
+/* One loading frame fades out. Its duplicate card/title never covers the real
+   article's stable header or the paragraph entrance beneath it. */
+.mz-page-loading[data-fade-out-ghost][data-loading-kind='article'] .mz-article {
+  background: transparent;
+  box-shadow: none;
+}
+.mz-page-loading[data-fade-out-ghost][data-loading-kind='article'] .mz-article-header { visibility: hidden; }
+.mz-page-loading[data-fade-out-ghost][data-loading-kind='article'] .mz-article-backdrop { visibility: hidden; }
 
 /* Fast cache hits and ~50ms requests must not flash skeleton bars. Navigation
    keeps its article title/card steady; only the still-pending body is delayed. */
-.mz-route-loading,
 .mz-navigation-stage.is-waiting .mz-navigation-underlay [data-loading-kind='page'],
 .mz-navigation-stage.is-waiting .mz-navigation-underlay .mz-inline-loading {
-  animation: mz-loading-reveal 160ms var(--mz-ease) 150ms backwards;
+  animation: mz-loading-reveal 200ms var(--mz-ease) 150ms backwards;
 }
 .mz-navigation-stage.is-waiting .mz-navigation-underlay .mz-article-skeleton {
-  animation: mz-navigation-loading-reveal 160ms var(--mz-ease) 150ms backwards;
+  animation: mz-navigation-loading-reveal 200ms var(--mz-ease) 150ms backwards;
 }
 .mz-navigation-stage.is-waiting .mz-navigation-underlay :is(.mz-skeleton-title, .mz-skeleton-meta) {
-  animation: mz-navigation-loading-reveal 160ms var(--mz-ease) 150ms backwards;
+  animation: mz-navigation-loading-reveal 200ms var(--mz-ease) 150ms backwards;
 }
 @keyframes mz-navigation-loading-reveal {
   from { opacity: 0; visibility: hidden; }
@@ -110,10 +135,10 @@
 .mz-article > .mz-article-skeleton,
 .mz-sidebar > .mz-toc-loading,
 .mz-article-nav[aria-busy='true'] {
-  animation: mz-fade-in 160ms var(--mz-ease) backwards;
+  animation: mz-fade-in 200ms var(--mz-ease) backwards;
 }
 .mz-article > .mz-article-skeleton {
-  animation: mz-body-loading-reveal 160ms var(--mz-ease) 150ms backwards;
+  animation: mz-body-loading-reveal 200ms var(--mz-ease) 150ms backwards;
 }
 
 /* The loading frame must never hide a title or leave a post-exit blank. */

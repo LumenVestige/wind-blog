@@ -1,4 +1,4 @@
-import { ARTICLE_ENTRANCE_EVENT } from '@/lib/blog-motion-events'
+import { ARTICLE_ENTRANCE_EVENT, BLOG_MOTION } from '@/lib/blog-motion-events'
 
 const BLOCK = 'p,h1,h2,h3,h4,h5,h6,li,pre,table,img,video,hr,.katex-display,.obsidian-mermaid,.md-code-block,.obsidian-callout,.obsidian-embed,.obsidian-callout-title,.mz-article-info,summary'
 const IGNORE = 'svg,button,input,.katex,.math-fallback,.obsidian-footnotes,[hidden]'
@@ -20,18 +20,14 @@ export function bindArticleBlockMotion(root: HTMLElement): () => void {
   let visibility: MutationObserver | undefined
   let played = false
   let stopped = false
-  let frame = 0
 
   const cancel = () => {
-    cancelAnimationFrame(frame)
-    frame = 0
     animations.forEach((animation) => animation.cancel())
     animations.clear()
   }
   const run = () => {
-    frame = 0
     if (stopped || played || !root.isConnected || media.matches ||
-      shell.hasAttribute('data-blog-navigating') || root.closest('[hidden]')) return
+      shell.hasAttribute('data-blog-navigating') || shell.hasAttribute('data-blog-restoring') || root.closest('[hidden]')) return
     played = true
     visibility?.disconnect()
     const viewportHeight = window.innerHeight
@@ -65,7 +61,7 @@ export function bindArticleBlockMotion(root: HTMLElement): () => void {
         const translate = rect.height > viewportHeight ? '0 0' : '0 10px'
         const animation = element.animate(
           [{ opacity: 0, translate }, { opacity: 1, translate: '0 0' }],
-          { duration: 300, delay: Math.min(rank * 35, 140), easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'backwards' },
+          { duration: BLOG_MOTION.bodyEnter, delay: Math.min(rank * BLOG_MOTION.bodyStagger, BLOG_MOTION.bodyMaxDelay), easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'backwards' },
         )
         animations.add(animation)
         animation.onfinish = () => { animations.delete(animation); animation.cancel() }
@@ -76,10 +72,10 @@ export function bindArticleBlockMotion(root: HTMLElement): () => void {
     }
   }
   const start = () => {
-    if (played || stopped || frame || media.matches || root.closest('[hidden]') || shell.hasAttribute('data-blog-navigating') || !shell.hasAttribute('data-blog-transitions')) return
-    // Keep content visible while awaiting this frame. There is no hidden
-    // preparation phase, font wait or re-splitting on resize.
-    frame = requestAnimationFrame(run)
+    if (played || stopped || media.matches || root.closest('[hidden]') || shell.hasAttribute('data-blog-navigating') || shell.hasAttribute('data-blog-restoring') || !shell.hasAttribute('data-blog-transitions')) return
+    // Bind in the visibility/layout commit, before its first paint. Deferring
+    // this to another frame briefly shows fully opaque text before fading it.
+    run()
   }
   const reduce = () => { if (media.matches) cancel() }
   if (surface) {

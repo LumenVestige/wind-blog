@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import Viewer from 'viewerjs'
 import { bindMarkdownCodeCopy } from '@/lib/markdown-code-copy'
 import { bindMarkdownMermaid } from '@/lib/markdown-mermaid'
@@ -8,7 +8,7 @@ import { bindImageViewerZoom } from '@/lib/image-viewer-zoom'
 import { cn } from '@/lib/utils'
 import { bindArticleBlockMotion } from '@/lib/article-block-motion'
 
-export function MarkdownView({
+export const MarkdownView = memo(function MarkdownView({
   html,
   className,
   animateEntrance = false,
@@ -18,6 +18,10 @@ export function MarkdownView({
   animateEntrance?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  // Next bundles a React DOM version that writes innerHTML whenever this prop
+  // object changes. Keep both the component and payload stable during counters,
+  // navigation and sidebar updates, preserving animations and bound media.
+  const markup = useMemo(() => ({ __html: html }), [html])
 
   useLayoutEffect(() => {
     if (animateEntrance && ref.current) return bindArticleBlockMotion(ref.current)
@@ -64,7 +68,7 @@ export function MarkdownView({
     <div
       ref={ref}
       className={cn('markdown-body', className)}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={markup}
     />
   )
-}
+})

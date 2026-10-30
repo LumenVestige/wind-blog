@@ -25,6 +25,7 @@ function Surface({ mode }: { mode: 'blog' | 'admin' }) {
   const pending = useRef(false)
   const pendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const frame = useRef(0)
+  const revealed = useRef(new WeakSet<HTMLElement>())
   const selector =
     mode === 'blog' ? '[data-blog-theme="mizuki"]' : '[data-blog-admin]'
 
@@ -44,7 +45,9 @@ function Surface({ mode }: { mode: 'blog' | 'admin' }) {
     const root = document.querySelector<HTMLElement>(selector)
     if (!root) return
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const seen = new WeakSet<HTMLElement>()
+    // Query/filter Tab changes keep their cards mounted. Replaying a card's
+    // entrance would fade its already-visible Tab bar on every selection.
+    const seen = revealed.current
     const animations = new Set<Animation>()
     const scan = () => {
       let index = 0

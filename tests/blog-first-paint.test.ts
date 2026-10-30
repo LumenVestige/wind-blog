@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ prefetch: vi.fn(), push: vi.fn(), replace: vi.fn() }),
 }))
 import { BlogNavigationProvider } from '@/components/blog/blog-navigation'
-import { BlogPageLoading } from '@/components/blog/page-loading'
+import { PageLoadingFrame } from '@/components/blog/page-loading'
 import { isArticlePathname } from '@/lib/blog-route'
 
 let root: import('react-dom/client').Root | undefined
@@ -56,6 +56,7 @@ describe('blog first paint', () => {
     await act(() => { root = hydrateRoot(container, page(strict)) })
     expect(container.querySelector('main')).toBe(content)
     expect(animate).not.toHaveBeenCalled()
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull()
     expect(container.querySelector('.mz-shell')?.hasAttribute('data-blog-transitions')).toBe(false)
 
     // A subsequent in-site route commit still animates, without replaying on
@@ -95,12 +96,11 @@ describe('blog first paint', () => {
     expect(animate.mock.instances).not.toContain(document.querySelector('.mz-content'))
   })
 
-  it('server-renders route-appropriate loading placeholders before hydration', () => {
-    const home = renderToString(createElement(BlogPageLoading))
+  it('renders destination-appropriate placeholders when navigation requests a frame', () => {
+    const home = renderToString(createElement(PageLoadingFrame, { pathname: '/' }))
     expect(home).toContain('aria-busy="true"')
     expect(home.match(/class="mz-feed-card"/g)).toHaveLength(6)
-    route.pathname = '/agent-part-1'
-    const article = renderToString(createElement(BlogPageLoading))
+    const article = renderToString(createElement(PageLoadingFrame, { pathname: '/agent-part-1' }))
     expect(article).toContain('mz-skeleton-title')
     expect(article).not.toContain('mz-feed-card')
     expect(isArticlePathname('/archives')).toBe(false)

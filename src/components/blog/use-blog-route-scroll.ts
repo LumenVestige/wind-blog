@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
+import { ARTICLE_ENTRANCE_EVENT } from '@/lib/blog-motion-events'
 
 /** Fresh pages start at the top; history and chapter links keep native scrolling. */
 export function useBlogRouteScroll() {
@@ -15,6 +16,7 @@ export function useBlogRouteScroll() {
       historyPath.current = window.location.pathname === previous.current
         ? null
         : window.location.pathname
+      document.querySelector('.mz-shell')?.toggleAttribute('data-blog-restoring', historyPath.current !== null)
     }
     const save = () => {
       if (historyPath.current !== null) return
@@ -46,10 +48,13 @@ export function useBlogRouteScroll() {
           window.scrollTo({ left: position.x, top: position.y, behavior: 'instant' })
         }
         historyPath.current = null
+        document.querySelector('.mz-shell')?.removeAttribute('data-blog-restoring')
+        window.dispatchEvent(new Event(ARTICLE_ENTRANCE_EVENT))
       })
       return () => cancelAnimationFrame(frame)
     }
     historyPath.current = null
+    document.querySelector('.mz-shell')?.removeAttribute('data-blog-restoring')
     if (window.location.hash) return
 
     // Next may preserve a visible page's offset. Reset only after the new route
