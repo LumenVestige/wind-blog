@@ -963,6 +963,23 @@ html:has([data-blog-theme='mizuki']) {
   }
 }
 
+/* On wide article pages the outline uses the outer right gutter instead of
+   taking a column from the centered reading card. Retain a full-height rail
+   so the outline's own sticky positioning keeps working during scrolling. */
+/* At this breakpoint the page is at most 62vw. A full 17.5rem outline,
+   its gap and the screen-edge inset must all fit; otherwise use the grid. */
+@media (min-width: 1800px) and (min-width: 96.1rem) {
+  .mz-grid.has-sidebar.is-article {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mz-grid.has-sidebar.is-article > .mz-sidebar {
+    position: absolute;
+    inset: 0 auto 0 calc(100% + 1rem);
+    width: 17.5rem;
+  }
+}
+
 .mz-feed-toolbar-start {
   display: flex;
   align-items: center;

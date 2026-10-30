@@ -1,7 +1,8 @@
 'use client'
 
 import Link from '@/components/blog/blog-navigation'
-import type { MouseEvent, ReactNode } from 'react'
+import { useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 const KEY = 'wind-article-preview'
 
@@ -45,6 +46,16 @@ export function ArticleLink({
   className?: string
   children: ReactNode
 }) {
+  const linkRef = useRef<HTMLAnchorElement>(null)
+  const [tooltipOpen, setTooltipOpen] = useState(false)
+
+  function toggleTooltip(next: boolean) {
+    const title = linkRef.current?.querySelector<HTMLElement>('.mz-feed-title-text')
+    // Mobile titles wrap in full; short desktop titles do not need a repeat.
+    const clipped = !!title && (title.scrollWidth > title.clientWidth + 1 || title.scrollHeight > title.clientHeight + 1)
+    setTooltipOpen(next && clipped)
+  }
+
   function open(event: MouseEvent<HTMLAnchorElement>) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
     saveArticlePreview(preview)
@@ -58,11 +69,20 @@ export function ArticleLink({
     )
   }
 
-  return (
-    <Link href={`/${preview.slug}`} articleSlug={preview.slug} className={className} onClick={open}
+  const link = (
+    <Link ref={linkRef} href={`/${preview.slug}`} articleSlug={preview.slug} className={className} onClick={open}
       onPointerUp={(event) => { if (event.button === 0) rebound(event.currentTarget) }}
       onKeyUp={(event) => { if (event.key === 'Enter') rebound(event.currentTarget) }}>
       {children}
     </Link>
   )
+  if (!className?.split(/\s+/).includes('mz-feed-card')) return link
+  return <TooltipProvider delayDuration={0}>
+    <Tooltip open={tooltipOpen} onOpenChange={toggleTooltip}>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent className="mz-title-tooltip" side="top" align="start" sideOffset={8} collisionPadding={12}>
+        {preview.title}
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
 }

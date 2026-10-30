@@ -270,7 +270,7 @@ export default async function BlogHomePage({
                   className="mz-feed-card"
                 >
                   <div className="mz-feed-body">
-                    <h2 className="mz-feed-title" title={a.title}><span className="mz-feed-title-text">{a.title}</span><ChevronRight className="mz-feed-enter" aria-hidden="true" /></h2>
+                    <h2 className="mz-feed-title"><span className="mz-feed-title-text">{a.title}</span><ChevronRight className="mz-feed-enter" aria-hidden="true" /></h2>
                     <div className="mz-feed-preview">
                       <div className="mz-feed-excerpt">
                         {a.summary ? <MarkdownSummary content={a.summary} /> : null}
