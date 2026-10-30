@@ -51,6 +51,7 @@ import { Badge } from '@/components/ui/badge'
 import { RequestError } from '@/components/ui/request-error'
 import { AdminHeading } from './admin-ui'
 import { AccountSettings } from './site-account-settings'
+import { uiFontOptions, englishFontOptions, codeFontOptions } from '@/lib/typography'
 
 function useModule<S extends SettingsSection>(
   section: S,
@@ -284,6 +285,27 @@ function General({ initial }: { initial: SettingsSnapshot['general'] }) {
     </ModuleForm>
   )
 }
+function FontField({ id, label, value, options, description, onChange }: {
+  id: string
+  label: string
+  value: string
+  options: readonly { value: string; label: string }[]
+  description: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <Field>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={id} aria-describedby={`${id}-description`}><SelectValue /></SelectTrigger>
+        <SelectContent><SelectGroup>
+          {options.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+        </SelectGroup></SelectContent>
+      </Select>
+      <FieldDescription id={`${id}-description`}>{description}</FieldDescription>
+    </Field>
+  )
+}
 function Appearance({ initial }: { initial: SettingsSnapshot['appearance'] }) {
   const form = useModule('appearance', initial),
     { value, change } = form
@@ -323,19 +345,40 @@ function Appearance({ initial }: { initial: SettingsSnapshot['appearance'] }) {
         </ToggleGroup>
         <FieldDescription>读者仍可自行切换明暗模式。</FieldDescription>
       </Field>
-      <Field orientation="horizontal">
-        <FieldContent>
-          <FieldLabel htmlFor="wenkai-enabled">中文使用霞鹜文楷</FieldLabel>
-          <FieldDescription>
-            默认使用系统中文字体。英文和数字统一使用 Maple Mono。
-          </FieldDescription>
-        </FieldContent>
-        <Switch
-          id="wenkai-enabled"
-          checked={value.wenkaiEnabled}
-          onCheckedChange={(enabled) => change('wenkaiEnabled', enabled)}
+      <FieldGroup className="rounded-lg border p-4">
+        <FontField
+          id="body-font"
+          label="正文字体"
+          value={value.wenkaiEnabled ? 'wenkai' : 'system'}
+          options={[{ value: 'system', label: '系统字体' }, { value: 'wenkai', label: '霞鹜文楷' }]}
+          onChange={(font) => change('wenkaiEnabled', font === 'wenkai')}
+          description="用于文章、静态页面和 Markdown 正文，默认使用系统字体。"
         />
-      </Field>
+        <FontField
+          id="ui-font"
+          label="界面 UI 字体"
+          value={value.uiFont}
+          options={uiFontOptions}
+          onChange={(font) => change('uiFont', font as SettingsValues['appearance']['uiFont'])}
+          description="用于导航、按钮、侧栏和后台界面，可与正文分别设置。"
+        />
+        <FontField
+          id="english-font"
+          label="英文字体"
+          value={value.englishFont}
+          options={englishFontOptions}
+          onChange={(font) => change('englishFont', font as SettingsValues['appearance']['englishFont'])}
+          description="用于正文和界面的英文、数字；遵循正文时不额外替换，使用各自字体自带的英文。"
+        />
+        <FontField
+          id="code-font"
+          label="代码块字体"
+          value={value.codeFont}
+          options={codeFontOptions}
+          onChange={(font) => change('codeFont', font as SettingsValues['appearance']['codeFont'])}
+          description="独立用于代码块和源码编辑区，优先于英文字体设置。"
+        />
+      </FieldGroup>
       <TextField
         id="subtitle"
         label="博客简介"

@@ -89,4 +89,56 @@ describe('optional Chinese font loading', () => {
     expect(appendChild).not.toHaveBeenCalled()
     hooks.cleanup = undefined
   })
+  it('waits for code visibility and discovers blocks inserted by later navigation', () => {
+    Object.assign(document, { readyState: 'complete' })
+    let nodes: object[] = []
+    Object.assign(document, { body: {}, querySelectorAll: vi.fn(() => nodes) })
+    let intersect!: (entries: { isIntersecting: boolean }[]) => void
+    let mutate!: () => void
+    const observeCode = vi.fn(), disconnectVisibility = vi.fn(), disconnectMutations = vi.fn()
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(callback: typeof intersect) { intersect = callback }
+      observe = observeCode
+      disconnect = disconnectVisibility
+    })
+    vi.stubGlobal('MutationObserver', class {
+      constructor(callback: () => void) { mutate = callback }
+      observe = vi.fn()
+      disconnect = disconnectMutations
+    })
+    DeferredFonts({ href: '/fonts/mono.css', selector: 'pre' })
+    expect(observeCode).not.toHaveBeenCalled()
+    expect(requestIdleCallback).not.toHaveBeenCalled()
+    nodes = [{}]
+    mutate()
+    expect(observeCode).toHaveBeenCalledWith(nodes[0])
+    intersect([{ isIntersecting: false }])
+    expect(requestIdleCallback).not.toHaveBeenCalled()
+    intersect([{ isIntersecting: true }])
+    expect(requestIdleCallback).toHaveBeenCalledOnce()
+    expect(disconnectVisibility).toHaveBeenCalled()
+    expect(disconnectMutations).toHaveBeenCalled()
+    idleCallback!()
+    expect(appendChild).toHaveBeenCalledOnce()
+    intersect([{ isIntersecting: true }])
+    expect(requestIdleCallback).toHaveBeenCalledOnce()
+  })
+  it('cancels code observation before a pending visibility callback arrives', () => {
+    Object.assign(document, { readyState: 'complete', body: {}, querySelectorAll: () => [{}] })
+    let intersect!: (entries: { isIntersecting: boolean }[]) => void
+    const disconnect = vi.fn()
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(callback: typeof intersect) { intersect = callback }
+      observe = vi.fn()
+      disconnect = disconnect
+    })
+    vi.stubGlobal('MutationObserver', class { observe = vi.fn(); disconnect = disconnect })
+    DeferredFonts({ href: '/fonts/mono.css', selector: 'pre' })
+    hooks.cleanup!()
+    intersect([{ isIntersecting: true }])
+    expect(disconnect).toHaveBeenCalled()
+    expect(requestIdleCallback).not.toHaveBeenCalled()
+    expect(appendChild).not.toHaveBeenCalled()
+    hooks.cleanup = undefined
+  })
 })

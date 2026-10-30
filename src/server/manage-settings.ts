@@ -13,6 +13,8 @@ import {
   type SettingsSnapshot,
   type SettingsValues,
 } from '@/lib/admin-settings'
+import { typographySettings } from '@/server/typography'
+import { fontSettingKeys, fontSettingOptions } from '@/lib/typography'
 
 function version(value: unknown) {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex')
@@ -33,7 +35,7 @@ export function manageSettingsSnapshot(userId: number): SettingsSnapshot {
     appearance: {
       colorScheme: config.colorScheme,
       subtitle: config.subtitle,
-      wenkaiEnabled: getSetting('wenkai_enabled', '0') === '1',
+      ...typographySettings(),
     },
     content: {
       homeIntroMd: config.homeIntroMd,
@@ -140,6 +142,13 @@ export function saveManageSettings(
         throw new ApiError('请选择有效的明暗模式', 1, 400)
       if (value.wenkaiEnabled !== undefined && typeof value.wenkaiEnabled !== 'boolean')
         throw new ApiError('中文字体开关格式不正确', 1, 400)
+      const fonts: Record<string, string> = {}
+      for (const field of Object.keys(fontSettingKeys) as (keyof typeof fontSettingKeys)[]) {
+        if (value[field] === undefined) continue
+        if (!fontSettingOptions[field].some(option => option.value === value[field]))
+          throw new ApiError('请选择有效的字体', 1, 400)
+        fonts[fontSettingKeys[field]] = value[field] as string
+      }
       saveThemeConfig(userId, {
         themeId: 'mizuki',
         colorScheme: String(value.colorScheme),
@@ -147,6 +156,7 @@ export function saveManageSettings(
       })
       if (value.wenkaiEnabled !== undefined)
         setSettings({ wenkai_enabled: value.wenkaiEnabled ? '1' : '0' })
+      setSettings(fonts)
     } else if (key === 'content') {
       for (const field of ['homeIntroMd', 'aboutMd', 'friendsMd']) {
         if (typeof value[field] !== 'string' || value[field].length > 200000)

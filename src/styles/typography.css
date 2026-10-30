@@ -1,0 +1,32 @@
+/* UI inherits --font-ui; content and code opt into their independent stacks. */
+.markdown-body,
+.prose-blog,
+.mz-prose,
+.chirpy-prose {
+  font-family: var(--font-body);
+}
+
+/* Inline code stays with its surrounding prose. */
+.markdown-body code,
+.prose-blog code,
+.mz-prose code,
+.chirpy-prose code {
+  font-family: inherit;
+}
+
+.markdown-body pre,
+.markdown-body pre code,
+.prose-blog pre,
+.prose-blog pre code,
+.mz-prose pre,
+.mz-prose pre code,
+.chirpy-prose pre,
+.chirpy-prose pre code,
+.markdown-body .math-fallback {
+  font-family: var(--font-code);
+}
+
+/* Code block controls are interface text, not code content. */
+.markdown-body .md-code-header {
+  font-family: var(--font-ui);
+}

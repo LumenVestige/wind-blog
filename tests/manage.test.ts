@@ -133,6 +133,26 @@ describe('modular management settings', () => {
     expect((await snapshot()).appearance.values.wenkaiEnabled).toBe(false)
     expect(getSetting('wenkai_enabled')).toBe('0')
   })
+  it('saves independent font choices and preserves them for older clients', async () => {
+    const initial = (await snapshot()).appearance
+    expect(initial.values).toMatchObject({ uiFont: 'inherit', englishFont: 'maple', codeFont: 'maple' })
+    const chosen = { ...initial.values, uiFont: 'system', englishFont: 'wenkai-mono', codeFont: 'system', wenkaiEnabled: true }
+    expect((await save('appearance', chosen)).status).toBe(200)
+    expect((await snapshot()).appearance.values).toEqual(chosen)
+    expect(getSetting('ui_font')).toBe('system')
+    expect(getSetting('english_font')).toBe('wenkai-mono')
+    expect(getSetting('code_font')).toBe('system')
+    expect((await save('appearance', { colorScheme: initial.values.colorScheme, subtitle: initial.values.subtitle })).status).toBe(200)
+    expect((await snapshot()).appearance.values).toEqual(chosen)
+    for (const field of ['uiFont', 'englishFont', 'codeFont']) {
+      for (const invalid of ['other-font', null, false, 1, ['maple']]) {
+        expect((await save('appearance', { ...chosen, subtitle: '不能写入', [field]: invalid })).status).toBe(400)
+        expect((await snapshot()).appearance.values).toEqual(chosen)
+      }
+    }
+    expect((await save('appearance', initial.values, initial.version)).status).toBe(409)
+    expect((await save('appearance', initial.values)).status).toBe(200)
+  })
   it('rejects a stale module while allowing independent modules to save', async () => {
     const before = await snapshot()
     expect(

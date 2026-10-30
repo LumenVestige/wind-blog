@@ -1,3 +1,5 @@
+import type { TypographySettings } from './typography'
+
 export interface SettingsValues {
   general: {
     siteName: string
@@ -5,7 +7,7 @@ export interface SettingsValues {
     faviconUrl: string
     icpNumber: string
   }
-  appearance: { colorScheme: 'system' | 'light' | 'dark'; subtitle: string; wenkaiEnabled: boolean }
+  appearance: { colorScheme: 'system' | 'light' | 'dark'; subtitle: string } & TypographySettings
   content: { homeIntroMd: string; aboutMd: string; friendsMd: string }
   social: { socialLinks: { type: string; url: string; label?: string }[] }
   interaction: { commentsEnabled: boolean; likesEnabled: boolean }
