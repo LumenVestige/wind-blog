@@ -19,7 +19,7 @@ import ArticlePage from '@/app/(site)/[slug]/page'
 import { closeDb, get } from '@/db'
 import { seedAdmin } from '@/db/seed'
 import { siteOwner } from '@/server/tenant'
-import { createArticle, getArticleById, makeUnlockToken, updateArticle } from '@/server/blog/articles'
+import { adjacentArticles, createArticle, getArticleById, makeUnlockToken, updateArticle } from '@/server/blog/articles'
 import { articleRevision, renderArticle } from '@/server/blog/article-render'
 import { dispatch } from '@/server/api/router'
 import { passwordTag, signToken } from '@/lib/jwt'
@@ -105,6 +105,16 @@ describe('full article SSR and server render cache', () => {
     expect(result.body.data.viewCount).toBe(before + 1)
     expect(result.body.data).not.toHaveProperty('content')
     expect(result.body.data).not.toHaveProperty('html')
+  })
+
+  it('passes adjacent articles as plain objects across the RSC boundary', () => {
+    const adjacent = adjacentArticles(getArticleById(publicId)!)
+    const neighbors = [adjacent.prev, adjacent.next].filter((item) => item !== null)
+    expect(neighbors.length).toBeGreaterThan(0)
+    for (const item of neighbors) {
+      expect(Object.getPrototypeOf(item)).toBe(Object.prototype)
+      expect(item).toMatchObject({ slug: expect.any(String), title: expect.any(String) })
+    }
   })
 
   it('rejects stale or revoked prefetched pages before increasing read counts', async () => {

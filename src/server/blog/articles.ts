@@ -239,7 +239,12 @@ export function adjacentArticles(row: ArticleRow): {
      ORDER BY ${when} ASC, a.id ASC LIMIT 1`,
     row.user_id, row.id, at, at, row.id,
   )
-  return { prev: prev || null, next: next || null }
+  // node:sqlite rows have a null prototype. RSC can only pass plain objects
+  // across the server/client boundary, so never return raw rows to the reader.
+  return {
+    prev: prev ? { slug: prev.slug, title: prev.title } : null,
+    next: next ? { slug: next.slug, title: next.title } : null,
+  }
 }
 
 const RESERVED_SLUGS = new Set(['about', 'archives', 'blog', 'blog-plaza', 'categories', 'dashboard', 'friends', 'login', 'manage', 'p', 'register', 'setup', 'static', 'api'])
