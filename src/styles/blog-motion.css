@@ -58,15 +58,38 @@
    preparing an entrance or add temporary text/line wrappers. */
 .mz-article > #article-body { animation: none; }
 
-/* Keep a loading surface behind the outgoing page, even when a long JS task
-   delays its animation-finished callback. Never fade the shared main element. */
+/* Prepare loading UI without letting it show through the outgoing surface. */
 .mz-navigation-stage { position: relative; min-width: 0; }
 .mz-navigation-stage > .blog-page-transition { position: relative; z-index: 1; }
 .mz-navigation-stage > .blog-page-transition[hidden] { display: none !important; }
 .mz-navigation-underlay { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.mz-navigation-underlay[aria-hidden='true'],
+.mz-navigation-underlay[aria-hidden='true'] * { visibility: hidden !important; }
 .mz-navigation-underlay > * { position: sticky; top: calc(var(--mz-nav-h) + 1rem); }
 .mz-navigation-stage.is-waiting > .mz-navigation-underlay { position: relative; }
 .mz-navigation-stage.is-waiting > .mz-navigation-underlay > * { position: static; }
+
+/* Fast cache hits and ~50ms requests must not flash skeleton bars. Navigation
+   keeps its article title/card steady; only the still-pending body is delayed. */
+.mz-route-loading,
+.mz-navigation-stage.is-waiting .mz-navigation-underlay [data-loading-kind='page'],
+.mz-navigation-stage.is-waiting .mz-navigation-underlay .mz-inline-loading {
+  animation: mz-loading-reveal 160ms var(--mz-ease) 150ms backwards;
+}
+.mz-navigation-stage.is-waiting .mz-navigation-underlay .mz-article-skeleton {
+  animation: mz-navigation-loading-reveal 160ms var(--mz-ease) 150ms backwards;
+}
+.mz-navigation-stage.is-waiting .mz-navigation-underlay :is(.mz-skeleton-title, .mz-skeleton-meta) {
+  animation: mz-navigation-loading-reveal 160ms var(--mz-ease) 150ms backwards;
+}
+@keyframes mz-navigation-loading-reveal {
+  from { opacity: 0; visibility: hidden; }
+  to { opacity: 1; visibility: visible; }
+}
+@keyframes mz-body-loading-reveal {
+  from { opacity: 0; visibility: hidden; }
+  to { opacity: 1; visibility: visible; }
+}
 
 /* First visits paint directly. Enable entrances only after an in-site route
    change; data arriving on a direct article visit also stays steady. */
@@ -88,6 +111,9 @@
 .mz-sidebar > .mz-toc-loading,
 .mz-article-nav[aria-busy='true'] {
   animation: mz-fade-in 160ms var(--mz-ease) backwards;
+}
+.mz-article > .mz-article-skeleton {
+  animation: mz-body-loading-reveal 160ms var(--mz-ease) 150ms backwards;
 }
 
 /* The loading frame must never hide a title or leave a post-exit blank. */

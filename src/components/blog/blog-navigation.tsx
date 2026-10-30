@@ -20,6 +20,9 @@ const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)'
 
 // A tiny built-in frame covers clicks that beat background chunk warmup.
 function ImmediateLoadingFrame({ preview }: Fallback) {
+  if (!preview) return <div className="mz-page-loading mz-inline-loading" role="status" aria-label="页面加载中" aria-busy="true">
+    <div className="mz-loading-lines" aria-hidden="true">{[100, 92, 76].map((width) => <div key={width} className="mz-skeleton mz-skeleton-line" style={{ width: `${width}%` }} />)}</div>
+  </div>
   return <div className="mz-page-loading"><article className="mz-article is-loading" role="status" aria-label="页面加载中" aria-busy="true">
     <header className="mz-article-header">{preview?.title ? <h1>{preview.title}</h1> : <div className="mz-skeleton mz-skeleton-title" />}</header>
     <div className="mz-loading-lines" aria-hidden="true">{[100, 96, 80, 100, 90, 72].map((width, index) => <div key={index} className="mz-skeleton mz-skeleton-line" style={{ width: `${width}%` }} />)}</div>
@@ -58,7 +61,7 @@ function RouteObserver({ onCommit }: { onCommit: (animate: boolean) => void }) {
   return null
 }
 
-/** Fetch routes at click time; the exit only controls which surface is shown. */
+/** Prefetch/data work starts on click; route presentation waits for the exit. */
 export function BlogNavigationProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const sequence = useRef(0)
@@ -165,9 +168,8 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     let slug = options.articleSlug || url.pathname.slice(1)
     try { slug = decodeURIComponent(slug) } catch { /* A malformed URL still gets a loading frame. */ }
     const frame: Fallback = { pathname: url.pathname, preview: isArticlePathname(url.pathname) ? readArticlePreview(slug) : null, exited: false }
-    // Prepare an opaque loading surface behind the outgoing route before any
-    // long Markdown task runs. The compositor can reveal it even if JS is busy
-    // when the exit reaches its final frame.
+    // Prepare the fallback out of sight. aria-hidden alone is not visual hiding:
+    // CSS also gates this surface until the 180ms exit has actually finished.
     flushSync(() => setFallback(frame))
     const completeExit = () => {
       if (sequence.current !== id || destination.current !== active || active.exited) return
@@ -177,6 +179,9 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
       flushSync(() => setFallback({ ...frame, exited: true }))
       animations.current.forEach((animation) => animation.cancel())
       animations.current = []
+      // The route was already prefetched during the exit. Committing it now
+      // prevents fast responses from replacing the outgoing page mid-animation.
+      push()
     }
     pendingNavigation.current = completeExit
     router.prefetch(href)
@@ -199,8 +204,8 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     }
     // Failed or cancelled navigation must never strand the page at opacity zero.
     recovery.current = setTimeout(enter, 8000)
-    // Both route and article requests start with the click, not exit.finished.
-    push()
+    // Route prefetch, reading resources and article data started with the click.
+    // Only the visible route commit is held until the outgoing motion completes.
     if (!surface || reduced) completeExit()
   }, [router, reset, enter])
 

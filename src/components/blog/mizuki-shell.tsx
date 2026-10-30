@@ -66,6 +66,7 @@ export function MizukiShell({
         <div
           className={cn(
             'mz-grid',
+            pathname === '/' && 'is-home',
             showSidebar && 'has-sidebar',
             articlePage && 'is-article',
             pathname === '/archives' && 'is-archives',

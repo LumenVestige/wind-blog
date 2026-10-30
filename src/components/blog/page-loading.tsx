@@ -37,7 +37,7 @@ function Lines() {
 
 export function PageLoadingFrame({ pathname, preview }: { pathname: string; preview?: ArticlePreview | null }) {
   const article = isArticlePathname(pathname)
-  return <div className="mz-page-loading" role="status" aria-busy="true" aria-label="页面加载中">
+  return <div className="mz-page-loading" data-loading-kind={article ? 'article' : 'page'} role="status" aria-busy="true" aria-label="页面加载中">
     <span className="sr-only">页面加载中…</span>
     {article ? <ArticleLoadingFrame preview={preview} /> : pathname === '/' ? <>
       <div className="mz-loading-toolbar" aria-hidden="true"><span className="mz-skeleton" /></div>
@@ -59,5 +59,5 @@ export function BlogPageLoading() {
   useLayoutEffect(() => {
     setPreview(readArticlePreview(slug))
   }, [slug])
-  return <PageLoadingFrame pathname={pathname} preview={preview?.slug === slug ? preview : null} />
+  return <div className="mz-route-loading"><PageLoadingFrame pathname={pathname} preview={preview?.slug === slug ? preview : null} /></div>
 }

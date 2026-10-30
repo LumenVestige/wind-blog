@@ -70,15 +70,17 @@ async function mount() {
 }
 
 describe('route loading and exit animation handoff', () => {
-  it('starts routing on the click and shows a title/skeleton immediately when the exit finishes first', async () => {
+  it('prefetches on click but holds the visible route commit until the exit finishes', async () => {
     await mount()
     await act(() => navigate('/one'))
-    expect(router.push).toHaveBeenCalledExactlyOnceWith('/one', { scroll: undefined })
+    expect(router.prefetch).toHaveBeenCalledExactlyOnceWith('/one')
+    expect(router.push).not.toHaveBeenCalled()
     expect(document.querySelector('.mz-navigation-underlay')?.getAttribute('aria-hidden')).toBe('true')
     expect(document.querySelector('.blog-page-transition')?.hasAttribute('hidden')).toBe(false)
     const exit = motions[0]
     expect(exit.element).not.toBe(document.querySelector('main'))
     await act(async () => { exit.finish(); await Promise.resolve() })
+    expect(router.push).toHaveBeenCalledExactlyOnceWith('/one', { scroll: undefined })
     expect(document.querySelector('h1')?.textContent).toBe('Title one')
     expect(document.querySelector('.mz-article-skeleton')).not.toBeNull()
     expect(document.querySelector('.blog-page-transition')?.hasAttribute('hidden')).toBe(true)
@@ -93,13 +95,17 @@ describe('route loading and exit animation handoff', () => {
     expect(document.querySelector('main')?.textContent).toContain('Ready body')
   })
 
-  it('keeps a completed target ready through the remaining exit without showing an unnecessary fallback', async () => {
+  it('keeps a cached target out of the outgoing surface and presents it immediately after the exit', async () => {
     await mount()
     await act(() => navigate('/archives'))
     const exit = motions[0]
-    route.pathname = '/archives'; location.pathname = '/archives'
-    await act(() => root!.render(page('Archives ready')))
+    expect(document.querySelector('.blog-page-transition')?.textContent).toBe('Original page')
+    expect(router.push).not.toHaveBeenCalled()
     expect(exit.cancel).not.toHaveBeenCalled()
+    router.push.mockImplementationOnce(() => {
+      route.pathname = '/archives'; location.pathname = '/archives'
+      root!.render(page('Archives ready'))
+    })
     await act(async () => { exit.finish(); await Promise.resolve() })
     expect(document.querySelector('[role="status"]')).toBeNull()
     expect(document.querySelector('main')?.textContent).toBe('Archives ready')
@@ -126,7 +132,7 @@ describe('route loading and exit animation handoff', () => {
     expect(document.querySelector('.mz-navigation-underlay')?.getAttribute('aria-hidden')).toBe('true')
     await act(async () => { second.finish(); await Promise.resolve() })
     expect(document.querySelector('h1')?.textContent).toBe('Title two')
-    expect(router.push).toHaveBeenCalledTimes(2)
+    expect(router.push).toHaveBeenCalledExactlyOnceWith('/two', { scroll: undefined })
   })
 
   it('immediately shows the loading surface when reduced motion bypasses the exit', async () => {

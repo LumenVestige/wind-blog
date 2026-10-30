@@ -53,3 +53,8 @@
     scale: none;
   }
 }
+.admin-page-loading { animation: admin-loading-reveal 160ms ease 150ms backwards; }
+@keyframes admin-loading-reveal {
+  from { opacity: 0; visibility: hidden; }
+  to { opacity: 1; visibility: visible; }
+}
