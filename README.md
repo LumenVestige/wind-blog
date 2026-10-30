@@ -44,6 +44,7 @@ npm run dev                       # http://localhost:3000
 
 - 唯一站长可在编辑器上传图片；允许 JPEG、PNG、GIF、WebP、ICO，最大 10MB；SVG 需先转为位图
 - 文章图片以 `/{uploadDir}/{sha256}{ext}` 内容寻址存储；读接口按当前 CDN 域名展开为完整 URL，**换域名即时生效**
+- 首页列表封面使用当前 CDN 的 `!cover640` 缩略图版本；需在又拍云创建 `cover640`（限定宽度 640px、WebP、质量 75%，间隔标识符 `!`）。外链和已带处理后缀的封面保持原地址，正文及 API 仍返回原图
 - 头像存储为 path-only key（`/{uploadDir}/avatar/...`），同样按当前域名展开
 
 ## 兼容 Obsidian 插件

@@ -21,6 +21,26 @@ export function expandUrl(v: string): string {
   return s
 }
 
+/** Use the CDN's cover640 version only for unprocessed images on our image host. */
+export function coverThumbnailUrl(v: string, base: string): string {
+  if (!base || !/^(?:https?:)?\/\//i.test(v)) return v
+  try {
+    const cdn = new URL(base)
+    const image = new URL(v, cdn)
+    if (!['http:', 'https:'].includes(image.protocol) || image.host !== cdn.host) return v
+    const prefix = cdn.pathname.replace(/\/+$/, '') + '/'
+    if (!image.pathname.startsWith(prefix)) return v
+    // A version or inline processing parameters after the extension must be preserved.
+    if (!/\.(?:jpe?g|png|webp|gif|bmp)$/i.test(image.pathname)) return v
+    const suffixAt = v.search(/[?#]/)
+    return suffixAt < 0
+      ? `${v}!cover640`
+      : `${v.slice(0, suffixAt)}!cover640${v.slice(suffixAt)}`
+  } catch {
+    return v
+  }
+}
+
 export function objectKeyFromUrl(u: string): string {
   const s = (u || '').trim()
   if (!s) return ''

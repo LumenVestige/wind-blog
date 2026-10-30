@@ -12,7 +12,7 @@ import { siteOwner } from '@/server/tenant'
 import { listByUsername } from '@/server/blog/articles'
 import { listCategoriesPublic } from '@/server/blog/categories'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
-import { expandUrl } from '@/server/images'
+import { coverThumbnailUrl, expandUrl, publicBase } from '@/server/images'
 import { ArticleLink, FeedArticleTitle } from '@/components/blog/article-link'
 import { FeedSearch } from '@/components/blog/feed-search'
 import { FeedTabs } from '@/components/blog/feed-tabs'
@@ -199,6 +199,7 @@ export default async function BlogHomePage({
   }
 
   if (themeId === 'mizuki') {
+    const coverBase = publicBase()
     const tabs = [
       { key: undefined, label: '最新' },
       { key: 'hot', label: '热门' },
@@ -277,7 +278,7 @@ export default async function BlogHomePage({
                       {a.coverUrl ? (
                         <span className="mz-feed-cover">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={a.coverUrl} alt="" loading="lazy" />
+                          <img src={coverThumbnailUrl(a.coverUrl, coverBase)} alt="" loading="lazy" />
                         </span>
                       ) : null}
                     </div>
