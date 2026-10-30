@@ -1,25 +1,27 @@
 'use client'
 
-import Link from 'next/link'
+import Link, { usePendingBlogHref } from '@/components/blog/blog-navigation'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 type Category = { id: number; name: string; articleCount: number }
 type TagCount = { name: string; count: number }
 
-/** Current home-feed query with `page` reset, or null off the home page. */
+/** Current home-feed or archive query with `page` reset, or null off the home page. */
 function useFeedParams() {
   const pathname = usePathname()
   const params = useSearchParams()
-  if (pathname !== '/') return null
-  const next = new URLSearchParams(params)
+  const pendingHref = usePendingBlogHref()
+  if (pathname !== '/' && pathname !== '/archives') return null
+  const pending = pendingHref ? new URL(pendingHref, 'http://blog.local') : null
+  const next = new URLSearchParams(pending?.pathname === pathname ? pending.searchParams : params)
   next.delete('page')
   return next
 }
 
-function toHref(params: URLSearchParams) {
+function toHref(params: URLSearchParams, pathname = '/') {
   const qs = params.toString()
-  return qs ? `/?${qs}` : '/'
+  return qs ? `${pathname}?${qs}` : pathname
 }
 
 /**
@@ -29,29 +31,32 @@ function toHref(params: URLSearchParams) {
  */
 export function CategoryFilterList({ categories }: { categories: Category[] }) {
   const feed = useFeedParams()
-  const active = feed?.get('categoryId') || ''
+  const pathname = usePathname()
+  const archive = pathname === '/archives'
+  const active = feed?.get('categoryId') || String(categories.find((c) => c.name === feed?.get('category'))?.id || '')
 
   function href(id: number) {
     if (!feed) return `/?categoryId=${id}`
     const next = new URLSearchParams(feed)
+    next.delete('category')
     if (active === String(id)) next.delete('categoryId')
     else next.set('categoryId', String(id))
-    return toHref(next)
+    return toHref(next, pathname)
   }
 
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className={archive ? 'mz-archive-categories' : 'flex flex-wrap gap-1.5'}>
       {categories.map((c) => {
         const on = active === String(c.id)
         return (
           <Link
             key={c.id}
             href={href(c.id)}
-            className={cn('mz-tag', on && 'is-active')}
+            className={cn(archive ? 'mz-archive-category' : 'mz-tag', on && 'is-active')}
             aria-current={on ? 'true' : undefined}
           >
-            {c.name}
-            {c.articleCount != null ? ` · ${c.articleCount}` : ''}
+            <span>{c.name}</span>
+            {c.articleCount != null ? archive ? <span className="mz-archive-category-count">{c.articleCount}</span> : ` · ${c.articleCount}` : ''}
           </Link>
         )
       })}
@@ -65,6 +70,7 @@ export function CategoryFilterList({ categories }: { categories: Category[] }) {
  */
 export function TagFilterList({ tags }: { tags: TagCount[] }) {
   const feed = useFeedParams()
+  const pathname = usePathname()
   const active = feed?.getAll('tag') || []
 
   function href(name: string) {
@@ -75,7 +81,7 @@ export function TagFilterList({ tags }: { tags: TagCount[] }) {
       : [...active, name]
     next.delete('tag')
     names.forEach((t) => next.append('tag', t))
-    return toHref(next)
+    return toHref(next, pathname)
   }
 
   return (

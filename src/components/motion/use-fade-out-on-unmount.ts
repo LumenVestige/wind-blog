@@ -27,6 +27,12 @@ export function useFadeOutOnUnmount<T extends HTMLElement>(duration = FADE_OUT_M
       const rect = node.getBoundingClientRect()
       if (!rect.width || !rect.height) return
       const styles = getComputedStyle(node)
+      let opacity = 1
+      for (let parent: HTMLElement | null = node; parent; parent = parent.parentElement) {
+        opacity *= Number(getComputedStyle(parent).opacity)
+      }
+      // A deferred placeholder (or one leaving with its page) never flashes a ghost.
+      if (opacity < 0.01) return
       // Keep the ghost inside the themed root so CSS variables still resolve.
       const host =
         node.closest<HTMLElement>('[data-blog-theme], [data-blog-admin]') ||
@@ -34,6 +40,15 @@ export function useFadeOutOnUnmount<T extends HTMLElement>(duration = FADE_OUT_M
       const ghost = node.cloneNode(true) as HTMLElement
       ghost.removeAttribute('id')
       ghost.setAttribute('aria-hidden', 'true')
+      ghost.inert = true
+      // Preserve each bar's current appearance instead of restarting its entrance.
+      const bars = node.querySelectorAll<HTMLElement>('.mz-skeleton, [data-slot="skeleton"]')
+      ghost.querySelectorAll<HTMLElement>('.mz-skeleton, [data-slot="skeleton"]').forEach((bar, index) => {
+        const source = bars[index]
+        if (!source) return
+        const current = getComputedStyle(source)
+        Object.assign(bar.style, { animation: 'none', opacity: current.opacity, backgroundPosition: current.backgroundPosition })
+      })
       Object.assign(ghost.style, {
         position: 'fixed',
         inset: 'auto',
@@ -43,13 +58,14 @@ export function useFadeOutOnUnmount<T extends HTMLElement>(duration = FADE_OUT_M
         height: `${rect.height}px`,
         margin: '0',
         pointerEvents: 'none',
+        overflow: 'hidden',
         zIndex: '9999',
         backgroundColor: styles.backgroundColor,
         backgroundImage: styles.backgroundImage,
         borderRadius: styles.borderRadius,
         boxShadow: styles.boxShadow,
         animation: 'none',
-        opacity: '1',
+        opacity: String(opacity),
         transition: `opacity ${duration}ms ease`,
       })
       host.appendChild(ghost)

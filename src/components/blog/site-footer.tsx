@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/blog/blog-navigation'
 
 const COMMIT = process.env.NEXT_PUBLIC_GIT_SHA || 'dev'
 

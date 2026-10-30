@@ -20,6 +20,7 @@ import type { AuthUser } from '@/lib/jwt'
 import { saveUpyun, upyunStatus } from '@/lib/settings'
 import { getOwner } from '@/server/tenant'
 import { get, run, toBool } from '@/db'
+import { isoToUnix } from '@/lib/utils'
 import { expandUrl } from '@/server/images'
 import {
   adjacentArticles,
@@ -284,6 +285,35 @@ export const articleAdjacentH: Handler = async (ctx) => {
   if (!row) throw new ApiError('文章不存在', 1, 404)
   assertArticleVisible(row, await viewer(ctx))
   return ok(adjacentArticles(row))
+}
+
+/** Speculative reads never count a visit and only return publicly readable posts. */
+export const articlePrefetchH: Handler = (ctx) => {
+  const owner = getOwner()
+  const row = owner ? getArticleBySlug(owner.username, str(getQuery(ctx.req).get('slug'))) : undefined
+  if (!row || row.visibility !== 'public' || row.moderation_status !== 'approved') {
+    throw new ApiError('文章不存在', 1, 404)
+  }
+  assertArticleVisible(row, null)
+  return ok(serializeArticle(row, { tags: getArticleTags([row.id]).get(row.id) }))
+}
+
+/** Confirm cached content is still public/current before showing it and counting a visit. */
+export const articleViewH: Handler = async (ctx) => {
+  const body = await readJson(ctx.req)
+  const row = getArticleById(num(body.id))
+  if (!row || row.visibility !== 'public' || row.moderation_status !== 'approved') {
+    throw new ApiError('文章不存在', 1, 404)
+  }
+  assertArticleVisible(row, null)
+  if (num(body.updatedAt) !== isoToUnix(row.updated_at)) throw new ApiError('文章已更新', 409, 409)
+  const user = await viewer(ctx)
+  return ok({
+    viewCount: recordView(row.id),
+    likeCount: row.like_count,
+    commentCount: row.comment_count,
+    liked: !!user && !!get('SELECT id FROM blog_likes WHERE article_id = ? AND user_id = ?', row.id, user.id),
+  })
 }
 
 export const articleGetH: Handler = async (ctx) => {

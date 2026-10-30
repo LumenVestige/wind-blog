@@ -150,6 +150,7 @@ export default async function ArticlePage({
       themeId={themeId}
       username={author.username}
       categoryName=""
+      categories={listCategoriesPublic(author.username).map(({ id, name }) => ({ id, name }))}
       viewerId={viewer?.id || 0}
       isAdmin={!!viewer?.isAdmin}
     />

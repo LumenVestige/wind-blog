@@ -1,5 +1,5 @@
 export const metadata = { title: '关于' }
-import Link from 'next/link'
+import Link from '@/components/blog/blog-navigation'
 import { siteOwner } from '@/server/tenant'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { expandUrl } from '@/server/images'

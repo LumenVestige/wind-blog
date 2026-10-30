@@ -9,6 +9,8 @@ import {
   articleCreateH,
   articleDeleteH,
   articleGetH,
+  articlePrefetchH,
+  articleViewH,
   articleAdjacentH,
   articleMineH,
   articlePinH,
@@ -132,6 +134,8 @@ const routes: Record<string, Handler> = {
   // articles
   'GET user/blog/article/mine': articleMineH,
   'GET user/blog/article/get': articleGetH,
+  'GET user/blog/article/prefetch': articlePrefetchH,
+  'POST user/blog/article/view': articleViewH,
   'GET user/blog/article/adjacent': articleAdjacentH,
   'POST user/blog/article/create': articleCreateH,
   'POST user/blog/article/update': articleUpdateH,

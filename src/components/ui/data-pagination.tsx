@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import Link from '@/components/blog/blog-navigation'
+import { useBlogRouter } from '@/components/blog/blog-navigation'
 import { useEffect, useId, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,7 +43,7 @@ export function DataPagination({
   label = '列表分页',
   pageSizes = PAGE_SIZES,
 }: DataPaginationProps) {
-  const router = useRouter()
+  const router = useBlogRouter()
   const id = useId()
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const current = Math.min(pages, Math.max(1, page))

@@ -311,6 +311,14 @@ img.md-img-zoomable {
   cursor: zoom-in;
 }
 
+/* Keep browser page gestures out of the image viewer; Viewer handles touch pinch. */
+.wind-image-viewer,
+.wind-image-viewer .viewer-canvas,
+.wind-image-viewer .viewer-canvas > img {
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
 /* 预览区：工具条叠在图片内侧底部，不悬空到框外（避免 hover 丢失 / 被顶栏遮住） */
 .markdown-body .md-img-resize-wrap {
   position: relative;

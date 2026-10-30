@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Heart } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -23,12 +22,14 @@ export function LikeButton({
 }) {
   const [liked, setLiked] = useState(initialLiked)
   const [count, setCount] = useState(initialCount)
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   async function toggle() {
     if (loading) return
+    const previous = { liked, count }
     setLoading(true)
+    setLiked(!liked)
+    setCount(Math.max(0, count + (liked ? -1 : 1)))
     try {
       const res = await api.post<{ liked: boolean; likeCount: number }>(
         '/api/user/blog/like',
@@ -37,6 +38,8 @@ export function LikeButton({
       setLiked(res.liked)
       setCount(res.likeCount)
     } catch (e) {
+      setLiked(previous.liked)
+      setCount(previous.count)
       toast.error(e instanceof ClientApiError ? e.message : '操作失败')
     } finally { setLoading(false) }
   }
@@ -50,6 +53,7 @@ export function LikeButton({
           variant={liked ? 'default' : 'outline'}
           onClick={toggle}
           disabled={loading}
+          aria-busy={loading}
           className="min-w-40"
           aria-pressed={liked}
         >
@@ -66,7 +70,7 @@ export function LikeButton({
 
   return (
     <Button variant={liked ? 'default' : 'outline'} size="sm" onClick={toggle}
-          disabled={loading}>
+          disabled={loading} aria-busy={loading} aria-pressed={liked}>
       <Heart className={liked ? 'fill-current' : ''} />
       点赞 {count}
     </Button>

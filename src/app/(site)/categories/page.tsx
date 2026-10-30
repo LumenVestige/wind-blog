@@ -1,5 +1,5 @@
 export const metadata = { title: '分类' }
-import Link from 'next/link'
+import Link from '@/components/blog/blog-navigation'
 import { FolderOpen } from 'lucide-react'
 import { siteOwner } from '@/server/tenant'
 import { listCategoriesPublic } from '@/server/blog/categories'

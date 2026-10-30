@@ -45,15 +45,12 @@
 [data-motion-reveal] {
   animation: none !important;
 }
-:is([data-blog-theme='mizuki'], [data-blog-admin]) :is(main, #admin-content) {
+[data-blog-admin] :is(main, #admin-content) {
   transition: opacity 140ms ease;
 }
-:is([data-blog-theme='mizuki'], [data-blog-admin])[data-navigating]
+[data-blog-admin][data-navigating]
   :is(main, #admin-content) {
   opacity: 0.55;
-}
-.blog-page-transition {
-  animation-duration: 380ms;
 }
 
 /* Card lift and independent cover/title movement. */
@@ -293,7 +290,12 @@ button[aria-pressed='true'] .lucide-heart {
   box-shadow: 0 8px 28px color-mix(in srgb, var(--foreground) 12%, transparent);
 }
 .viewer-transition {
+  /* Viewer marks an image ready on the size/margin transition's completion. */
   transition:
+    width 200ms var(--motion-ease),
+    height 200ms var(--motion-ease),
+    margin-left 200ms var(--motion-ease),
+    margin-top 200ms var(--motion-ease),
     transform 320ms var(--motion-ease),
     opacity 240ms ease;
 }

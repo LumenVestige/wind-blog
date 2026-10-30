@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/blog/blog-navigation'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { MarkdownSummary } from '@/components/blog/markdown-summary'
@@ -31,7 +31,7 @@ export function ArticleCard({ article }: { article: ArticleCardData }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <h3 className="truncate text-base font-semibold">
-            <Link href={`/${article.slug}`} className="hover:text-primary">
+            <Link href={`/${article.slug}`} articleSlug={article.slug} className="hover:text-primary">
               {article.title}
             </Link>
           </h3>

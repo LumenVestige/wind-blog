@@ -1,27 +1,34 @@
 export const metadata = { title: '文章归档' }
-import Link from 'next/link'
+import Link from '@/components/blog/blog-navigation'
 import { siteOwner } from '@/server/tenant'
 import { listByUsername, type ArticleInfo } from '@/server/blog/articles'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
+import { listCategoriesPublic } from '@/server/blog/categories'
 
 export const dynamic = 'force-dynamic'
 
-function loadAll(username: string): ArticleInfo[] {
+function loadAll(username: string, filters: { categoryId?: number; tags?: string[] } = {}): ArticleInfo[] {
   const pageSize = 100
-  const first = listByUsername(username, { page: 1, pageSize })
+  const first = listByUsername(username, { ...filters, page: 1, pageSize })
   const list = [...first.list]
   const pages = Math.ceil(first.total / pageSize)
   for (let page = 2; page <= pages; page += 1) {
-    list.push(...listByUsername(username, { page, pageSize }).list)
+    list.push(...listByUsername(username, { ...filters, page, pageSize }).list)
   }
   return list
 }
 
-export default async function ArchivesPage() {
+export default async function ArchivesPage({ searchParams }: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const author = siteOwner()
   const username = author.username
   const themeId = siteConfigData(ensureSiteConfig(author.id)).themeId
-  const list = loadAll(username)
+  const params = await searchParams
+  const category = listCategoriesPublic(username).find((c) => String(c.id) === params.categoryId || c.name === params.category)
+  const tags = ([] as string[]).concat(params.tag || []).filter(Boolean)
+  const unknownCategory = !!(params.categoryId || params.category) && !category
+  const list = unknownCategory ? [] : loadAll(username, { categoryId: category?.id, tags })
 
   const map = new Map<number, { article: ArticleInfo; month: number; day: number }[]>()
   for (const a of list) {
@@ -36,25 +43,30 @@ export default async function ArchivesPage() {
 
   if (themeId === 'mizuki') {
     return (
-      <div className="mz-article" id="archives">
-        <h1 className="mz-page-title">归档</h1>
+      <div className="mz-archive-panel" id="archives">
+        <h1 className="sr-only">{category ? `${category.name} · ` : ''}{tags.length ? `${tags.join('、')} · ` : ''}文章归档</h1>
         {groups.length === 0 ? (
-          <div className="mz-empty">还没有文章</div>
+          <div className="mz-archive-empty">{category || tags.length || unknownCategory ? '这个分类或标签下还没有文章' : '还没有文章'}</div>
         ) : (
           groups.map((g) => (
-            <div key={g.year}>
-              <div className="mz-archive-year">{g.year}<span className="mz-archive-count">{g.items.length} 篇文章</span></div>
+            <section key={g.year} aria-label={`${g.year} 年`}>
+              <div className="mz-archive-year">
+                <h2>{g.year}</h2><span className="mz-archive-year-marker" aria-hidden="true" />
+                <span className="mz-archive-count">{g.items.length} 篇文章</span>
+              </div>
               <ul className="mz-archive-list">
                 {g.items.map(({ article: a, month, day }) => (
                   <li key={a.id}>
-                    <Link href={`/${a.slug}`} className="mz-archive-row">
-                      <span className="date">{String(month).padStart(2, '0')}-{String(day).padStart(2, '0')}</span>
+                    <Link href={`/${a.slug}`} articleSlug={a.slug} className="mz-archive-row" aria-label={a.title} title={a.title}>
+                      <time className="date" dateTime={new Date((a.publishedAt || a.createdAt) * 1000).toISOString()}>{String(month).padStart(2, '0')}-{String(day).padStart(2, '0')}</time>
+                      <span className="mz-archive-dot" aria-hidden="true" />
                       <span className="mz-archive-title">{a.title}</span>
+                      <span className="mz-archive-tags" aria-hidden="true">{a.tags.map((tag) => `#${tag}`).join(' ')}</span>
                     </Link>
                   </li>
                 ))}
               </ul>
-            </div>
+            </section>
           ))
         )}
       </div>

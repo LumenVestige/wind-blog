@@ -1,6 +1,7 @@
-import Link from 'next/link'
+import Link from '@/components/blog/blog-navigation'
 import {
   Calendar,
+  ChevronRight,
   Eye,
   FolderOpen,
   Heart,
@@ -15,13 +16,14 @@ import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { expandUrl } from '@/server/images'
 import { ArticleLink } from '@/components/blog/article-link'
 import { FeedSearch } from '@/components/blog/feed-search'
+import { FeedTabs } from '@/components/blog/feed-tabs'
 import { Markdown } from '@/components/blog/markdown'
 import { MarkdownSummary } from '@/components/blog/markdown-summary'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { blogQuery, formatDateCn, formatDateSlash } from '@/lib/blog-present'
-import { DataPagination } from '@/components/ui/data-pagination'
+import { BlogPagination } from '@/components/blog/blog-pagination'
 import { FEED_PAGE_SIZES, parsePage, parsePageSize } from '@/lib/pagination'
 import { cn } from '@/lib/utils'
 
@@ -93,6 +95,10 @@ export default async function BlogHomePage({
     summary: a.summary,
     publishedLabel: formatDateSlash(a.publishedAt || a.createdAt),
     categoryName: catName(a.categoryId) || '',
+    categoryId: a.categoryId,
+    publishedAt: a.publishedAt || a.createdAt,
+    updatedAt: a.updatedAt,
+    tags: a.tags,
   })
   const activeCat = categoryId ? catName(categoryId) : undefined
   const baseQuery = { q: keyword, categoryId, tag: tags, sort }
@@ -115,13 +121,12 @@ export default async function BlogHomePage({
     ) : null
 
   const pager = (
-    <DataPagination
+    <BlogPagination
       page={page}
       total={res.total}
       pageSize={pageSize}
       href={blogQuery(username, baseQuery)}
       label="文章列表分页"
-      pageSizes={FEED_PAGE_SIZES}
     />
   )
 
@@ -204,18 +209,10 @@ export default async function BlogHomePage({
         {intro}
         <div className="mz-feed-toolbar">
           <div className="mz-feed-toolbar-start">
-            <nav className="mz-feed-tabs" aria-label="文章排序">
-              {tabs.map((t) => (
-                <Link
-                  key={t.label}
-                  href={blogQuery(username, { ...baseQuery, sort: t.key })}
-                  className={cn('mz-feed-tab', sort === t.key && 'is-active')}
-                  aria-current={sort === t.key ? 'page' : undefined}
-                >
-                  {t.label}
-                </Link>
-              ))}
-            </nav>
+            <FeedTabs sort={sort} items={tabs.map((t) => ({
+              label: t.label, sort: t.key,
+              href: blogQuery(username, { ...baseQuery, sort: t.key }),
+            }))} />
             {categoryId ? (
               <span className="mz-feed-filter">
                 <FolderOpen aria-hidden />
@@ -255,15 +252,16 @@ export default async function BlogHomePage({
           />
         </div>
         {res.list.length === 0 ? (
-          <div className="mz-empty">
+          <div className="mz-empty" data-feed-list>
             {keyword || categoryId || tag
               ? '没有找到匹配的文章，请调整筛选条件。'
               : '还没有公开文章'}
           </div>
         ) : (
           <div
-            className="mz-feed-grid"
-            // Size rows for a full page so a short last page keeps card height.
+            className={cn('mz-feed-grid', res.list.length < pageSize && 'is-short')}
+            data-feed-list
+            // Full pages fill the available height; short pages keep natural rows.
             style={{ '--mz-feed-rows': Math.ceil(pageSize / 2) } as React.CSSProperties}
           >
             {res.list.map((a) => {
@@ -274,7 +272,7 @@ export default async function BlogHomePage({
                   className="mz-feed-card"
                 >
                   <div className="mz-feed-body">
-                    <h2 className="mz-feed-title">{a.title}</h2>
+                    <h2 className="mz-feed-title"><span className="mz-feed-title-text">{a.title}</span><ChevronRight className="mz-feed-enter" aria-hidden="true" /></h2>
                     <div className="mz-feed-excerpt">
                       {a.summary ? <MarkdownSummary content={a.summary} /> : null}
                     </div>

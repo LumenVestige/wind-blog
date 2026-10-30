@@ -1,12 +1,13 @@
 'use client'
 
-import Link from 'next/link'
+import Link, { usePendingBlogHref } from '@/components/blog/blog-navigation'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { Archive, FolderOpen, Home, Info, LogIn, Menu, Settings, Users } from 'lucide-react'
+import { Archive, ChevronDown, FolderOpen, Home, Info, ListTree, LogIn, Menu, Settings, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './theme-toggle'
 import type { BlogShellData } from './shell-types'
+import type { TocItem } from './article-toc'
 
 export type SiteNavbarData = Pick<
   BlogShellData,
@@ -20,13 +21,20 @@ export type SiteNavbarData = Pick<
 export function SiteNavbar({
   data,
   articleTitle = null,
+  articleToc = [],
 }: {
   data: SiteNavbarData
   /** Set on article pages; the brand swaps to it once the page title scrolls under the bar. */
   articleTitle?: string | null
+  articleToc?: TocItem[]
 }) {
   const pathname = usePathname()
+  const pendingHref = usePendingBlogHref()
+  const activePathname = pendingHref ? new URL(pendingHref, 'http://blog.local').pathname : pathname
   const [menuOpen, setMenuOpen] = useState(false)
+  const [tocOpen, setTocOpen] = useState(false)
+  const tocButtonRef = useRef<HTMLButtonElement>(null)
+  const topRowRef = useRef<HTMLDivElement>(null)
   const [compact, setCompact] = useState(false)
   const [titleDocked, setTitleDocked] = useState(false)
   const [titleWidth, setTitleWidth] = useState(0)
@@ -38,7 +46,34 @@ export function SiteNavbar({
 
   useEffect(() => {
     setMenuOpen(false)
+    setTocOpen(false)
   }, [pathname])
+
+  useEffect(() => {
+    if (!articleToc.length) setTocOpen(false)
+  }, [articleToc.length])
+
+  useEffect(() => {
+    if (!tocOpen) return
+    const outside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !topRowRef.current?.contains(event.target)) setTocOpen(false)
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setTocOpen(false)
+      tocButtonRef.current?.focus()
+    }
+    const desktop = window.matchMedia('(min-width: 1024px)')
+    const resize = () => { if (desktop.matches) setTocOpen(false) }
+    desktop.addEventListener('change', resize)
+    document.addEventListener('pointerdown', outside)
+    document.addEventListener('keydown', escape)
+    return () => {
+      desktop.removeEventListener('change', resize)
+      document.removeEventListener('pointerdown', outside)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [tocOpen])
 
   useEffect(() => {
     if (!compact) setMenuOpen(false)
@@ -112,13 +147,14 @@ export function SiteNavbar({
   ]
 
   function active(href: string, end?: boolean) {
-    return end ? pathname === href : pathname.startsWith(href)
+    return end ? activePathname === href : activePathname.startsWith(href)
   }
 
   const loginHref = `/login?next=${encodeURIComponent(pathname || '/')}`
+  const tocBaseLevel = Math.min(...articleToc.map((heading) => heading.level))
 
   return (
-    <div className={cn('mz-top-row', compact && 'is-compact')}>
+    <div className={cn('mz-top-row', compact && 'is-compact')} ref={topRowRef}>
       <header className="mz-navbar" aria-label="导航">
         <div className="mz-nav-inner" ref={navInnerRef}>
           <div className={cn('mz-brand-slot', titleDocked && 'is-title')} ref={brandRef}>
@@ -147,19 +183,26 @@ export function SiteNavbar({
 
           <nav className="mz-nav-links" aria-label="博客导航" ref={navLinksRef}>
             {navItems.map((it) => (
-              <Link key={it.href} href={it.href} className={cn('mz-nav-link', active(it.href, it.end) && 'is-active')}>
+              <Link key={it.href} href={it.href} aria-current={active(it.href, it.end) ? 'page' : undefined} className={cn('mz-nav-link', active(it.href, it.end) && 'is-active')}>
                 <it.icon className="size-3.5 opacity-70" />
                 {it.label}
               </Link>
             ))}
             {data.pages.map((p) => (
-              <Link key={p.slug} href={`/p/${p.slug}`} className="mz-nav-link">
+              <Link key={p.slug} href={`/p/${p.slug}`} className={cn('mz-nav-link', active(`/p/${p.slug}`) && 'is-active')}>
                 {p.label}
               </Link>
             ))}
           </nav>
 
           <div className="mz-nav-actions" ref={navActionsRef}>
+            {articleToc.length > 0 && (
+              <button type="button" className={cn('mz-icon-btn mz-mobile-toc-button', tocOpen && 'is-active')}
+                ref={tocButtonRef} aria-label="文章目录" title="文章目录" aria-expanded={tocOpen} aria-controls="mobile-article-toc"
+                onClick={() => { setTocOpen((open) => !open); setMenuOpen(false) }}>
+                <ListTree className="size-4" aria-hidden="true" />
+              </button>
+            )}
             <ThemeToggle variant="cycle" className="mz-icon-btn" />
             {data.isOwner ? (
               <Link href="/manage" className="mz-icon-btn" title="管理" aria-label="管理">
@@ -176,13 +219,45 @@ export function SiteNavbar({
               aria-label="菜单"
               aria-expanded={menuOpen}
               ref={menuButtonRef}
-              onClick={() => setMenuOpen((v) => !v)}
+              onClick={() => { setMenuOpen((v) => !v); setTocOpen(false) }}
             >
               <Menu className="size-4" />
             </button>
           </div>
         </div>
       </header>
+
+      {articleToc.length > 0 && (
+        <div className="mz-mobile-toc-dropdown" data-open={tocOpen} id="mobile-article-toc"
+          inert={!tocOpen || undefined} aria-hidden={!tocOpen}>
+          <div className="mz-mobile-toc-clip">
+            <nav className="mz-mobile-toc-panel" aria-label="移动端文章目录">
+              <div className="mz-mobile-toc-heading">文章目录<ChevronDown className="size-4" aria-hidden="true" /></div>
+              <ul>
+                {articleToc.map((item) => (
+                  <li key={item.id}>
+                    <a href={item.id === 'article-top' ? '#' : `#${item.id}`}
+                      style={{ paddingLeft: `${0.75 + Math.max(0, item.level - tocBaseLevel) * 0.85}rem` }}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        setTocOpen(false)
+                        tocButtonRef.current?.focus()
+                        const heading = document.getElementById(item.id)
+                        const offset = (navInnerRef.current?.getBoundingClientRect().bottom || 68) + 16
+                        const top = item.id === 'article-top' ? 0 : heading ? window.scrollY + heading.getBoundingClientRect().top - offset : null
+                        if (top == null) return
+                        window.scrollTo({ top: Math.max(0, top), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+                        history.replaceState(history.state, '', item.id === 'article-top' ? location.pathname + location.search : `#${encodeURIComponent(item.id)}`)
+                      }}>
+                      {item.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        </div>
+      )}
 
       <div className={cn('mz-mobile-menu', menuOpen && 'is-open')}>
         <div className="mz-mobile-panel">

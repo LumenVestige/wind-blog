@@ -24,7 +24,7 @@ export class ClientApiError extends Error {
 async function request<T>(
   method: string,
   path: string,
-  opts: { params?: Record<string, unknown>; body?: unknown } = {},
+  opts: { params?: Record<string, unknown>; body?: unknown; signal?: AbortSignal } = {},
 ): Promise<T> {
   let url = path
   if (opts.params) {
@@ -48,7 +48,7 @@ async function request<T>(
   }
   let res: Response
   try {
-    res = await fetch(url, { method, headers, body, credentials: 'include' })
+    res = await fetch(url, { method, headers, body, credentials: 'include', signal: opts.signal })
   } catch (e) {
     throw new ClientApiError('网络请求失败', 0, 0)
   }
@@ -81,8 +81,8 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(path: string, params?: Record<string, unknown>) =>
-    request<T>('GET', path, { params }),
+  get: <T>(path: string, params?: Record<string, unknown>, options?: { signal?: AbortSignal }) =>
+    request<T>('GET', path, { params, signal: options?.signal }),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, { body }),
   upload: <T>(path: string, form: FormData) => request<T>('POST', path, { body: form }),
 }

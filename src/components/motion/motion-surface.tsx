@@ -4,10 +4,11 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import gsap from 'gsap'
 import { createPortal } from 'react-dom'
+import { usePendingBlogHref } from '@/components/blog/blog-navigation'
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const targets = {
-  blog: '.mz-post-card, .mz-cat-card, .mz-archive-year, .mz-article > header, #article-body h2, #article-body h3, #article-body .md-code-block, #article-body blockquote, #article-body img, .mz-section-card, [data-comment-row]',
+  blog: '[data-comment-row]',
   admin:
     '[data-slot="card"], [data-slot="empty"], [data-slot="table-body"] > tr, [data-motion-item]',
 }
@@ -15,7 +16,8 @@ const targets = {
 function Surface({ mode }: { mode: 'blog' | 'admin' }) {
   const pathname = usePathname()
   const params = useSearchParams()
-  const route = pathname + '?' + params.toString()
+  const pendingHref = usePendingBlogHref()
+  const route = pathname + '?' + params.toString() + (mode === 'blog' ? `|${pendingHref || ''}` : '')
   const bar = useRef<HTMLDivElement>(null)
   const reading = useRef<HTMLDivElement>(null)
   const indicator = useRef<HTMLDivElement>(null)
@@ -116,6 +118,7 @@ function Surface({ mode }: { mode: 'blog' | 'admin' }) {
         })
     }
     const click = (event: MouseEvent) => {
+      if (mode === 'blog') return // BlogNavigationProvider owns the page transition.
       if (
         event.defaultPrevented ||
         event.button ||
@@ -161,7 +164,7 @@ function Surface({ mode }: { mode: 'blog' | 'admin' }) {
       finish()
       if (bar.current) gsap.killTweensOf(bar.current)
     }
-  }, [selector])
+  }, [selector, mode])
 
   useEffect(() => {
     const root = document.querySelector<HTMLElement>(selector)

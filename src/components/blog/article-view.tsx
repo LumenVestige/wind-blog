@@ -1,9 +1,9 @@
 'use client'
 import { cn } from '@/lib/utils'
 
-import Link from 'next/link'
+import Link from '@/components/blog/blog-navigation'
 import { useEffect, useState } from 'react'
-import { Clock, Eye, Heart, Link2, MessageCircle } from 'lucide-react'
+import { BookOpen, CalendarDays, CalendarClock, Clock, Eye, Hash, Heart, Link2, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { MarkdownView } from '@/components/blog/markdown-view'
@@ -13,7 +13,7 @@ import { CommentSection } from '@/components/blog/comment-section'
 import { ArticleToc, type TocItem } from '@/components/blog/article-toc'
 import { useBlogChrome } from '@/components/blog/blog-chrome'
 import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
-import { estimateReadMinutes } from '@/lib/blog-present'
+import { estimateReadMinutes, formatDateSlash } from '@/lib/blog-present'
 
 export interface ArticleViewData {
   id: number
@@ -23,7 +23,10 @@ export interface ArticleViewData {
   html: string
   tags: string[]
   categoryName: string
+  categoryId?: number | null
   publishedLabel: string
+  publishedAt?: number
+  updatedAt?: number
   viewCount: number
   likeCount: number
   liked: boolean
@@ -50,7 +53,7 @@ export function ArticleBodyContent({
   const isChirpy = themeId === 'chirpy'
   const isMizuki = themeId === 'mizuki'
   const mobileToc =
-    !locked && toc.length > 0 ? (
+    !isMizuki && !locked && toc.length > 0 ? (
       <details className={cn("mb-6 rounded-lg border p-3", isChirpy ? "chirpy-toc-mobile xl:hidden" : isMizuki ? "lg:hidden" : "")}>
         <summary className="cursor-pointer select-none font-semibold text-[var(--label-color)]">目录</summary>
         <ul className="chirpy-toc-list mt-2">
@@ -161,6 +164,12 @@ export function ArticleView({
 
   useEffect(() => {
     if (!chrome) return
+    chrome.setArticleToc(locked || loading ? [] : toc)
+    return () => chrome.setArticleToc([])
+  }, [chrome, locked, toc, loading])
+
+  useEffect(() => {
+    if (!chrome) return
     if (loading && themeId === 'mizuki') {
       chrome.setPanel(<ArticleTocSkeleton />)
       return () => chrome.setPanel(null)
@@ -186,7 +195,7 @@ export function ArticleView({
   }
 
   const mobileToc =
-    !locked && toc.length > 0 ? (
+    !isMizuki && !locked && toc.length > 0 ? (
       <details className={cn("mb-6 rounded-lg border p-3", isChirpy ? "chirpy-toc-mobile xl:hidden" : isMizuki ? "lg:hidden" : "")}>
         <summary className="cursor-pointer select-none font-semibold text-[var(--label-color)]">
           目录
@@ -303,6 +312,7 @@ export function ArticleView({
             <li key={a.id}>
               <Link
                 href={`${base}/${a.slug}`}
+                articleSlug={a.slug}
                 className={
                   isChirpy
                     ? 'block rounded-[10px] bg-[var(--card-bg)] p-3 shadow-[var(--card-shadow)] transition hover:bg-[var(--card-hover-bg)]'
@@ -427,7 +437,7 @@ export function ArticleView({
     return (
       <div className="space-y-4">
         <article className={cn('mz-article', loading && 'is-loading')}>
-          <header>
+          <header className="mz-article-header">
             {article.title ? (
               <h1>{article.title}</h1>
             ) : loading ? (
@@ -435,12 +445,51 @@ export function ArticleView({
             ) : (
               <h1 />
             )}
-            {loading ? (
+            <div className="mz-article-info">
+            {loading && !article.publishedAt ? (
               <ArticleMetaSkeleton />
             ) : (
-              <div className="mz-article-meta">{meta}</div>
+              <div className="mz-article-meta">
+                <span className="mz-meta-item" title="发布时间">
+                  <span className="mz-meta-icon"><CalendarDays aria-hidden="true" /></span>
+                  <span className="sr-only">发布于</span>
+                  <time dateTime={article.publishedAt ? new Date(article.publishedAt * 1000).toISOString() : undefined}>
+                    {article.publishedAt ? formatDateSlash(article.publishedAt).replaceAll('/', '-') : article.publishedLabel}
+                  </time>
+                </span>
+                {article.updatedAt ? (
+                  <span className="mz-meta-item" title="更新时间">
+                    <span className="mz-meta-icon"><CalendarClock aria-hidden="true" /></span>
+                    <span className="sr-only">更新于</span>
+                    <time dateTime={new Date(article.updatedAt * 1000).toISOString()}>{formatDateSlash(article.updatedAt).replaceAll('/', '-')}</time>
+                  </span>
+                ) : null}
+                <span className="mz-meta-item">
+                  <span className="mz-meta-icon"><BookOpen aria-hidden="true" /></span>
+                  <span className="sr-only">分类：</span>
+                  {article.categoryId ? <Link href={`/archives?categoryId=${article.categoryId}`}>{article.categoryName || '未分类'}</Link> : <span>{article.categoryName || '未分类'}</span>}
+                </span>
+                <span className="mz-meta-item mz-meta-tags">
+                  <span className="mz-meta-icon"><Hash aria-hidden="true" /></span>
+                  <span className="sr-only">标签：</span>
+                  <span className="mz-meta-tag-list">
+                    {article.tags.length ? article.tags.map((tag, index) => (
+                      <span key={tag}>{index > 0 && <span className="mz-meta-separator" aria-hidden="true">/</span>}<Link href={`/archives?tag=${encodeURIComponent(tag)}`}>{tag}</Link></span>
+                    )) : '无标签'}
+                  </span>
+                </span>
+              </div>
             )}
-            {tags}
+            {!loading && (
+              <div className="mz-article-details">
+                <span><Clock aria-hidden="true" />约 {estimateReadMinutes(article.content)} 分钟</span>
+                <span><Eye aria-hidden="true" /><span className="sr-only">阅读</span>{article.viewCount}</span>
+                <span><Heart aria-hidden="true" /><span className="sr-only">喜欢</span>{article.likeCount}</span>
+                <span><MessageCircle aria-hidden="true" /><span className="sr-only">评论</span>{article.commentCount}</span>
+                {isOwner ? <Link href={editHref}>编辑文章</Link> : null}
+              </div>
+            )}
+            </div>
           </header>
           {body}
           {!bodySlot ? likeBlock : null}

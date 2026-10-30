@@ -1,33 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { api } from '@/lib/api-client'
+import { loadArticleForReading, type ArticlePayload } from '@/lib/article-prefetch'
 import { renderMarkdown, extractHeadings } from '@/lib/markdown'
 import { formatDateLong } from '@/lib/blog-present'
 import { ArticleBodyContent, ArticleView, type ArticleViewData } from '@/components/blog/article-view'
-import { readArticlePreview } from '@/components/blog/article-link'
-import { ArticleNav } from '@/components/blog/article-nav'
+import { readArticlePreview, type ArticlePreview } from '@/components/blog/article-link'
+import { ArticleNav, ArticleNavSkeleton } from '@/components/blog/article-nav'
 import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
 import type { TocItem } from '@/components/blog/article-toc'
-
-type ArticlePayload = {
-  id: number
-  slug: string
-  title: string
-  summary: string
-  content?: string
-  tags: string[]
-  publishedAt: number
-  createdAt: number
-  viewCount: number
-  likeCount: number
-  liked: boolean
-  commentCount: number
-  requiresPassword: boolean
-  userId: number
-  username: string
-}
 
 // Enough paragraphs to overflow any viewport; the card clips them at full height.
 const SKELETON_LINES = Array.from({ length: 5 }, () => [
@@ -50,45 +32,36 @@ function ArticleBodySkeleton() {
   )
 }
 
-function ArticleNavSkeleton() {
-  const ref = useFadeOutOnUnmount<HTMLElement>()
-  return (
-    <nav ref={ref} className="mz-article-nav" aria-hidden>
-      {['', ' is-next'].map((side) => (
-        <div key={side} className={`mz-article-nav-item${side}`}>
-          <span className="mz-skeleton mz-skeleton-meta" style={{ width: '3.5rem' }} />
-          <span className="mz-skeleton mz-skeleton-line" style={{ width: '70%' }} />
-        </div>
-      ))}
-    </nav>
-  )
-}
-
 export function InstantArticle({
   themeId,
   username,
   categoryName,
+  categories = [],
   viewerId = 0,
   isAdmin = false,
 }: {
   themeId: 'mizuki' | 'chirpy' | 'simple'
   username: string
   categoryName: string
+  categories?: { id: number; name: string }[]
   viewerId?: number
   isAdmin?: boolean
 }) {
   const params = useParams<{ slug: string }>()
   const slug = params.slug
-  const preview = readArticlePreview(slug)
-  const [article, setArticle] = useState<ArticlePayload | null>(null)
+  const [cachedPreview, setPreview] = useState<ArticlePreview | null>(null)
+  const preview = cachedPreview?.slug === slug ? cachedPreview : null
+  const [loaded, setArticle] = useState<ArticlePayload | null>(null)
+  const article = loaded?.slug === slug ? loaded : null
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
+    // The server cannot read sessionStorage. Hydrate the same skeleton first.
+    setPreview(readArticlePreview(slug))
     setArticle(null)
     setFailed(false)
-    api
-      .get<ArticlePayload>('/api/user/blog/article/get', { username, slug })
+    loadArticleForReading(username, slug)
       .then((data) => {
         if (!cancelled) setArticle(data)
       })
@@ -106,10 +79,13 @@ export function InstantArticle({
     id: article?.id || 0,
     slug,
     title,
-    content: summary,
+    content: article?.content || summary,
     html: '',
-    tags: article?.tags || [],
-    categoryName,
+    tags: article?.tags || preview?.tags || [],
+    categoryId: article?.categoryId ?? preview?.categoryId,
+    categoryName: categories.find((category) => category.id === (article?.categoryId ?? preview?.categoryId))?.name || preview?.categoryName || categoryName,
+    publishedAt: article ? article.publishedAt || article.createdAt : preview?.publishedAt,
+    updatedAt: article?.updatedAt || preview?.updatedAt,
     publishedLabel: article
       ? formatDateLong(article.publishedAt || article.createdAt)
       : preview?.publishedLabel || '',
@@ -120,10 +96,9 @@ export function InstantArticle({
     requiresPassword: article?.requiresPassword || false,
     userId: article?.userId || 0,
   }
-  const headings = article?.content
-    ? extractHeadings(article.content).filter((h) => h.level <= 4)
-    : []
-  const toc: TocItem[] = headings.map((h) => ({ id: h.id, text: h.text, level: h.level }))
+  const toc: TocItem[] = useMemo(() => article?.content
+    ? extractHeadings(article.content).filter((h) => h.level <= 4).map((h) => ({ id: h.id, text: h.text, level: h.level }))
+    : [], [article?.content])
   const isOwner = viewerId > 0 && (article?.userId === viewerId || isAdmin)
   const body = article ? (
     <ArticleBodyContent
@@ -144,6 +119,7 @@ export function InstantArticle({
   return (
     <>
     <ArticleView
+      key={`article-${slug}`}
       themeId={themeId}
       username={article?.username || username}
       isOwner={isOwner}
@@ -156,7 +132,7 @@ export function InstantArticle({
       loading={!article && !failed}
     />
     {themeId === 'mizuki' && article ? (
-      <ArticleNav username={article.username || username} slug={slug} />
+      <ArticleNav key={`nav-${slug}`} username={article.username || username} slug={slug} />
     ) : themeId === 'mizuki' && !failed ? (
       <ArticleNavSkeleton />
     ) : null}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { ArticleLink } from '@/components/blog/article-link'
+import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
 
 type Adjacent = { slug: string; title: string } | null
 
@@ -14,6 +15,19 @@ const previewOf = (a: { slug: string; title: string }) => ({
   publishedLabel: '',
   categoryName: '',
 })
+
+export function ArticleNavSkeleton() {
+  const ref = useFadeOutOnUnmount<HTMLElement>()
+  return (
+    <nav ref={ref} className="mz-article-nav" aria-label="加载相邻文章" aria-busy="true">
+      {['', ' is-next'].map((side) => (
+        <div key={side} className={`mz-article-nav-item${side}`} aria-hidden="true">
+          <span className="mz-skeleton mz-skeleton-line" style={{ width: '70%' }} />
+        </div>
+      ))}
+    </nav>
+  )
+}
 
 /** 文章底部的上一篇（更早）/ 下一篇（更新）导航。 */
 export function ArticleNav({ username, slug }: { username: string; slug: string }) {
@@ -27,21 +41,20 @@ export function ArticleNav({ username, slug }: { username: string; slug: string 
       .then((d) => {
         if (!cancelled) setData(d)
       })
-      .catch(() => {})
+      .catch(() => { if (!cancelled) setData({ prev: null, next: null }) })
     return () => {
       cancelled = true
     }
   }, [username, slug])
 
-  if (!data || (!data.prev && !data.next)) return null
+  if (!data) return <ArticleNavSkeleton />
+  if (!data.prev && !data.next) return null
   return (
     <nav className="mz-article-nav" aria-label="上一篇和下一篇">
       {data.prev ? (
         <ArticleLink preview={previewOf(data.prev)} className="mz-article-nav-item">
-          <span className="mz-article-nav-label">
-            <ChevronLeft />
-            上一篇
-          </span>
+          <ChevronLeft className="mz-article-nav-arrow" aria-hidden="true" />
+          <span className="sr-only">上一篇：</span>
           <span className="mz-article-nav-title">{data.prev.title}</span>
         </ArticleLink>
       ) : (
@@ -49,11 +62,9 @@ export function ArticleNav({ username, slug }: { username: string; slug: string 
       )}
       {data.next ? (
         <ArticleLink preview={previewOf(data.next)} className="mz-article-nav-item is-next">
-          <span className="mz-article-nav-label">
-            下一篇
-            <ChevronRight />
-          </span>
+          <span className="sr-only">下一篇：</span>
           <span className="mz-article-nav-title">{data.next.title}</span>
+          <ChevronRight className="mz-article-nav-arrow" aria-hidden="true" />
         </ArticleLink>
       ) : (
         <span className="mz-article-nav-empty" aria-hidden />

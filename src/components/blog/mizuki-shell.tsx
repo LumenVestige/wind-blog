@@ -1,6 +1,8 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/blog/blog-navigation'
+import { BlogNavigationProvider } from './blog-navigation'
+import { ArticleResourceWarmup } from './article-resource-warmup'
 import { MotionSurface } from '@/components/motion/motion-surface'
 import { usePathname } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
@@ -20,7 +22,7 @@ import type { BlogShellData } from './shell-types'
 const RECENT_TAIL = 6
 
 /** Pages that render without the right-hand sidebar. */
-const SIDEBARLESS_PATHS = new Set(['/archives', '/about'])
+const SIDEBARLESS_PATHS = new Set(['/about'])
 
 export function MizukiShell({
   data,
@@ -45,16 +47,17 @@ export function MizukiShell({
   }, [])
 
   return (
+    <BlogNavigationProvider>
+    <ArticleResourceWarmup />
     <BlogChrome>
-      {({ panel, articleTitle }) => {
-        // Archive and about pages use the full width. Articles keep only their
-        // outline, and an article without one has nothing left for the rail.
+      {({ panel, articleTitle, articleToc }) => {
+        // Articles keep only their outline; archives place their filters on the left.
         const showSidebar =
           !SIDEBARLESS_PATHS.has(pathname) && (articleTitle == null || !!panel)
         return (
     <div data-blog-theme="mizuki" className={cn('mz-shell', dark && 'dark')}>
       <ThemeInit scheme={scheme} />
-      <SiteNavbar data={data} articleTitle={articleTitle || null} />
+      <SiteNavbar data={data} articleTitle={articleTitle || null} articleToc={articleToc} />
 
       <MotionSurface mode="blog" />
       <div className="mz-main-wrap">
@@ -63,6 +66,7 @@ export function MizukiShell({
             'mz-grid',
             showSidebar && 'has-sidebar',
             articleTitle != null && 'is-article',
+            pathname === '/archives' && 'is-archives',
           )}
         >
           <main className="mz-content" aria-label="正文">
@@ -72,7 +76,7 @@ export function MizukiShell({
           {showSidebar && (
           <aside className="mz-sidebar" aria-label="侧栏">
             {/* Article pages keep only the outline (passed in as `panel`). */}
-            {articleTitle == null && data.recentPosts.length > 0 && (
+            {pathname !== '/archives' && articleTitle == null && data.recentPosts.length > 0 && (
               <div className="mz-widget">
                 <h2 className="mz-widget-title">最近更新</h2>
                 <ul className="mz-panel-list">
@@ -83,7 +87,7 @@ export function MizukiShell({
                     const tail = chars.slice(-RECENT_TAIL).join('')
                     return (
                       <li key={a.id}>
-                        <Link href={`${base}/${a.slug}`} className="mz-recent-item" title={a.title}>
+                        <Link href={`${base}/${a.slug}`} articleSlug={a.slug} className="mz-recent-item" title={a.title}>
                           <span className="mz-recent-title">
                             <span className="mz-recent-head">{head}</span>
                             <span className="mz-recent-tail">{tail}</span>
@@ -143,5 +147,6 @@ export function MizukiShell({
         )
       }}
     </BlogChrome>
+    </BlogNavigationProvider>
   )
 }

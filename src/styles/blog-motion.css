@@ -5,24 +5,38 @@
   --blog-reading-bg: color-mix(in srgb, var(--blog-accent) 14%, transparent);
 }
 
-/* The template remounts on navigation; the shell and sticky rail stay in place. */
-.blog-page-transition {
-  animation: blog-page-enter 280ms var(--blog-motion-ease) backwards;
-}
-
-.blog-page-transition .mz-article {
+/* Next keeps the shell mounted. BlogNavigationProvider owns route motion so
+   cards never stack another translation on the page entrance. */
+.blog-page-transition,
+.blog-page-transition .mz-article,
+.blog-page-transition .mz-feed-card,
+.blog-page-transition .mz-post-card,
+.blog-page-transition .mz-cat-card {
   animation: none;
 }
 
-@keyframes blog-page-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.mz-article-header > h1,
+.mz-article-header > .mz-article-info,
+.mz-article > #article-body {
+  animation: mz-document-enter 300ms var(--mz-ease) backwards;
+}
+
+.mz-article-header > h1 { animation-delay: 50ms; }
+.mz-article-header > .mz-article-info { animation-delay: 100ms; }
+.mz-article > #article-body { animation-delay: 175ms; }
+
+/* Fast responses arrive inside the entrance. Only longer waits reveal bars. */
+.mz-article-header > .mz-skeleton-title,
+.mz-article-header > .mz-article-info:has(.mz-article-meta[aria-hidden='true']),
+.mz-article > .mz-article-skeleton,
+.mz-sidebar > .mz-toc-loading,
+.mz-article-nav[aria-busy='true'] {
+  animation: mz-fade-in 160ms var(--mz-ease) 280ms backwards;
+}
+
+@keyframes mz-document-enter {
+  from { opacity: 0; translate: 0 32px; }
+  to { opacity: 1; translate: 0 0; }
 }
 
 .toc-outline {
@@ -63,7 +77,7 @@
   padding: 0.38rem 1.6rem 0.38rem 0.65rem;
   border-radius: 0.65rem;
   color: var(--mz-text-75, var(--text-muted-color));
-  font-size: 0.84rem;
+  font-size: 0.8125rem;
   line-height: 1.5;
   text-decoration: none;
   overflow-wrap: anywhere;
@@ -143,66 +157,110 @@
   transform: rotate(-90deg);
 }
 
-/* A full-row link also makes the date and empty space clickable. */
+/* Archive: the date, continuous dotted line, title and quiet tag column share
+   the same grid as the year header. The entire row is one link. */
+.mz-archive-panel {
+  border-radius: var(--mz-radius);
+  background: var(--mz-card-bg);
+  padding: 1.5rem 2rem;
+  overflow: hidden;
+}
+
+.mz-archive-year {
+  display: grid;
+  grid-template-columns: 10% 10% minmax(0, 1fr);
+  align-items: center;
+  height: 3.75rem;
+  margin: 0;
+  color: var(--mz-text-75);
+}
+
+.mz-archive-year h2 { margin: 0; text-align: right; font-size: 1.5rem; font-weight: 700; }
+.mz-archive-year-marker {
+  position: relative;
+  justify-self: center;
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 3px solid var(--mz-primary);
+  border-radius: 50%;
+}
+.mz-archive-year-marker::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 5px);
+  height: 1.15rem;
+  border-left: 1px dashed var(--mz-line);
+}
+.mz-archive-count { margin: 0; font-size: 0.875rem; font-weight: 400; color: var(--mz-text-50); }
+.mz-archive-panel .mz-archive-list { gap: 0; }
+
 .mz-archive-list .mz-archive-row {
   display: grid;
-  grid-template-columns: 3.2rem 0.35rem minmax(0, 1fr);
+  grid-template-columns: 10% 10% minmax(0, 65fr) minmax(0, 15fr);
   align-items: center;
-  gap: 1.1rem;
   width: 100%;
-  padding: 0.8rem 0.9rem;
-  border-radius: 0.75rem;
-  transition:
-    background-color 180ms ease,
-    color 180ms ease;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 150ms var(--mz-ease);
 }
-
-.mz-archive-list .mz-archive-row::before {
-  content: "";
-  grid-column: 2;
-  grid-row: 1;
-  width: 0.3rem;
-  height: 0.3rem;
-  justify-self: center;
-  border-radius: 1rem;
-  background: var(--blog-accent);
-  opacity: 0.35;
-  transition:
-    height 200ms var(--blog-motion-ease),
-    opacity 160ms ease;
+.mz-archive-row .date { width: auto; font-size: 0.875rem; text-align: right; color: var(--mz-text-50); }
+.mz-archive-dot { position: relative; display: grid; place-items: center; height: 100%; }
+.mz-archive-dot::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto;
+  border-left: 1px dashed var(--mz-line);
 }
-
-.mz-archive-row .date {
-  grid-column: 1;
-  grid-row: 1;
+.mz-archive-dot::after {
+  content: '';
+  z-index: 1;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--mz-primary) 40%, var(--mz-text-50));
+  outline: 4px solid var(--mz-card-bg);
+  transition: height 150ms var(--mz-ease), background-color 150ms var(--mz-ease), outline-color 150ms var(--mz-ease);
 }
 .mz-archive-title {
-  grid-column: 3;
-  transition: translate 200ms var(--blog-motion-ease);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 2rem;
+  color: var(--mz-text-75);
+  font-weight: 700;
+  transition: translate 150ms var(--mz-ease), color 150ms var(--mz-ease);
 }
-.mz-archive-count {
-  margin-left: 1rem;
-  font-size: 0.85rem;
-  font-weight: 400;
-  color: var(--mz-text-50);
+.mz-archive-tags { font-size: 0.8rem; color: var(--mz-muted); opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mz-archive-list .mz-archive-row:is(:hover, :focus-visible) { background: var(--mz-btn-bg); }
+.mz-archive-row:is(:hover, :focus-visible) .mz-archive-title { translate: 4px 0; color: var(--mz-primary); }
+.mz-archive-row:is(:hover, :focus-visible) .mz-archive-dot::after { height: 1.25rem; background: var(--mz-primary); outline-color: var(--mz-btn-bg); }
+.mz-archive-row:focus-visible { outline: 2px solid var(--mz-primary); outline-offset: -2px; }
+.mz-archive-empty { padding: 3rem 0; text-align: center; color: var(--mz-text-50); }
+
+.mz-archive-categories { display: flex; flex-direction: column; }
+.mz-archive-category { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.5rem; border-radius: 0.5rem; color: var(--mz-text-75); text-decoration: none; transition: color 150ms var(--mz-ease), background-color 150ms var(--mz-ease); }
+.mz-archive-category:is(:hover, .is-active) { color: var(--mz-primary); background: var(--mz-btn-bg); }
+.mz-archive-category-count { padding: 0.1rem 0.45rem; font-size: 0.875rem; font-weight: 700; background: var(--mz-btn-bg); color: var(--mz-primary); border-radius: 0.5rem; }
+
+@media (min-width: 1024px) {
+  .mz-grid.has-sidebar.is-archives { grid-template-columns: 17.5rem minmax(0, 1fr); }
+  .mz-grid.is-archives > .mz-content { grid-column: 2; grid-row: 1; }
+  .mz-grid.is-archives > .mz-sidebar { grid-column: 1; grid-row: 1; }
 }
 
-.mz-archive-list .mz-archive-row:hover,
-.mz-archive-list .mz-archive-row:focus-visible {
-  color: var(--blog-accent);
-  background: var(--mz-btn-bg);
+@media (max-width: 1023px) {
+  .mz-grid.is-archives > .mz-sidebar { display: flex; grid-row: 1; }
+  .mz-grid.is-archives .mz-archive-categories { flex-direction: row; flex-wrap: wrap; gap: 0.5rem; }
+  .mz-grid.is-archives .mz-archive-category { gap: 1rem; }
 }
 
-.mz-archive-row:hover::before,
-.mz-archive-row:focus-visible::before {
-  height: 1.35rem;
-  opacity: 1;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .mz-archive-row:hover .mz-archive-title {
-    translate: 3px 0;
-  }
+@media (max-width: 767px) {
+  .mz-archive-panel { padding: 1rem; }
+  .mz-archive-year { grid-template-columns: 15% 15% minmax(0, 1fr); }
+  .mz-archive-list .mz-archive-row { grid-template-columns: 15% 15% minmax(0, 1fr); }
+  .mz-archive-tags { display: none; }
+  .mz-archive-title { padding-right: 0.5rem; font-size: 0.9rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -215,7 +273,7 @@
     animation: none !important;
     transition: none !important;
   }
-  .mz-archive-row:hover .mz-archive-title {
+  .mz-archive-row:is(:hover, :focus-visible) .mz-archive-title {
     translate: none;
   }
 }

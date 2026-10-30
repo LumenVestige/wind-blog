@@ -132,19 +132,23 @@ export function CommentSection({
   async function like(c: CommentInfo) {
     if (pendingLike !== null) return
     setPendingLike(c.id)
+    const apply = (value: { liked: boolean; likeCount: number }) => {
+      const update = (items: CommentInfo[]): CommentInfo[] => items.map((item) => ({
+        ...item,
+        ...(item.id === c.id ? value : {}),
+        replies: update(item.replies || []),
+      }))
+      setComments(update)
+    }
+    apply({ liked: !c.liked, likeCount: Math.max(0, c.likeCount + (c.liked ? -1 : 1)) })
     try {
       const result = await api.post<{ liked: boolean; likeCount: number }>(
         '/api/user/blog/comment/like',
         { commentId: c.id },
       )
-      const update = (items: CommentInfo[]): CommentInfo[] =>
-        items.map((item) => ({
-          ...item,
-          ...(item.id === c.id ? result : {}),
-          replies: update(item.replies || []),
-        }))
-      setComments(update)
+      apply(result)
     } catch (e) {
+      apply({ liked: c.liked, likeCount: c.likeCount })
       toast.error(e instanceof Error ? e.message : '操作失败')
     } finally {
       setPendingLike(null)
