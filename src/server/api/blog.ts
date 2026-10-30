@@ -298,7 +298,7 @@ export const articlePrefetchH: Handler = (ctx) => {
   return ok(serializeArticle(row, { tags: getArticleTags([row.id]).get(row.id) }))
 }
 
-/** Confirm cached content is still public/current before showing it and counting a visit. */
+/** Background accounting for prefetched reads; revoked or stale posts are not counted. */
 export const articleViewH: Handler = async (ctx) => {
   const body = await readJson(ctx.req)
   const row = getArticleById(num(body.id))

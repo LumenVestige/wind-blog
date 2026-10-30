@@ -6,8 +6,9 @@ import {
   createContext, startTransition, Suspense, useCallback, useContext,
   useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode,
 } from 'react'
-import { canPrefetchArticle, createArticleIntent, prefetchArticle } from '@/lib/article-prefetch'
+import { canPrefetchArticle, clearArticlePrefetch, createArticleIntent, prefetchArticle, prepareArticleForNavigation } from '@/lib/article-prefetch'
 import { warmArticleResources } from '@/lib/article-resource-warmup'
+import { ARTICLE_ENTRANCE_EVENT } from '@/lib/blog-motion-events'
 
 type Navigate = (href: string, options?: { scroll?: boolean; replace?: boolean }) => void
 const Navigation = createContext<{ navigate: Navigate; pendingHref: string | null } | null>(null)
@@ -23,6 +24,7 @@ function RouteObserver({ onCommit }: { onCommit: (animate: boolean) => void }) {
     if (committed.current === route) return
     const initial = committed.current === null
     committed.current = route
+    if (!initial) clearArticlePrefetch(pathname)
     // SSR content is already visible. Hydration (including Strict Mode's
     // repeated effects) must never hide it just to replay an entrance.
     onCommit(!initial)
@@ -59,7 +61,7 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     const content = document.querySelector<HTMLElement>('.mz-content')
     if (!content || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const surface = feedOnly ? content.querySelector<HTMLElement>('[data-feed-list]') || content : content
-    // Article headings and body have their own stagger; only fade their backdrop.
+    // Article lines own their entrance; only fade the backdrop here.
     const article = content.querySelector('.mz-article > header')
     animations.current.push(surface.animate(
       [{ opacity: 0, translate: article ? '0 0' : feedOnly ? '0 12px' : '0 32px' }, { opacity: 1, translate: '0 0' }],
@@ -72,6 +74,7 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
         { duration: 300, delay: 50, easing: EASE, fill: 'backwards' },
       ))
     }
+    if (article) window.dispatchEvent(new Event(ARTICLE_ENTRANCE_EVENT))
   }, [reset])
 
   const navigate = useCallback<Navigate>((href, options = {}) => {
@@ -147,6 +150,7 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     return () => {
       media.removeEventListener('change', reduce)
       window.removeEventListener('popstate', reset)
+      clearArticlePrefetch('')
       reset()
     }
   }, [reset])
@@ -188,7 +192,16 @@ export default function BlogLink({ onNavigate, href, replace, scroll, prefetch, 
     let prevented = false
     onNavigate?.({ preventDefault: () => { prevented = true; event.preventDefault() } })
     if (prevented) return
-    if (articleSlug) intent.activate()
+    if (articleSlug) {
+      intent.activate()
+      if (typeof href === 'string') {
+        const destination = new URL(href, location.href)
+        if (destination.origin === location.origin &&
+            (destination.pathname !== location.pathname || destination.search !== location.search)) {
+          prepareArticleForNavigation(articleSlug)
+        }
+      }
+    }
     if (!navigation || typeof href !== 'string') return
     event.preventDefault()
     navigation.navigate(href, { replace, scroll })

@@ -50,14 +50,18 @@
 }
 
 .mz-article-header > h1,
-.mz-article-header > .mz-article-info,
-.mz-article > #article-body {
-  animation: mz-document-enter 300ms var(--mz-ease) backwards;
+.mz-article-header > .mz-article-info {
+  animation: none;
 }
 
-.mz-article-header > h1 { animation-delay: 50ms; }
-.mz-article-header > .mz-article-info { animation-delay: 100ms; }
-.mz-article > #article-body { animation-delay: 175ms; }
+/* Body rows are measured and animated by article-line-motion after layout. */
+.mz-article > #article-body { animation: none; }
+.mz-line-source,
+.mz-reading-line {
+  display: block;
+  position: relative;
+}
+[data-line-motion='pending'] { visibility: hidden; }
 
 /* First visits paint directly. Enable entrances only after an in-site route
    change; data arriving on a direct article visit also stays steady. */
@@ -68,7 +72,8 @@
   .mz-article-nav:not([aria-busy='true']),
   .mz-article-header > h1,
   .mz-article-header > .mz-article-info:not(:has(.mz-article-meta[aria-hidden='true'])),
-  .mz-article > #article-body
+  .mz-article > #article-body,
+  .mz-article > #article-body > .markdown-body > *
 ) { animation: none; }
 
 /* Fast responses arrive inside the entrance. Only longer waits reveal bars. */

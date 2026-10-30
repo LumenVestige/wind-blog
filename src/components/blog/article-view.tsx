@@ -2,7 +2,7 @@
 import { cn } from '@/lib/utils'
 
 import Link from '@/components/blog/blog-navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BookOpen, CalendarDays, CalendarClock, Clock, Eye, Hash, Heart, Link2, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import { ArticleToc, type TocItem } from '@/components/blog/article-toc'
 import { useBlogChrome } from '@/components/blog/blog-chrome'
 import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
 import { estimateReadMinutes, formatDateSlash } from '@/lib/blog-present'
+import { bindArticleLineMotion } from '@/lib/article-line-motion'
 
 export interface ArticleViewData {
   id: number
@@ -152,6 +153,10 @@ export function ArticleView({
   const isChirpy = themeId === 'chirpy'
   const isMizuki = themeId === 'mizuki'
   const locked = article.requiresPassword
+  const articleRef = useRef<HTMLElement>(null)
+  useLayoutEffect(() => {
+    if (isMizuki && !loading && articleRef.current) return bindArticleLineMotion(articleRef.current)
+  }, [isMizuki, loading, article.id, article.content])
   const base = ''
   // `from=article` makes the editor return here after saving.
   const editHref = `/manage/edit/${article.id}?from=article`
@@ -436,7 +441,7 @@ export function ArticleView({
   if (isMizuki) {
     return (
       <div className="space-y-4">
-        <article className={cn('mz-article', loading && 'is-loading')}>
+        <article ref={articleRef} className={cn('mz-article', loading && 'is-loading')}>
           <header className="mz-article-header">
             {article.title ? (
               <h1>{article.title}</h1>

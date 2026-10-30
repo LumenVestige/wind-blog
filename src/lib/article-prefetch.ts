@@ -1,7 +1,7 @@
 import { api } from '@/lib/api-client'
 
 export const ARTICLE_HOVER_MS = 200
-const CACHE_TTL_MS = 60_000
+const CACHE_TTL_MS = 5_000
 const CACHE_LIMIT = 5
 const PENDING_LIMIT = 2
 
@@ -27,12 +27,53 @@ export type ArticlePayload = {
 
 type Entry = {
   promise: Promise<ArticlePayload>
+  data: ArticlePayload | null
   expires: number
   controller: AbortController
   pending: boolean
 }
 const cache = new Map<string, Entry>()
 const reads = new Map<string, Promise<ArticlePayload>>()
+type NavigationRead = { promise: Promise<ArticlePayload>; data: ArticlePayload | null; expires: number }
+const navigationReads = new Map<string, NavigationRead>()
+
+/** Hand fresh page-local content to navigation without another network gate.
+ * Hover still only fetches public content and never counts a visit.
+ */
+export function prepareArticleForNavigation(slug: string): Promise<ArticlePayload> | null {
+  for (const [key, entry] of navigationReads) if (entry.expires <= Date.now()) navigationReads.delete(key)
+  const existing = navigationReads.get(slug)
+  if (existing) return existing.promise
+  navigationReads.clear()
+  const prefetched = cache.get(slug)
+  if (!prefetched || prefetched.expires <= Date.now()) return null
+  const entry: NavigationRead = {
+    // Consume the entry now so leaving the source page cannot abort this read.
+    promise: loadArticleForReading('', slug),
+    data: prefetched.data,
+    expires: Date.now() + 8000,
+  }
+  navigationReads.set(slug, entry)
+  void entry.promise.then((data) => { entry.data = data }, () => {
+    if (navigationReads.get(slug) === entry) navigationReads.delete(slug)
+  })
+  return entry.promise
+}
+
+/** A navigation hands its content/request to the article exactly once. */
+export function takeArticleNavigation(slug: string): NavigationRead | null {
+  const entry = navigationReads.get(slug)
+  navigationReads.delete(slug)
+  return entry && entry.expires > Date.now() ? entry : null
+}
+
+/** Speculation belongs to its source page; only the selected one-shot handoff survives. */
+export function clearArticlePrefetch(pathname: string) {
+  for (const slug of cache.keys()) evict(slug)
+  for (const slug of navigationReads.keys()) {
+    if (pathname !== `/${slug}` && pathname !== `/${encodeURIComponent(slug)}`) navigationReads.delete(slug)
+  }
+}
 
 function evict(slug: string) {
   cache.get(slug)?.controller.abort()
@@ -57,12 +98,14 @@ export function prefetchArticle(slug: string, immediate = false): Promise<Articl
   const timeout = setTimeout(() => controller.abort(), 8000)
   const entry: Entry = {
     promise: api.get<ArticlePayload>('/api/user/blog/article/prefetch', { slug }, { signal: controller.signal }),
+    data: null,
     expires: Date.now() + CACHE_TTL_MS,
     controller,
     pending: true,
   }
   cache.set(slug, entry)
-  void entry.promise.then(() => {
+  void entry.promise.then((data) => {
+    entry.data = data
     entry.pending = false
     entry.expires = Date.now() + CACHE_TTL_MS
     clearTimeout(timeout)
@@ -73,7 +116,7 @@ export function prefetchArticle(slug: string, immediate = false): Promise<Articl
   return entry.promise
 }
 
-/** Reuse speculative content, validating and counting only once the page opens. */
+/** Render fresh speculative content immediately; account for the visit in the background. */
 export function loadArticleForReading(username: string, slug: string): Promise<ArticlePayload> {
   const key = `${username}:${slug}`
   const pending = reads.get(key)
@@ -86,12 +129,13 @@ export function loadArticleForReading(username: string, slug: string): Promise<A
     if (prefetched) {
       try {
         const data = await prefetched
-        const counts = await api.post<Pick<ArticlePayload, 'viewCount' | 'likeCount' | 'liked' | 'commentCount'>>(
+        void api.post(
           '/api/user/blog/article/view', { id: data.id, updatedAt: data.updatedAt },
-        )
-        return { ...data, ...counts }
-      } catch {
-        // Protected/changed/expired content uses the existing authenticated read path.
+        ).catch(() => { /* Read accounting never blocks already-prefetched content. */ })
+        return data
+      } catch (error) {
+        // The target page knows its author and can retry a failed handoff.
+        if (!username) throw error
       }
     }
     return api.get<ArticlePayload>('/api/user/blog/article/get', { username, slug })

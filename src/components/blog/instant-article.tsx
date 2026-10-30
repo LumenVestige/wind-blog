@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { loadArticleForReading, type ArticlePayload } from '@/lib/article-prefetch'
+import { loadArticleForReading, takeArticleNavigation, type ArticlePayload } from '@/lib/article-prefetch'
 import { renderMarkdown, extractHeadings } from '@/lib/markdown'
 import { formatDateLong } from '@/lib/blog-present'
 import { ArticleBodyContent, ArticleView, type ArticleViewData } from '@/components/blog/article-view'
@@ -54,16 +54,29 @@ export function InstantArticle({
   const [loaded, setArticle] = useState<ArticlePayload | null>(null)
   const article = loaded?.slug === slug ? loaded : null
   const [failed, setFailed] = useState(false)
+  const opening = useRef<{ slug: string; promise: Promise<ArticlePayload>; data: ArticlePayload | null } | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let cancelled = false
-    // The server cannot read sessionStorage. Hydrate the same skeleton first.
+    // Hydrate the server's placeholder, then consume a page-local navigation
+    // handoff before painting. A cache hit must not paint an empty body first.
+    // Keep the same request across Strict Mode's repeated effect setup.
+    if (opening.current?.slug !== slug) {
+      const prepared = takeArticleNavigation(slug)
+      const promise = prepared
+        ? prepared.promise.catch(() => loadArticleForReading(username, slug))
+        : loadArticleForReading(username, slug)
+      opening.current = { slug, promise, data: prepared?.data || null }
+    }
     setPreview(readArticlePreview(slug))
-    setArticle(null)
+    setArticle(opening.current.data)
     setFailed(false)
-    loadArticleForReading(username, slug)
+    opening.current.promise
       .then((data) => {
-        if (!cancelled) setArticle(data)
+        if (!cancelled) {
+          opening.current = { slug, promise: Promise.resolve(data), data }
+          setArticle(data)
+        }
       })
       .catch(() => {
         if (!cancelled) setFailed(true)
@@ -99,11 +112,12 @@ export function InstantArticle({
   const toc: TocItem[] = useMemo(() => article?.content
     ? extractHeadings(article.content).filter((h) => h.level <= 4).map((h) => ({ id: h.id, text: h.text, level: h.level }))
     : [], [article?.content])
+  const html = useMemo(() => renderMarkdown(article?.content || ''), [article?.content])
   const isOwner = viewerId > 0 && (article?.userId === viewerId || isAdmin)
   const body = article ? (
     <ArticleBodyContent
       themeId={themeId}
-      html={renderMarkdown(article.content || '')}
+      html={html}
       toc={toc}
       locked={article.requiresPassword}
       articleId={article.id}
