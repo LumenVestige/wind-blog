@@ -937,7 +937,7 @@ html:has([data-blog-theme='mizuki']) {
 /* Toolbar spans the sidebar column too, so search lines up with the page's
    right edge; the sidebar then starts level with the first row of cards. */
 @media (min-width: 1024px) {
-  .mz-grid:has(.mz-content > .blog-page-transition > div > .mz-feed-toolbar:first-child) .mz-sidebar {
+  .mz-grid:has(.mz-content > .mz-navigation-stage > .blog-page-transition > div > .mz-feed-toolbar:first-child) .mz-sidebar {
     margin-top: calc(2.75rem + 1rem);
   }
 
@@ -1119,8 +1119,9 @@ html:has([data-blog-theme='mizuki']) {
   .mz-shell:has(.mz-feed-grid) .mz-main-wrap,
   .mz-shell:has(.mz-feed-grid) .mz-grid,
   .mz-shell:has(.mz-feed-grid) .mz-content,
-  .mz-shell:has(.mz-feed-grid) .mz-content > .blog-page-transition,
-  .mz-shell:has(.mz-feed-grid) .mz-content > .blog-page-transition > div {
+  .mz-shell:has(.mz-feed-grid) .mz-content > .mz-navigation-stage,
+  .mz-shell:has(.mz-feed-grid) .mz-content > .mz-navigation-stage > .blog-page-transition,
+  .mz-shell:has(.mz-feed-grid) .mz-content > .mz-navigation-stage > .blog-page-transition > div {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;

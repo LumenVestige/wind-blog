@@ -155,7 +155,10 @@ export function ArticleView({
   const locked = article.requiresPassword
   const articleRef = useRef<HTMLElement>(null)
   useLayoutEffect(() => {
-    if (isMizuki && !loading && articleRef.current) return bindArticleBlockMotion(articleRef.current)
+    const body = articleRef.current?.querySelector<HTMLElement>('#article-body .markdown-body')
+    // The title has already been shown by navigation/preview. Only newly ready
+    // body blocks enter; never fade or replay that title on data/render completion.
+    if (isMizuki && !loading && body) return bindArticleBlockMotion(body)
   }, [isMizuki, loading, article.id, article.content])
   const base = ''
   // `from=article` makes the editor return here after saving.

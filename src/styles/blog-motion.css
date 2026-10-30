@@ -58,6 +58,16 @@
    preparing an entrance or add temporary text/line wrappers. */
 .mz-article > #article-body { animation: none; }
 
+/* Keep a loading surface behind the outgoing page, even when a long JS task
+   delays its animation-finished callback. Never fade the shared main element. */
+.mz-navigation-stage { position: relative; min-width: 0; }
+.mz-navigation-stage > .blog-page-transition { position: relative; z-index: 1; }
+.mz-navigation-stage > .blog-page-transition[hidden] { display: none !important; }
+.mz-navigation-underlay { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.mz-navigation-underlay > * { position: sticky; top: calc(var(--mz-nav-h) + 1rem); }
+.mz-navigation-stage.is-waiting > .mz-navigation-underlay { position: relative; }
+.mz-navigation-stage.is-waiting > .mz-navigation-underlay > * { position: static; }
+
 /* First visits paint directly. Enable entrances only after an in-site route
    change; data arriving on a direct article visit also stays steady. */
 .mz-shell:not([data-blog-transitions]) :is(
@@ -71,19 +81,18 @@
   .mz-article > #article-body > .markdown-body > *
 ) { animation: none; }
 
-/* Fast responses arrive inside the entrance. Only longer waits reveal bars. */
+/* The card/title stay visible; pending body placeholders fade in immediately. */
 .mz-article-header > .mz-skeleton-title,
 .mz-article-header > .mz-article-info:has(.mz-article-meta[aria-hidden='true']),
 .mz-article > .mz-article-skeleton,
 .mz-sidebar > .mz-toc-loading,
 .mz-article-nav[aria-busy='true'] {
-  animation: mz-fade-in 160ms var(--mz-ease) 280ms backwards;
+  animation: mz-fade-in 160ms var(--mz-ease) backwards;
 }
 
-/* Server-streamed route fallback: fast requests never flash a skeleton. */
+/* The loading frame must never hide a title or leave a post-exit blank. */
 .mz-page-loading {
   pointer-events: none;
-  animation: mz-loading-reveal 160ms var(--mz-ease) 300ms backwards;
 }
 @keyframes mz-loading-reveal {
   from { opacity: 0; visibility: hidden; }
@@ -327,7 +336,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   [data-blog-theme] .mz-page-loading {
-    animation: mz-loading-reveal 0s linear 300ms backwards !important;
+    animation: none !important;
   }
   .blog-page-transition,
   .toc-reading-range,

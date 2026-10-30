@@ -1,10 +1,22 @@
 import { canPrefetchArticle } from '@/lib/article-prefetch'
 
-let resources: Promise<unknown> | undefined
+let resources: Promise<typeof import('@/components/blog/instant-article')> | undefined
+let loadingResources: Promise<typeof import('@/components/blog/page-loading')> | undefined
+
+export function warmPageLoadingResources() {
+  loadingResources ??= import(/* webpackFetchPriority: "low" */ '@/components/blog/page-loading').catch((error) => {
+    loadingResources = undefined
+    throw error
+  })
+  return loadingResources
+}
 
 /** Load the reading UI without mounting it or requesting an article. */
 export function warmArticleResources() {
-  resources ??= import(/* webpackFetchPriority: "low" */ '@/components/blog/instant-article').catch((error) => {
+  resources ??= Promise.all([
+    warmPageLoadingResources(),
+    import(/* webpackFetchPriority: "low" */ '@/components/blog/instant-article'),
+  ]).then(([, reader]) => reader).catch((error) => {
     resources = undefined
     throw error
   })

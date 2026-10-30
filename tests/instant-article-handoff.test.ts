@@ -5,9 +5,11 @@ import { parseHTML } from 'linkedom'
 import type { ArticlePayload } from '@/lib/article-prefetch'
 
 const requests = vi.hoisted(() => ({ take: vi.fn(), load: vi.fn() }))
+const renderer = vi.hoisted(() => ({ peek: vi.fn(), prepare: vi.fn() }))
 vi.mock('next/navigation', () => ({ useParams: () => ({ slug: 'one' }) }))
 vi.mock('@/lib/article-prefetch', () => ({ takeArticleNavigation: requests.take, loadArticleForReading: requests.load }))
 vi.mock('@/lib/markdown', () => ({ renderMarkdown: (content: string) => content, extractHeadings: () => [] }))
+vi.mock('@/lib/article-display', () => ({ peekArticleDisplay: renderer.peek, prepareArticleDisplay: renderer.prepare }))
 vi.mock('@/components/blog/article-link', () => ({ readArticlePreview: () => null }))
 vi.mock('@/components/blog/article-nav', () => ({ ArticleNav: () => null, ArticleNavSkeleton: () => null }))
 vi.mock('@/components/blog/article-view', () => ({
@@ -36,6 +38,8 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   requests.take.mockReset()
   requests.load.mockReset()
+  renderer.peek.mockReset().mockImplementation((content: string) => ({ html: content, toc: [] }))
+  renderer.prepare.mockReset()
 })
 afterEach(async () => {
   if (root) await act(() => root!.unmount())
@@ -76,5 +80,24 @@ describe('article navigation handoff', () => {
     expect(document.getElementById('article-body')?.textContent).toBe('Ready body')
     expect(requests.load).not.toHaveBeenCalled()
     expect(requests.take).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the same visible title and skeleton while a downloaded body is still being rendered', async () => {
+    let complete!: (data: { html: string; toc: [] }) => void
+    const render = new Promise<{ html: string; toc: [] }>((resolve) => { complete = resolve })
+    renderer.peek.mockImplementation((content: string) => content ? null : { html: '', toc: [] })
+    renderer.prepare.mockReturnValue(render)
+    requests.take.mockReturnValueOnce({ data: article, promise: Promise.resolve(article) })
+    const { createRoot } = await import('react-dom/client')
+    await act(() => { root = createRoot(document.getElementById('root')!); root.render(page()) })
+    const title = document.querySelector('h1')
+    expect(title?.textContent).toBe('Ready title')
+    expect(document.querySelector('.mz-article-skeleton')).not.toBeNull()
+    expect(document.getElementById('article-body')).toBeNull()
+    await act(async () => { complete({ html: 'Rendered body', toc: [] }); await render })
+    expect(document.querySelector('h1')).toBe(title)
+    expect(title?.textContent).toBe('Ready title')
+    expect(document.querySelector('.mz-article-skeleton')).toBeNull()
+    expect(document.getElementById('article-body')?.textContent).toBe('Rendered body')
   })
 })

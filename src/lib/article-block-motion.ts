@@ -69,7 +69,7 @@ export function bindArticleBlockMotion(root: HTMLElement): () => void {
     }
   }
   const start = () => {
-    if (played || stopped || media.matches || !shell.hasAttribute('data-blog-transitions')) return
+    if (played || stopped || media.matches || shell.hasAttribute('data-blog-navigating') || !shell.hasAttribute('data-blog-transitions')) return
     played = true
     // Keep content visible while awaiting this frame. There is no hidden
     // preparation phase, font wait or re-splitting on resize.

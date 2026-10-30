@@ -1,7 +1,7 @@
 'use client'
 
 import Link from '@/components/blog/blog-navigation'
-import { BlogNavigationProvider } from './blog-navigation'
+import { BlogNavigationProvider, BlogPageContent } from './blog-navigation'
 import { ArticleResourceWarmup } from './article-resource-warmup'
 import { MotionSurface } from '@/components/motion/motion-surface'
 import { usePathname } from 'next/navigation'
@@ -72,7 +72,7 @@ export function MizukiShell({
           )}
         >
           <main className="mz-content" aria-label="正文">
-            {children}
+            <BlogPageContent>{children}</BlogPageContent>
           </main>
 
           {showSidebar && (

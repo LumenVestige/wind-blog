@@ -3,16 +3,42 @@
 import NextLink from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
-  createContext, startTransition, Suspense, useCallback, useContext,
+  createContext, lazy, startTransition, Suspense, useCallback, useContext,
   useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode,
 } from 'react'
 import { canPrefetchArticle, clearArticlePrefetch, createArticleIntent, prefetchArticle, prepareArticleForNavigation } from '@/lib/article-prefetch'
-import { warmArticleResources } from '@/lib/article-resource-warmup'
+import { warmArticleResources, warmPageLoadingResources } from '@/lib/article-resource-warmup'
 import { ARTICLE_ENTRANCE_EVENT } from '@/lib/blog-motion-events'
+import { readArticlePreview, saveArticlePreview, type ArticlePreview } from '@/lib/article-preview'
+import { flushSync } from 'react-dom'
+import { isArticlePathname } from '@/lib/blog-route'
 
-type Navigate = (href: string, options?: { scroll?: boolean; replace?: boolean }) => void
-const Navigation = createContext<{ navigate: Navigate; pendingHref: string | null } | null>(null)
+type Navigate = (href: string, options?: { scroll?: boolean; replace?: boolean; articleSlug?: string }) => void
+type Fallback = { pathname: string; preview: ArticlePreview | null; exited: boolean }
+const Navigation = createContext<{ navigate: Navigate; pendingHref: string | null; fallback: Fallback | null } | null>(null)
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)'
+
+// A tiny built-in frame covers clicks that beat background chunk warmup.
+function ImmediateLoadingFrame({ preview }: Fallback) {
+  return <div className="mz-page-loading"><article className="mz-article is-loading" role="status" aria-label="页面加载中" aria-busy="true">
+    <header className="mz-article-header">{preview?.title ? <h1>{preview.title}</h1> : <div className="mz-skeleton mz-skeleton-title" />}</header>
+    <div className="mz-loading-lines" aria-hidden="true">{[100, 96, 80, 100, 90, 72].map((width, index) => <div key={index} className="mz-skeleton mz-skeleton-line" style={{ width: `${width}%` }} />)}</div>
+  </article></div>
+}
+const LoadingFrame = lazy(() => warmPageLoadingResources()
+  .then((module) => ({ default: module.PageLoadingFrame }))
+  .catch(() => ({ default: ImmediateLoadingFrame })))
+
+/** The actual route may still be streaming after the outgoing motion ends. */
+export function BlogPageContent({ children }: { children: ReactNode }) {
+  const fallback = useContext(Navigation)?.fallback
+  return <div className={`mz-navigation-stage${fallback?.exited ? ' is-waiting' : ''}`}>
+    <div className="blog-page-transition" hidden={!!fallback?.exited}>{children}</div>
+    {fallback && <div className="mz-navigation-underlay" aria-hidden={!fallback.exited}>
+      <Suspense fallback={<ImmediateLoadingFrame {...fallback} />}><LoadingFrame {...fallback} /></Suspense>
+    </div>}
+  </div>
+}
 
 function RouteObserver({ onCommit }: { onCommit: (animate: boolean) => void }) {
   const pathname = usePathname()
@@ -32,7 +58,7 @@ function RouteObserver({ onCommit }: { onCommit: (animate: boolean) => void }) {
   return null
 }
 
-/** Keep the shell mounted; finish the outgoing motion before handing off to Next. */
+/** Fetch routes at click time; the exit only controls which surface is shown. */
 export function BlogNavigationProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const sequence = useRef(0)
@@ -41,10 +67,15 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
   const pendingNavigation = useRef<(() => void) | null>(null)
   const previousPath = useRef<string | null>(null)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const [fallback, setFallback] = useState<Fallback | null>(null)
+  const destination = useRef<{ href: string; exited: boolean; committed: boolean } | null>(null)
 
   const reset = useCallback(() => {
     sequence.current++
     setPendingHref(null)
+    setFallback(null)
+    destination.current = null
+    document.querySelector('.mz-shell')?.removeAttribute('data-blog-navigating')
     pendingNavigation.current = null
     if (recovery.current) clearTimeout(recovery.current)
     recovery.current = null
@@ -60,10 +91,11 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     document.querySelector<HTMLElement>('.mz-shell')?.setAttribute('data-blog-transitions', '')
     const content = document.querySelector<HTMLElement>('.mz-content')
     if (!content || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const surface = feedOnly ? content.querySelector<HTMLElement>('[data-feed-list]') || content : content
+    const routeContent = content.querySelector<HTMLElement>('.blog-page-transition') || content
+    const surface = feedOnly ? routeContent.querySelector<HTMLElement>('[data-feed-list]') || routeContent : routeContent
     // Article blocks own their entrance. Do not fade their parent too: stacking
     // opacity animations would keep ready content invisible for longer.
-    const article = content.querySelector('.mz-article > header')
+    const article = routeContent.querySelector('.mz-article > header')
     if (!article) animations.current.push(surface.animate(
       [{ opacity: 0, translate: feedOnly ? '0 12px' : '0 32px' }, { opacity: 1, translate: '0 0' }],
       { duration: 300, easing: EASE, fill: 'backwards' },
@@ -77,6 +109,18 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     }
     if (article) window.dispatchEvent(new Event(ARTICLE_ENTRANCE_EVENT))
   }, [reset])
+
+  const commit = useCallback((animate = true) => {
+    const active = destination.current
+    if (active) {
+      const target = new URL(active.href, location.href)
+      if (target.pathname === location.pathname && target.search === location.search) {
+        active.committed = true
+        if (!active.exited) return
+      }
+    }
+    enter(animate)
+  }, [enter])
 
   const navigate = useCallback<Navigate>((href, options = {}) => {
     const url = new URL(href, window.location.href)
@@ -100,28 +144,53 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
       push()
       return
     }
-    if (!content || samePage || outsideBlog || url.origin !== location.origin ||
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (samePage || outsideBlog || url.origin !== location.origin) {
       reset()
       if (!samePage) setPendingHref(href)
       push()
       return
     }
+    const wasWaiting = !!destination.current?.exited
     const feedOnly = url.pathname === '/' && location.pathname === '/'
-    const surface = feedOnly ? content.querySelector<HTMLElement>('[data-feed-list]') || content : content
-    const current = getComputedStyle(surface)
-    const from = { opacity: current.opacity, translate: current.translate === 'none' ? '0 0' : current.translate }
+    const routeContent = content?.querySelector<HTMLElement>('.blog-page-transition') || content
+    const surface = feedOnly ? routeContent?.querySelector<HTMLElement>('[data-feed-list]') || routeContent : routeContent
+    const current = surface ? getComputedStyle(surface) : null
+    const from = { opacity: current?.opacity || '1', translate: current?.translate === 'none' ? '0 0' : current?.translate || '0 0' }
     reset()
     setPendingHref(href)
+    const active = { href, exited: false, committed: false }
+    destination.current = active
+    document.querySelector('.mz-shell')?.setAttribute('data-blog-navigating', '')
     const id = sequence.current
-    pendingNavigation.current = push
+    let slug = options.articleSlug || url.pathname.slice(1)
+    try { slug = decodeURIComponent(slug) } catch { /* A malformed URL still gets a loading frame. */ }
+    const frame: Fallback = { pathname: url.pathname, preview: isArticlePathname(url.pathname) ? readArticlePreview(slug) : null, exited: false }
+    // Prepare an opaque loading surface behind the outgoing route before any
+    // long Markdown task runs. The compositor can reveal it even if JS is busy
+    // when the exit reaches its final frame.
+    flushSync(() => setFallback(frame))
+    const completeExit = () => {
+      if (sequence.current !== id || destination.current !== active || active.exited) return
+      active.exited = true
+      pendingNavigation.current = null
+      if (active.committed) { enter(); return }
+      flushSync(() => setFallback({ ...frame, exited: true }))
+      animations.current.forEach((animation) => animation.cancel())
+      animations.current = []
+    }
+    pendingNavigation.current = completeExit
     router.prefetch(href)
-    const exit = surface.animate(
-      [from, { opacity: 0, translate: feedOnly ? '0 8px' : '0 16px' }],
-      { duration: 180, easing: EASE, fill: 'both' },
-    )
-    animations.current.push(exit)
-    if (!feedOnly) {
+    void warmPageLoadingResources().catch(() => {})
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches || wasWaiting
+    if (surface && !reduced) {
+      const exit = surface.animate(
+        [from, { opacity: 0, translate: feedOnly ? '0 8px' : '0 16px' }],
+        { duration: 180, easing: EASE, fill: 'both' },
+      )
+      animations.current.push(exit)
+      void exit.finished.then(completeExit).catch(() => { /* Superseded navigation. */ })
+    }
+    if (!feedOnly && !reduced) {
       const sidebar = document.querySelector<HTMLElement>('.mz-sidebar')
       if (sidebar) animations.current.push(sidebar.animate(
         [{ opacity: 1 }, { opacity: 0 }],
@@ -130,21 +199,18 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     }
     // Failed or cancelled navigation must never strand the page at opacity zero.
     recovery.current = setTimeout(enter, 8000)
-    void exit.finished.then(() => {
-      if (sequence.current === id) {
-        pendingNavigation.current = null
-        push()
-      }
-    }).catch(() => { /* Superseded by another navigation or history traversal. */ })
+    // Both route and article requests start with the click, not exit.finished.
+    push()
+    if (!surface || reduced) completeExit()
   }, [router, reset, enter])
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
     const reduce = () => {
       if (!media.matches) return
-      const push = pendingNavigation.current
-      reset()
-      push?.()
+      pendingNavigation.current?.()
+      animations.current.forEach((animation) => animation.cancel())
+      animations.current = []
     }
     media.addEventListener('change', reduce)
     window.addEventListener('popstate', reset)
@@ -156,17 +222,17 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     }
   }, [reset])
 
-  const value = useMemo(() => ({ navigate, pendingHref }), [navigate, pendingHref])
+  const value = useMemo(() => ({ navigate, pendingHref, fallback }), [navigate, pendingHref, fallback])
   return (
     <Navigation.Provider value={value}>
       {children}
-      <Suspense fallback={null}><RouteObserver onCommit={enter} /></Suspense>
+      <Suspense fallback={null}><RouteObserver onCommit={commit} /></Suspense>
     </Navigation.Provider>
   )
 }
 
 /** Native Next link semantics preserve modifier clicks, downloads and new tabs. */
-export default function BlogLink({ onNavigate, href, replace, scroll, prefetch, articleSlug,
+export default function BlogLink({ onNavigate, onClick, href, replace, scroll, prefetch, articleSlug,
   onPointerEnter, onPointerLeave, onPointerDown, onFocus, onBlur, ...props
 }: ComponentProps<typeof NextLink> & { articleSlug?: string }) {
   const navigation = useContext(Navigation)
@@ -180,6 +246,13 @@ export default function BlogLink({ onNavigate, href, replace, scroll, prefetch, 
   useEffect(() => intent.cancel, [intent])
   return <NextLink {...props} href={href} replace={replace} scroll={scroll}
     prefetch={articleSlug ? false : prefetch}
+    onClick={(event) => {
+      onClick?.(event)
+      if (articleSlug && !event.defaultPrevented && event.button === 0 &&
+          !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && !readArticlePreview(articleSlug)) {
+        saveArticlePreview({ slug: articleSlug, title: event.currentTarget.title || event.currentTarget.textContent?.trim() || '', summary: '', publishedLabel: '', categoryName: '' })
+      }
+    }}
     onPointerEnter={(event) => { onPointerEnter?.(event); if (articleSlug && event.pointerType !== 'touch') intent.schedule() }}
     onPointerLeave={(event) => { onPointerLeave?.(event); intent.cancel() }}
     onPointerDown={(event) => {
@@ -199,13 +272,16 @@ export default function BlogLink({ onNavigate, href, replace, scroll, prefetch, 
         const destination = new URL(href, location.href)
         if (destination.origin === location.origin &&
             (destination.pathname !== location.pathname || destination.search !== location.search)) {
-          prepareArticleForNavigation(articleSlug)
+          const read = prepareArticleForNavigation(articleSlug)
+          if (read) void Promise.all([warmArticleResources(), read])
+            .then(([reader, data]) => reader.prepareArticleDisplay(data.content || ''))
+            .catch(() => { /* The destination keeps its frame and can retry. */ })
         }
       }
     }
     if (!navigation || typeof href !== 'string') return
     event.preventDefault()
-    navigation.navigate(href, { replace, scroll })
+    navigation.navigate(href, { replace, scroll, articleSlug })
   }} />
 }
 
