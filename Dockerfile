@@ -4,6 +4,7 @@ ENV NEXT_PUBLIC_GIT_SHA=$GIT_SHA
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
+COPY scripts/prepare-fonts.mjs ./scripts/prepare-fonts.mjs
 RUN npm ci --cache /tmp/npm-cache && rm -rf /tmp/npm-cache
 COPY . .
 RUN npm test && mkdir -p public && DB_PATH=/tmp/wind-build.db NODE_OPTIONS=--max-old-space-size=1024 npm run build
