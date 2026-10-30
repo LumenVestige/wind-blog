@@ -1,20 +1,27 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import Viewer from 'viewerjs'
 import { bindMarkdownCodeCopy } from '@/lib/markdown-code-copy'
 import { bindMarkdownMermaid } from '@/lib/markdown-mermaid'
 import { bindImageViewerZoom } from '@/lib/image-viewer-zoom'
 import { cn } from '@/lib/utils'
+import { bindArticleBlockMotion } from '@/lib/article-block-motion'
 
 export function MarkdownView({
   html,
   className,
+  animateEntrance = false,
 }: {
   html: string
   className?: string
+  animateEntrance?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    if (animateEntrance && ref.current) return bindArticleBlockMotion(ref.current)
+  }, [animateEntrance, html])
 
   useEffect(() => {
     const root = ref.current

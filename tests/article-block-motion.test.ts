@@ -18,6 +18,7 @@ beforeEach(() => {
   vi.stubGlobal('document', dom.document)
   vi.stubGlobal('HTMLElement', dom.HTMLElement)
   vi.stubGlobal('Event', dom.window.Event)
+  vi.stubGlobal('MutationObserver', dom.window.MutationObserver)
   Object.defineProperty(dom.window, 'innerHeight', { configurable: true, value: 800 })
   reduced = false
   changeMotion = undefined
@@ -78,7 +79,7 @@ describe('article viewport block entrance', () => {
     expect([...root.children]).toEqual(nodes)
     expect(root.querySelector('a')).toBe(link)
     expect(animate.mock.instances).toEqual(nodes.slice(0, 3))
-    expect(animate.mock.calls.map(([, options]) => options.delay)).toEqual([0, 18, 36])
+    expect(animate.mock.calls.map(([, options]) => options.delay)).toEqual([0, 35, 70])
     // Finish every geometry read before starting animations; no layout thrash.
     expect(Math.max(...measure.mock.invocationCallOrder)).toBeLessThan(Math.min(...animate.mock.invocationCallOrder))
     expect(root.lastElementChild?.getAttribute('style')).toBeNull()
@@ -100,6 +101,32 @@ describe('article viewport block entrance', () => {
     }
     expect(counts).toEqual([2, 2])
     expect(scan).not.toHaveBeenCalled()
+  })
+
+  it('waits for exit and the skeleton surface to uncover the body before playing once', async () => {
+    const shell = root.closest('.mz-shell')!
+    const body = root.parentElement!
+    const surface = document.createElement('div')
+    surface.className = 'blog-page-transition'
+    body.replaceWith(surface)
+    surface.appendChild(body)
+    surface.setAttribute('hidden', '')
+    shell.setAttribute('data-blog-navigating', '')
+    shell.setAttribute('data-blog-transitions', '')
+    cleanup = bindArticleBlockMotion(root)
+    vi.advanceTimersByTime(200)
+    expect(measure).not.toHaveBeenCalled()
+    shell.removeAttribute('data-blog-navigating')
+    window.dispatchEvent(new Event(ARTICLE_ENTRANCE_EVENT))
+    vi.advanceTimersByTime(200)
+    expect(animate).not.toHaveBeenCalled()
+    surface.removeAttribute('hidden')
+    await Promise.resolve()
+    vi.advanceTimersByTime(16)
+    expect(animate).toHaveBeenCalledTimes(3)
+    window.dispatchEvent(new Event(ARTICLE_ENTRANCE_EVENT))
+    vi.advanceTimersByTime(1000)
+    expect(animate).toHaveBeenCalledTimes(3)
   })
 
   it('stops at the viewport boundary inside nested containers', () => {

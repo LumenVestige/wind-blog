@@ -2,7 +2,7 @@
 import { cn } from '@/lib/utils'
 
 import Link from '@/components/blog/blog-navigation'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BookOpen, CalendarDays, CalendarClock, Clock, Eye, Hash, Heart, Link2, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,6 @@ import { ArticleToc, type TocItem } from '@/components/blog/article-toc'
 import { useBlogChrome } from '@/components/blog/blog-chrome'
 import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
 import { estimateReadMinutes, formatDateSlash } from '@/lib/blog-present'
-import { bindArticleBlockMotion } from '@/lib/article-block-motion'
 
 export interface ArticleViewData {
   id: number
@@ -79,7 +78,7 @@ export function ArticleBodyContent({
     <>
       <div className={isChirpy ? 'chirpy-prose content' : isMizuki ? 'mz-prose' : 'rounded-xl border bg-card p-6 shadow-sm'} id="article-body">
         {mobileToc}
-        <MarkdownView html={html} className={isChirpy || isMizuki ? '' : undefined} />
+        <MarkdownView html={html} className={isChirpy || isMizuki ? '' : undefined} animateEntrance={isMizuki} />
       </div>
       {children}
     </>
@@ -154,13 +153,6 @@ export function ArticleView({
   const isChirpy = themeId === 'chirpy'
   const isMizuki = themeId === 'mizuki'
   const locked = article.requiresPassword
-  const articleRef = useRef<HTMLElement>(null)
-  useLayoutEffect(() => {
-    const body = articleRef.current?.querySelector<HTMLElement>('#article-body .markdown-body')
-    // The title has already been shown by navigation/preview. Only newly ready
-    // body blocks enter; never fade or replay that title on data/render completion.
-    if (isMizuki && !loading && body) return bindArticleBlockMotion(body)
-  }, [isMizuki, loading, article.id, article.content])
   const base = ''
   // `from=article` makes the editor return here after saving.
   const editHref = `/manage/edit/${article.id}?from=article`
@@ -246,7 +238,7 @@ export function ArticleView({
   ) : isMizuki ? (
     <div className="mz-prose" id="article-body">
       {mobileToc}
-      <MarkdownView html={article.html} className="" />
+      <MarkdownView html={article.html} className="" animateEntrance={!loading} />
     </div>
   ) : (
     <div className="rounded-xl border bg-card p-6 shadow-sm">
@@ -445,7 +437,7 @@ export function ArticleView({
   if (isMizuki) {
     return (
       <div className="space-y-4">
-        <article ref={articleRef} className={cn('mz-article', loading && 'is-loading')}>
+        <article className={cn('mz-article', loading && 'is-loading')}>
           <header className="mz-article-header">
             {article.title ? (
               <h1>{article.title}</h1>

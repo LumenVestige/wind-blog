@@ -14,6 +14,10 @@ export function bindArticleBlockMotion(root: HTMLElement): () => void {
   if (!shell || (!root.matches('.mz-article') && !root.closest('#article-body'))) return noop
   const media = window.matchMedia('(prefers-reduced-motion: reduce)')
   const animations = new Set<Animation>()
+  // The route can mount while navigation still covers/hides its surface. Watch
+  // only that surface's visibility, never the article's descendants.
+  const surface = root.closest<HTMLElement>('.blog-page-transition')
+  let visibility: MutationObserver | undefined
   let played = false
   let stopped = false
   let frame = 0
@@ -26,7 +30,10 @@ export function bindArticleBlockMotion(root: HTMLElement): () => void {
   }
   const run = () => {
     frame = 0
-    if (stopped || !root.isConnected || media.matches) return
+    if (stopped || played || !root.isConnected || media.matches ||
+      shell.hasAttribute('data-blog-navigating') || root.closest('[hidden]')) return
+    played = true
+    visibility?.disconnect()
     const viewportHeight = window.innerHeight
     const targets: { element: HTMLElement; rect: DOMRect }[] = []
     let measurements = 0
@@ -58,7 +65,7 @@ export function bindArticleBlockMotion(root: HTMLElement): () => void {
         const translate = rect.height > viewportHeight ? '0 0' : '0 10px'
         const animation = element.animate(
           [{ opacity: 0, translate }, { opacity: 1, translate: '0 0' }],
-          { duration: 240, delay: Math.min(rank * 18, 120), easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'backwards' },
+          { duration: 300, delay: Math.min(rank * 35, 140), easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'backwards' },
         )
         animations.add(animation)
         animation.onfinish = () => { animations.delete(animation); animation.cancel() }
@@ -69,19 +76,23 @@ export function bindArticleBlockMotion(root: HTMLElement): () => void {
     }
   }
   const start = () => {
-    if (played || stopped || media.matches || shell.hasAttribute('data-blog-navigating') || !shell.hasAttribute('data-blog-transitions')) return
-    played = true
+    if (played || stopped || frame || media.matches || root.closest('[hidden]') || shell.hasAttribute('data-blog-navigating') || !shell.hasAttribute('data-blog-transitions')) return
     // Keep content visible while awaiting this frame. There is no hidden
     // preparation phase, font wait or re-splitting on resize.
     frame = requestAnimationFrame(run)
   }
   const reduce = () => { if (media.matches) cancel() }
+  if (surface) {
+    visibility = new MutationObserver(start)
+    visibility.observe(surface, { attributes: true, attributeFilter: ['hidden'] })
+  }
   window.addEventListener(ARTICLE_ENTRANCE_EVENT, start)
   media.addEventListener('change', reduce)
   start()
   return () => {
     stopped = true
     cancel()
+    visibility?.disconnect()
     window.removeEventListener(ARTICLE_ENTRANCE_EVENT, start)
     media.removeEventListener('change', reduce)
   }
