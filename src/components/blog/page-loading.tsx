@@ -20,7 +20,7 @@ export function BlogPageLoading() {
       <div className="mz-loading-lines"><Lines /><Lines /><Lines /><Lines /></div>
     </div> : pathname === '/' ? <>
       <div className="mz-loading-toolbar" aria-hidden="true"><span className="mz-skeleton" /></div>
-      <div className="mz-feed-grid is-short" aria-hidden="true">
+      <div className="mz-feed-grid" aria-hidden="true">
         {Array.from({ length: 6 }, (_, index) => <div className="mz-feed-card" key={index}>
           <div className="mz-feed-body"><div className="mz-skeleton mz-loading-title" /><Lines /><div className="mz-skeleton mz-loading-meta" /></div>
         </div>)}

@@ -1105,8 +1105,8 @@ html:has([data-blog-theme='mizuki']) {
   height: 1.1rem;
 }
 
-/* Full desktop pages share the available height. Short pages use natural
-   rows so pagination follows the final card instead of leaving empty slots. */
+/* Keep the outer page tall enough for its footer, while feed rows retain
+   their natural content height and pagination follows the final card. */
 @media (min-width: 768px) {
   .mz-shell:has(.mz-feed-grid) .mz-main-wrap,
   .mz-shell:has(.mz-feed-grid) .mz-grid,
@@ -1126,24 +1126,14 @@ html:has([data-blog-theme='mizuki']) {
     align-self: stretch;
   }
 
-  .mz-feed-grid {
-    flex: 1 1 auto;
-    /* Full-page row count; .is-short below drops unused tracks. */
-    grid-template-rows: repeat(var(--mz-feed-rows, 6), 1fr);
-    grid-auto-rows: 1fr;
-  }
 }
 
 .mz-feed-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.7rem;
-}
-
-.mz-feed-grid.is-short {
   flex: 0 0 auto;
-  grid-template-rows: none;
-  grid-auto-rows: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: auto;
+  gap: 0.7rem;
 }
 
 @media (min-width: 768px) {
@@ -1191,15 +1181,13 @@ html:has([data-blog-theme='mizuki']) {
 .mz-feed-title {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0;
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--mz-text-90);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   transition: color var(--mz-duration) var(--mz-ease);
 }
 
@@ -1207,15 +1195,39 @@ html:has([data-blog-theme='mizuki']) {
   color: var(--mz-primary);
 }
 
-.mz-feed-title-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.mz-feed-enter { width: 1.1rem; height: 1.1rem; flex-shrink: 0; opacity: 0; translate: -4px 0; stroke-width: 3; transition: opacity 200ms var(--mz-ease), translate 240ms var(--mz-ease); }
-.mz-feed-card:is(:hover, :focus-visible) .mz-feed-enter { opacity: 1; translate: 2px 0; }
+.mz-feed-title-text {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+.mz-feed-enter { width: 0; height: 1rem; margin-left: 0; flex-shrink: 0; opacity: 0; translate: -4px 0; stroke-width: 3; transition: width 180ms var(--mz-ease), margin-left 180ms var(--mz-ease), opacity 200ms var(--mz-ease), translate 240ms var(--mz-ease); }
+.mz-feed-card:is(:hover, :focus-visible) .mz-feed-enter { width: 1rem; margin-left: 0.4rem; opacity: 1; translate: 0; }
 
 @media (max-width: 767px) {
-  .mz-feed-title { font-size: 1.125rem; }
+  .mz-feed-title { font-size: 0.9375rem; }
+  .mz-feed-title-text {
+    white-space: normal;
+    text-overflow: clip;
+    overflow: visible;
+  }
+  .mz-feed-enter { display: none; }
+}
+
+.mz-feed-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 0 0 auto;
 }
 
 .mz-feed-excerpt {
+  flex: 1;
+  min-width: 0;
   font-size: 0.875rem;
   line-height: 1.63;
   color: var(--mz-text-50);
@@ -1252,10 +1264,15 @@ html:has([data-blog-theme='mizuki']) {
   width: 5.5rem;
   height: 5.5rem;
   flex-shrink: 0;
-  align-self: center;
+  align-self: flex-start;
   overflow: hidden;
   border-radius: calc(var(--mz-radius-sm) - 0.25rem);
   background: var(--mz-btn-bg);
+}
+
+@media (min-width: 768px) {
+  .mz-feed-card { padding: 0.75rem 1rem; }
+  .mz-feed-cover { width: 5rem; height: 5rem; }
 }
 
 @media (max-width: 479px) {

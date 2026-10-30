@@ -259,10 +259,8 @@ export default async function BlogHomePage({
           </div>
         ) : (
           <div
-            className={cn('mz-feed-grid', res.list.length < pageSize && 'is-short')}
+            className="mz-feed-grid"
             data-feed-list
-            // Full pages fill the available height; short pages keep natural rows.
-            style={{ '--mz-feed-rows': Math.ceil(pageSize / 2) } as React.CSSProperties}
           >
             {res.list.map((a) => {
               return (
@@ -272,9 +270,17 @@ export default async function BlogHomePage({
                   className="mz-feed-card"
                 >
                   <div className="mz-feed-body">
-                    <h2 className="mz-feed-title"><span className="mz-feed-title-text">{a.title}</span><ChevronRight className="mz-feed-enter" aria-hidden="true" /></h2>
-                    <div className="mz-feed-excerpt">
-                      {a.summary ? <MarkdownSummary content={a.summary} /> : null}
+                    <h2 className="mz-feed-title" title={a.title}><span className="mz-feed-title-text">{a.title}</span><ChevronRight className="mz-feed-enter" aria-hidden="true" /></h2>
+                    <div className="mz-feed-preview">
+                      <div className="mz-feed-excerpt">
+                        {a.summary ? <MarkdownSummary content={a.summary} /> : null}
+                      </div>
+                      {a.coverUrl ? (
+                        <span className="mz-feed-cover">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={a.coverUrl} alt="" loading="lazy" />
+                        </span>
+                      ) : null}
                     </div>
                     <div className="mz-feed-stats">
                       <span>
@@ -301,12 +307,6 @@ export default async function BlogHomePage({
                       ) : null}
                     </div>
                   </div>
-                  {a.coverUrl ? (
-                    <span className="mz-feed-cover">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={a.coverUrl} alt="" loading="lazy" />
-                    </span>
-                  ) : null}
                 </ArticleLink>
               )
             })}
