@@ -117,17 +117,18 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
   }, [reset])
 
   useLayoutEffect(() => {
-    enter(current.version > 0)
     const target = scrollTarget.current
     scrollTarget.current = null
-    if (!target) return
-    if (location.hash) {
+    if (target && location.hash) {
       let id = location.hash.slice(1)
       try { id = decodeURIComponent(id) } catch { /* Preserve a malformed fragment. */ }
       document.getElementById(id)?.scrollIntoView()
-    } else if (target.position) window.scrollTo({ left: target.position.x, top: target.position.y, behavior: 'instant' })
-    else if (target.scroll) window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    } else if (target?.position) window.scrollTo({ left: target.position.x, top: target.position.y, behavior: 'instant' })
+    else if (target?.scroll) window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     document.querySelector('.mz-shell')?.removeAttribute('data-blog-restoring')
+    // Body entrance measures the visible viewport synchronously. Dispatch only
+    // after scrolling and restoration finish, in this same pre-paint commit.
+    enter(current.version > 0)
   }, [current.version, enter])
 
   const navigate = useCallback<Navigate>((href, options = {}) => {

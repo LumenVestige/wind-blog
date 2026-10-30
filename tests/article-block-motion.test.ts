@@ -189,6 +189,19 @@ describe('article viewport block entrance', () => {
     expect(animate).toHaveBeenCalledTimes(3)
   })
 
+  it('does not consume the entrance when an early measurement finds no visible blocks', () => {
+    measure.mockImplementationOnce(() => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }))
+      .mockImplementationOnce(() => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }))
+      .mockImplementationOnce(() => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }))
+      .mockImplementationOnce(() => ({ top: 1000, bottom: 1052, left: 0, right: 600, width: 600, height: 52 }))
+    start()
+    expect(animate).not.toHaveBeenCalled()
+    window.dispatchEvent(new Event(ARTICLE_ENTRANCE_EVENT))
+    expect(animate).toHaveBeenCalledTimes(3)
+    window.dispatchEvent(new Event(ARTICLE_ENTRANCE_EVENT))
+    expect(animate).toHaveBeenCalledTimes(3)
+  })
+
   it('measures the restored history viewport only after scroll restoration finishes', () => {
     const shell = root.closest('.mz-shell')!
     shell.setAttribute('data-blog-transitions', '')

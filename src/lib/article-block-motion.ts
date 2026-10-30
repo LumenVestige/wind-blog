@@ -28,8 +28,6 @@ export function bindArticleBlockMotion(root: HTMLElement): () => void {
   const run = () => {
     if (stopped || played || !root.isConnected || media.matches ||
       shell.hasAttribute('data-blog-navigating') || shell.hasAttribute('data-blog-restoring') || root.closest('[hidden]')) return
-    played = true
-    visibility?.disconnect()
     const viewportHeight = window.innerHeight
     const targets: { element: HTMLElement; rect: DOMRect }[] = []
     let measurements = 0
@@ -51,6 +49,11 @@ export function bindArticleBlockMotion(root: HTMLElement): () => void {
     }
     try {
       collect(root)
+      // A covered or not-yet-positioned body can measure no visible blocks.
+      // That is not a played entrance; the visibility/commit signal may retry.
+      if (!targets.length) return
+      played = true
+      visibility?.disconnect()
       targets.sort((a, b) => a.rect.top - b.rect.top)
       let top = -Infinity
       let rank = -1
