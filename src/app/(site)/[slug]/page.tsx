@@ -1,39 +1,23 @@
 import type { Metadata } from 'next'
-import { Suspense } from 'react'
-import { getSetting } from '@/lib/settings'
+import { cookies } from 'next/headers'
+import { notFound } from 'next/navigation'
+import { get } from '@/db'
 import { publicBase } from '@/server/metadata'
 import { visitorIdentity } from '@/server/visitor'
 import { cookieName } from '@/server/http'
-import { cookies } from 'next/headers'
-import { assertArticleVisible, verifyUnlockToken } from '@/server/blog/articles'
-import { notFound } from 'next/navigation'
-import { getArticleBySlug, listByUsername, recordView, serializeArticle } from '@/server/blog/articles'
+import { adjacentArticles, assertArticleVisible, getArticleBySlug, serializeArticle, verifyUnlockToken } from '@/server/blog/articles'
+import { renderArticle } from '@/server/blog/article-render'
 import { listCategoriesPublic } from '@/server/blog/categories'
 import { getArticleTags } from '@/server/blog/tags'
 import { siteName, siteOwner } from '@/server/tenant'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { getViewer } from '@/server/session'
-import { get } from '@/db'
-import { extractHeadings, renderMarkdown, renderSummaryMarkdown } from '@/lib/markdown'
-import { isoToUnix } from '@/lib/utils'
-import { formatDateLong } from '@/lib/blog-present'
-import { ArticleBodyContent, ArticleView, type ArticleViewData } from '@/components/blog/article-view'
-import { InstantArticle } from '@/components/blog/instant-article'
-import { Skeleton } from '@/components/ui/skeleton'
-import type { TocItem } from '@/components/blog/article-toc'
+import { extractHeadings } from '@/lib/markdown'
+import { estimateReadMinutes, formatDateLong } from '@/lib/blog-present'
+import type { ArticleViewData } from '@/components/blog/article-view'
+import { ArticleReader } from '@/components/blog/article-reader'
 
 export const dynamic = 'force-dynamic'
-
-function ArticleBodyFallback() {
-  return (
-    <div className="space-y-3 rounded-xl border bg-card p-6" aria-busy="true" aria-live="polite">
-      <p className="text-sm text-muted-foreground">正文加载中…</p>
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-11/12" />
-      <Skeleton className="h-4 w-4/5" />
-    </div>
-  )
-}
 
 async function loadArticle(slug: string) {
   const author = siteOwner()
@@ -50,116 +34,58 @@ async function loadArticle(slug: string) {
   return { author, username, themeId, row, viewer, owner, requiresPassword }
 }
 
-async function ArticleBody({ slug }: { slug: string }) {
+/** SSR and Next route prefetch both use this authenticated, side-effect-free path. */
+export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const { username, themeId, row, viewer, owner, requiresPassword } = await loadArticle(slug)
-  if (!requiresPassword && row.visibility !== 'private') {
-    row.view_count = recordView(row.id)
-  }
   const guest = visitorIdentity(new Request('http://local', { headers: { cookie: (await cookies()).toString() } }))
-  const guestLiked = !guest.fresh && !!get("SELECT 1 FROM blog_visitor_likes WHERE kind = 'article' AND target_id = ? AND visitor_key = ?", row.id, guest.key)
   const liked = viewer
-    ? !!get<{ id: number }>(
-        'SELECT id FROM blog_likes WHERE article_id = ? AND user_id = ?',
-        row.id,
-        viewer.id,
-      )
-    : guestLiked
+    ? !!get('SELECT id FROM blog_likes WHERE article_id = ? AND user_id = ?', row.id, viewer.id)
+    : !guest.fresh && !!get("SELECT 1 FROM blog_visitor_likes WHERE kind = 'article' AND target_id = ? AND visitor_key = ?", row.id, guest.key)
   const info = serializeArticle(row, {
     viewerId: viewer?.id || 0,
-    isAdmin: viewer?.isAdmin || false,
-    includeContent: !requiresPassword,
+    isAdmin: !!viewer?.isAdmin,
+    includeContent: false,
     unlockTokenValid: !requiresPassword,
     tags: getArticleTags([row.id]).get(row.id) || [],
     likedSet: liked ? new Set([row.id]) : undefined,
   })
-  const categories = listCategoriesPublic(username)
-  const categoryName = categories.find((c) => c.id === row.category_id)?.name || ''
-  const related = requiresPassword
-    ? []
-    : listByUsername(
-        username,
-        { page: 1, pageSize: 8, categoryId: row.category_id || undefined, pinnedFirst: true },
-        viewer?.id || 0,
-        viewer?.isAdmin || false,
-      )
-        .list.filter((a) => a.id !== row.id)
-        .slice(0, 2)
-        .map((a) => ({ id: a.id, slug: a.slug, title: a.title, summary: a.summary, summaryHtml: renderSummaryMarkdown(a.summary) }))
-  const headings = requiresPassword
-    ? []
-    : extractHeadings(info.content || '').filter((h) => h.level <= 4)
-  const toc: TocItem[] =
-    headings.length > 0
-      ? headings.map((h) => ({ id: h.id, text: h.text, level: h.level }))
-      : info.content
-        ? [{ id: 'article-top', text: row.title, level: 1 }]
-        : []
+  // Never look up cached protected content before the access check above.
+  const rendered = requiresPassword ? null : renderArticle(row.content)
+  const categoryName = listCategoriesPublic(username).find((category) => category.id === row.category_id)?.name || ''
   const article: ArticleViewData = {
     id: row.id,
     slug: row.slug,
     title: row.title,
-    content: info.content || '',
-    html: renderMarkdown(info.content || ''),
+    content: '',
+    readMinutes: rendered ? estimateReadMinutes(row.content) : 0,
+    html: rendered?.html || '',
     tags: info.tags,
+    categoryId: info.categoryId,
     categoryName,
+    publishedAt: info.publishedAt || info.createdAt,
+    updatedAt: info.updatedAt,
     publishedLabel: formatDateLong(info.publishedAt || info.createdAt),
     viewCount: info.viewCount,
     likeCount: info.likeCount,
-    liked: info.liked,
+    liked,
     commentCount: info.commentCount,
     requiresPassword,
     userId: row.user_id,
   }
-  return (
-    <ArticleView
-      themeId={themeId}
-      username={username}
-      isOwner={owner}
-      article={article}
-      related={related}
-      toc={toc}
-      commentsEnabled={getSetting('comments_enabled', '1') === '1'}
-      likesEnabled={getSetting('likes_enabled', '1') === '1'}
-      viewerId={viewer?.id || 0}
-      isAdmin={!!viewer?.isAdmin}
-      bodyOnly
-      bodySlot={(
-        <ArticleBodyContent
-          themeId={themeId}
-          html={article.html}
-          toc={toc}
-          locked={article.requiresPassword}
-          articleId={article.id}
-        />
-      )}
-    />
-  )
-}
-
-export default async function ArticlePage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
-  const { slug } = await params
-  const { author, themeId, viewer, row } = await loadArticle(slug)
-  // Public headings are present in the original HTML, without rendering the
-  // whole Markdown body or depending on a crawler running JavaScript.
-  const outline = row.visibility === 'public' && row.moderation_status === 'approved'
-    ? extractHeadings(row.content).slice(0, 200)
-    : []
-  return (
-    <InstantArticle
-      themeId={themeId}
-      username={author.username}
-      categoryName=""
-      categories={listCategoriesPublic(author.username).map(({ id, name }) => ({ id, name }))}
-      viewerId={viewer?.id || 0}
-      isAdmin={!!viewer?.isAdmin}
-      initialPreview={{ slug: row.slug, title: row.title, summary: '', publishedLabel: formatDateLong(isoToUnix(row.published_at || row.created_at)), categoryName: '' }}
-      initialOutline={outline}
-    />
-  )
+  return <ArticleReader
+    key={row.slug}
+    themeId={themeId}
+    username={username}
+    article={article}
+    toc={rendered?.toc || []}
+    revision={rendered?.revision || ''}
+    countRead={!requiresPassword && row.visibility !== 'private'}
+    adjacent={requiresPassword ? { prev: null, next: null } : adjacentArticles(row)}
+    isOwner={owner}
+    viewerId={viewer?.id || 0}
+    isAdmin={!!viewer?.isAdmin}
+  />
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

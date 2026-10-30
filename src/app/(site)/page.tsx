@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import type { Metadata } from 'next'
 import { siteName, siteOwner } from '@/server/tenant'
-import { publicBase, siteDescription } from '@/server/metadata'
+import { publicBase as siteBase, siteDescription } from '@/server/metadata'
 import { listByUsername } from '@/server/blog/articles'
 import { listCategoriesPublic } from '@/server/blog/categories'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
@@ -33,7 +33,7 @@ export const dynamic = 'force-dynamic'
 export async function generateMetadata(): Promise<Metadata> {
   const name = siteName()
   const description = siteDescription()
-  const url = new URL('/', await publicBase()).toString()
+  const url = new URL('/', await siteBase()).toString()
   return {
     title: { absolute: name },
     description,

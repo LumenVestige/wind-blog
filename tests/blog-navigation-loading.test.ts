@@ -5,7 +5,7 @@ import { parseHTML } from 'linkedom'
 const route = vi.hoisted(() => ({ pathname: '/', search: '' }))
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }))
 vi.mock('next/navigation', () => ({ usePathname: () => route.pathname, useSearchParams: () => new URLSearchParams(route.search), useRouter: () => router }))
-vi.mock('@/lib/article-prefetch', () => ({ clearArticlePrefetch: vi.fn(), canPrefetchArticle: () => true, createArticleIntent: vi.fn(), prefetchArticle: vi.fn(), prepareArticleForNavigation: vi.fn() }))
+vi.mock('@/lib/article-prefetch', () => ({ canPrefetchArticle: () => true, createArticleIntent: vi.fn() }))
 vi.mock('@/lib/article-preview', () => ({ readArticlePreview: (slug: string) => ({ slug, title: `Title ${slug}` }), saveArticlePreview: vi.fn() }))
 vi.mock('@/lib/article-resource-warmup', () => ({
   warmArticleResources: vi.fn(),

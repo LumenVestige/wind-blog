@@ -1,6 +1,6 @@
 import { canPrefetchArticle } from '@/lib/article-prefetch'
 
-let resources: Promise<typeof import('@/components/blog/instant-article')> | undefined
+let resources: Promise<typeof import('@/components/blog/article-reader')> | undefined
 let loadingResources: Promise<typeof import('@/components/blog/page-loading')> | undefined
 
 export function warmPageLoadingResources() {
@@ -15,7 +15,7 @@ export function warmPageLoadingResources() {
 export function warmArticleResources() {
   resources ??= Promise.all([
     warmPageLoadingResources(),
-    import(/* webpackFetchPriority: "low" */ '@/components/blog/instant-article'),
+    import(/* webpackFetchPriority: "low" */ '@/components/blog/article-reader'),
   ]).then(([, reader]) => reader).catch((error) => {
     resources = undefined
     throw error

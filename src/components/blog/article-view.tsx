@@ -21,6 +21,7 @@ export interface ArticleViewData {
   slug: string
   title: string
   content: string
+  readMinutes?: number
   html: string
   tags: string[]
   categoryName: string
@@ -369,7 +370,7 @@ export function ArticleView({
       </span>
       {article.categoryName ? <span>{article.categoryName}</span> : null}
       <span className="inline-flex items-center gap-1">
-        <Clock className="size-3.5" />约 {estimateReadMinutes(article.content)} 分钟
+        <Clock className="size-3.5" />约 {article.readMinutes ?? estimateReadMinutes(article.content)} 分钟
       </span>
       <span className="inline-flex items-center gap-1">
         <Eye className="size-3.5" />
@@ -490,7 +491,7 @@ export function ArticleView({
             )}
             {!loading && (
               <div className="mz-article-details">
-                <span><Clock aria-hidden="true" />约 {estimateReadMinutes(article.content)} 分钟</span>
+                <span><Clock aria-hidden="true" />约 {article.readMinutes ?? estimateReadMinutes(article.content)} 分钟</span>
                 <span><Eye aria-hidden="true" /><span className="sr-only">阅读</span>{article.viewCount}</span>
                 <span><Heart aria-hidden="true" /><span className="sr-only">喜欢</span>{article.likeCount}</span>
                 <span><MessageCircle aria-hidden="true" /><span className="sr-only">评论</span>{article.commentCount}</span>
@@ -520,7 +521,7 @@ export function ArticleView({
           <time>{article.publishedLabel}</time>
           <span>·</span>
           <span className="inline-flex items-center gap-1">
-            <Clock className="size-3.5" />约 {estimateReadMinutes(article.content)} 分钟
+            <Clock className="size-3.5" />约 {article.readMinutes ?? estimateReadMinutes(article.content)} 分钟
           </span>
           {isOwner ? (
             <Button variant="link" size="sm" className="h-auto p-0" asChild>

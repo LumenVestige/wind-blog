@@ -9,13 +9,7 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(route.search),
   useRouter: () => ({ prefetch: vi.fn(), push: vi.fn(), replace: vi.fn() }),
 }))
-vi.mock('@/lib/article-prefetch', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@/lib/article-prefetch')>(),
-  clearArticlePrefetch: vi.fn(),
-}))
-
 import { BlogNavigationProvider } from '@/components/blog/blog-navigation'
-import { clearArticlePrefetch } from '@/lib/article-prefetch'
 import { BlogPageLoading } from '@/components/blog/page-loading'
 import { isArticlePathname } from '@/lib/blog-route'
 
@@ -25,7 +19,6 @@ let animate: ReturnType<typeof vi.fn>
 beforeEach(() => {
   route.pathname = '/'
   route.search = ''
-  vi.mocked(clearArticlePrefetch).mockClear()
   const dom = parseHTML('<html><body><div id="root"></div></body></html>')
   vi.stubGlobal('window', dom.window)
   vi.stubGlobal('document', dom.document)
@@ -82,7 +75,6 @@ describe('blog first paint', () => {
     expect(animate).not.toHaveBeenCalled()
     route.search = 'sort=hot'
     await act(() => root!.render(page()))
-    expect(clearArticlePrefetch).toHaveBeenCalledWith('/')
     expect(animate).toHaveBeenCalledOnce()
     expect(animate.mock.instances[0]).toBe(document.querySelector('[data-feed-list]'))
   })

@@ -6,7 +6,7 @@ import {
   createContext, lazy, startTransition, Suspense, useCallback, useContext,
   useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode,
 } from 'react'
-import { canPrefetchArticle, clearArticlePrefetch, createArticleIntent, prefetchArticle, prepareArticleForNavigation } from '@/lib/article-prefetch'
+import { canPrefetchArticle, createArticleIntent } from '@/lib/article-prefetch'
 import { warmArticleResources, warmPageLoadingResources } from '@/lib/article-resource-warmup'
 import { ARTICLE_ENTRANCE_EVENT } from '@/lib/blog-motion-events'
 import { readArticlePreview, saveArticlePreview, type ArticlePreview } from '@/lib/article-preview'
@@ -53,7 +53,6 @@ function RouteObserver({ onCommit }: { onCommit: (animate: boolean) => void }) {
     if (committed.current === route) return
     const initial = committed.current === null
     committed.current = route
-    if (!initial) clearArticlePrefetch(pathname)
     // SSR content is already visible. Hydration (including Strict Mode's
     // repeated effects) must never hide it just to replay an entrance.
     onCommit(!initial)
@@ -222,7 +221,6 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     return () => {
       media.removeEventListener('change', reduce)
       window.removeEventListener('popstate', reset)
-      clearArticlePrefetch('')
       reset()
     }
   }, [reset])
@@ -246,7 +244,6 @@ export default function BlogLink({ onNavigate, onClick, href, replace, scroll, p
     if (!articleSlug || (!immediate && !canPrefetchArticle())) return
     void warmArticleResources().catch(() => {})
     router.prefetch(`/${articleSlug}`)
-    void prefetchArticle(articleSlug, immediate)
   }), [articleSlug, router])
   useEffect(() => intent.cancel, [intent])
   return <NextLink {...props} href={href} replace={replace} scroll={scroll}
@@ -273,16 +270,6 @@ export default function BlogLink({ onNavigate, onClick, href, replace, scroll, p
     if (prevented) return
     if (articleSlug) {
       intent.activate()
-      if (typeof href === 'string') {
-        const destination = new URL(href, location.href)
-        if (destination.origin === location.origin &&
-            (destination.pathname !== location.pathname || destination.search !== location.search)) {
-          const read = prepareArticleForNavigation(articleSlug)
-          if (read) void Promise.all([warmArticleResources(), read])
-            .then(([reader, data]) => reader.prepareArticleDisplay(data.content || ''))
-            .catch(() => { /* The destination keeps its frame and can retry. */ })
-        }
-      }
     }
     if (!navigation || typeof href !== 'string') return
     event.preventDefault()

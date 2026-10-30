@@ -22,6 +22,7 @@ import { getOwner } from '@/server/tenant'
 import { get, run, toBool } from '@/db'
 import { isoToUnix } from '@/lib/utils'
 import { expandUrl } from '@/server/images'
+import { articleRevision } from '@/server/blog/article-render'
 import {
   adjacentArticles,
   createArticle,
@@ -313,6 +314,28 @@ export const articleViewH: Handler = async (ctx) => {
     likeCount: row.like_count,
     commentCount: row.comment_count,
     liked: !!user && !!get('SELECT id FROM blog_likes WHERE article_id = ? AND user_id = ?', row.id, user.id),
+  })
+}
+
+/** Actual SSR reader mounts count a visit; rendering/prefetching a route never does. */
+export const articleReadH: Handler = async (ctx) => {
+  const body = await readJson(ctx.req)
+  const row = getArticleById(num(body.id))
+  if (!row) throw new ApiError('文章不存在', 1, 404)
+  const user = await viewer(ctx)
+  assertArticleReadable(row, user, articleCookie(ctx, row.id))
+  if (num(body.updatedAt) !== isoToUnix(row.updated_at) || str(body.revision) !== articleRevision(row.content)) {
+    throw new ApiError('文章已更新', 409, 409)
+  }
+  const guest = visitorIdentity(ctx.req)
+  const liked = user
+    ? !!get('SELECT id FROM blog_likes WHERE article_id = ? AND user_id = ?', row.id, user.id)
+    : !guest.fresh && !!get("SELECT 1 FROM blog_visitor_likes WHERE kind = 'article' AND target_id = ? AND visitor_key = ?", row.id, guest.key)
+  return ok({
+    viewCount: row.visibility === 'private' ? row.view_count : recordView(row.id),
+    likeCount: row.like_count,
+    commentCount: row.comment_count,
+    liked,
   })
 }
 

@@ -7,6 +7,7 @@ import { ArticleLink } from '@/components/blog/article-link'
 import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
 
 type Adjacent = { slug: string; title: string } | null
+export type ArticleNavData = { prev: Adjacent; next: Adjacent }
 
 const previewOf = (a: { slug: string; title: string }) => ({
   slug: a.slug,
@@ -30,10 +31,12 @@ export function ArticleNavSkeleton() {
 }
 
 /** 文章底部的上一篇（更早）/ 下一篇（更新）导航。 */
-export function ArticleNav({ username, slug }: { username: string; slug: string }) {
-  const [data, setData] = useState<{ prev: Adjacent; next: Adjacent } | null>(null)
+export function ArticleNav({ username, slug, initialData }: { username: string; slug: string; initialData?: ArticleNavData }) {
+  const [loaded, setData] = useState<ArticleNavData | null>(null)
+  const data = initialData || loaded
 
   useEffect(() => {
+    if (initialData) return
     let cancelled = false
     setData(null)
     api
@@ -45,7 +48,7 @@ export function ArticleNav({ username, slug }: { username: string; slug: string 
     return () => {
       cancelled = true
     }
-  }, [username, slug])
+  }, [username, slug, initialData])
 
   if (!data) return <ArticleNavSkeleton />
   if (!data.prev && !data.next) return null
