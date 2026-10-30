@@ -61,10 +61,11 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     const content = document.querySelector<HTMLElement>('.mz-content')
     if (!content || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const surface = feedOnly ? content.querySelector<HTMLElement>('[data-feed-list]') || content : content
-    // Article lines own their entrance; only fade the backdrop here.
+    // Article blocks own their entrance. Do not fade their parent too: stacking
+    // opacity animations would keep ready content invisible for longer.
     const article = content.querySelector('.mz-article > header')
-    animations.current.push(surface.animate(
-      [{ opacity: 0, translate: article ? '0 0' : feedOnly ? '0 12px' : '0 32px' }, { opacity: 1, translate: '0 0' }],
+    if (!article) animations.current.push(surface.animate(
+      [{ opacity: 0, translate: feedOnly ? '0 12px' : '0 32px' }, { opacity: 1, translate: '0 0' }],
       { duration: 300, easing: EASE, fill: 'backwards' },
     ))
     if (!feedOnly) {

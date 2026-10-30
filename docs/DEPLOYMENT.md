@@ -48,12 +48,39 @@ docker compose up -d sec
 
 ## GitHub Actions 发布
 
-`main` 每次提交都会执行 `.github/workflows/release.yml`：在 GitHub 上编译 Dockerfile，并推送
+`main` 每次提交都会执行 `.github/workflows/release.yml`：在 GitHub 的 Linux 运行机上测试、编译，
+再用 `deploy/Dockerfile.runtime` 打包运行产物，并推送
 
 ```text
 registry.cn-hangzhou.aliyuncs.com/sanenchen/wind-blog:<commit sha>
 registry.cn-hangzhou.aliyuncs.com/sanenchen/wind-blog:latest
 ```
+
+两者指向同一份 Linux amd64 应用镜像，只构建和发布一次；服务器两个实例也共用同一个镜像 ID。
+Node 基础镜像固定为 `26.13.0-bookworm-slim` 并锁定 SHA-256 摘要，不随浮动标签更新。
+运行依赖、版本化字体、Next 应用及普通 public 资源分别成层；Git 提交号只进入应用构建。
+依赖及字体层的文件时间统一归零，避免 CI 缓存失效后
+仅因复制时间不同而生成新层。普通代码更新时，服务器只下载变化的应用层。
+
+现有 1Panel OpenResty 独立运行，固定版本 `1.31.1.1-2-4-noble`，不属于博客镜像，
+博客发布不会重新拉取或重建它。SQLite 随 Node 运行，不需要为博客拉取数据库镜像。
+首次切换到新分层、手动升级 Node 或修改依赖/字体版本时，相关层需要下载一次；
+之后日常更新以约 20MB 内的压缩增量为目标，实际取决于本次产物，不能把完整镜像大小当作下载量。
+
+2026-10-30 在当前 Linux 运行产物上做了两次 `--no-cache` 隔离构建，第二次仅修改应用文件：
+Node 基础层、运行依赖层、字体层的摘要均保持一致，唯一变化的应用层为 6,822,773 字节（约 6.82MB，gzip）。
+这验证了层复用不依赖构建缓存命中；新增依赖、大资源或升级基础镜像时，下载量会相应增加。
+
+### Actions 编译缓存
+
+- `actions/setup-node` 固定 Node `26.13.0` 并缓存 npm 下载，安装仍使用 `npm ci` 保证 lockfile 一致。
+- `actions/cache` 单独保存 `.next/cache`，源码变化时可恢复同一依赖版本的上一份编译缓存。
+- Actions 编译使用 2 个页面构建 worker、3GB V8 堆；本地默认仍为 1 个 worker，可用 `NEXT_BUILD_CPUS` 调整（1–4）。
+- Linux x64/glibc 上打包时复用已安装且与 lockfile 匹配的原生依赖，其他平台继续下载并校验 Linux 二进制。
+- Docker 只处理运行产物，GHA 镜像缓存使用 `mode=min`，不再上传安装依赖、Webpack 缓存等大型中间层。
+
+调整前最近一次 Actions 的镜像构建步骤约 200 秒，其中安装依赖 23 秒、测试与构建 103 秒、
+导出 Docker 构建缓存 64 秒。新缓存首次运行需要预热，后续耗时以实际 Actions 记录为准。
 
 仓库 Secrets 需要配置：
 

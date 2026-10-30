@@ -14,7 +14,7 @@ import { ArticleToc, type TocItem } from '@/components/blog/article-toc'
 import { useBlogChrome } from '@/components/blog/blog-chrome'
 import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
 import { estimateReadMinutes, formatDateSlash } from '@/lib/blog-present'
-import { bindArticleLineMotion } from '@/lib/article-line-motion'
+import { bindArticleBlockMotion } from '@/lib/article-block-motion'
 
 export interface ArticleViewData {
   id: number
@@ -155,7 +155,7 @@ export function ArticleView({
   const locked = article.requiresPassword
   const articleRef = useRef<HTMLElement>(null)
   useLayoutEffect(() => {
-    if (isMizuki && !loading && articleRef.current) return bindArticleLineMotion(articleRef.current)
+    if (isMizuki && !loading && articleRef.current) return bindArticleBlockMotion(articleRef.current)
   }, [isMizuki, loading, article.id, article.content])
   const base = ''
   // `from=article` makes the editor return here after saving.

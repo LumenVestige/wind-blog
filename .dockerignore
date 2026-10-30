@@ -1,5 +1,7 @@
 node_modules
+public/fonts
 .next
+dist
 .git
 .env
 .env.*

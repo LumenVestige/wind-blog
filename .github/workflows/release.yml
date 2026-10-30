@@ -21,6 +21,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up build Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26.13.0'
+          cache: npm
+
+      - name: Restore Next compiler cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-next-node26-v1-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'public/**', 'next.config.ts', 'tsconfig.json', 'scripts/prepare-fonts.mjs') }}
+          restore-keys: |
+            ${{ runner.os }}-next-node26-v1-${{ hashFiles('package-lock.json') }}-
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --fund=false
+
+      - name: Test
+        run: npm test
+
+      - name: Compile application
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_GIT_SHA: ${{ github.sha }}
+          NEXT_BUILD_CPUS: '2'
+          NODE_OPTIONS: --max-old-space-size=3072
+          DB_PATH: ${{ runner.temp }}/wind-build.db
+        run: npm run build
+
+      - name: Package Linux runtime
+        run: node scripts/package-runtime.mjs dist/runtime
+
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -31,17 +63,20 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: .
+          context: dist/runtime
+          platforms: linux/amd64
           push: true
-          build-args: |
-            GIT_SHA=${{ github.sha }}
           provenance: false
           sbom: false
           tags: |
             ${{ env.IMAGE }}:${{ github.sha }}
             ${{ env.IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # SHA and latest are two references to the same single-platform image.
+          # Only changed layers are uploaded/pulled; CI cache is not a second image.
+          cache-from: type=gha,scope=wind-blog-amd64
+          # Compiler/npm caches live in actions/cache. Only final runtime
+          # layers belong here, not a gigabyte of intermediate build output.
+          cache-to: type=gha,scope=wind-blog-amd64,mode=min
 
       - name: Deploy
         env:

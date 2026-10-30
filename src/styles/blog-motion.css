@@ -54,14 +54,9 @@
   animation: none;
 }
 
-/* Body rows are measured and animated by article-line-motion after layout. */
+/* Original blocks enter with native animations; never hide the article while
+   preparing an entrance or add temporary text/line wrappers. */
 .mz-article > #article-body { animation: none; }
-.mz-line-source,
-.mz-reading-line {
-  display: block;
-  position: relative;
-}
-[data-line-motion='pending'] { visibility: hidden; }
 
 /* First visits paint directly. Enable entrances only after an in-site route
    change; data arriving on a direct article visit also stays steady. */

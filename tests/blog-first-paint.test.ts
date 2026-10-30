@@ -29,6 +29,7 @@ beforeEach(() => {
   const dom = parseHTML('<html><body><div id="root"></div></body></html>')
   vi.stubGlobal('window', dom.window)
   vi.stubGlobal('document', dom.document)
+  vi.stubGlobal('Event', dom.window.Event)
   vi.stubGlobal('location', new URL('http://localhost/'))
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
@@ -84,6 +85,22 @@ describe('blog first paint', () => {
     expect(clearArticlePrefetch).toHaveBeenCalledWith('/')
     expect(animate).toHaveBeenCalledOnce()
     expect(animate.mock.instances[0]).toBe(document.querySelector('[data-feed-list]'))
+  })
+
+  it('does not fade the entire content area on top of an article entrance', async () => {
+    const articlePage = () => createElement(BlogNavigationProvider, null,
+      createElement('div', { className: 'mz-shell' },
+        createElement('main', { className: 'mz-content' },
+          createElement('article', { className: 'mz-article' }, createElement('header', null, 'Ready article'))),
+        createElement('aside', { className: 'mz-sidebar' }, 'Outline')))
+    const { createRoot } = await import('react-dom/client')
+    await act(() => { root = createRoot(document.getElementById('root')!); root.render(articlePage()) })
+    route.pathname = '/article'
+    location.pathname = '/article'
+    await act(() => root!.render(articlePage()))
+    expect(animate).toHaveBeenCalledOnce()
+    expect(animate.mock.instances[0]).toBe(document.querySelector('.mz-sidebar'))
+    expect(animate.mock.instances).not.toContain(document.querySelector('.mz-content'))
   })
 
   it('server-renders route-appropriate loading placeholders before hydration', () => {
