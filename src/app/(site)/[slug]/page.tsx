@@ -10,7 +10,7 @@ import { notFound } from 'next/navigation'
 import { getArticleBySlug, listByUsername, recordView, serializeArticle } from '@/server/blog/articles'
 import { listCategoriesPublic } from '@/server/blog/categories'
 import { getArticleTags } from '@/server/blog/tags'
-import { siteOwner } from '@/server/tenant'
+import { siteName, siteOwner } from '@/server/tenant'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { getViewer } from '@/server/session'
 import { get } from '@/db'
@@ -142,9 +142,12 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const author = siteOwner()
-  const themeId = siteConfigData(ensureSiteConfig(author.id)).themeId
-  const viewer = await getViewer()
+  const { author, themeId, viewer, row } = await loadArticle(slug)
+  // Public headings are present in the original HTML, without rendering the
+  // whole Markdown body or depending on a crawler running JavaScript.
+  const outline = row.visibility === 'public' && row.moderation_status === 'approved'
+    ? extractHeadings(row.content).slice(0, 200)
+    : []
   return (
     <InstantArticle
       themeId={themeId}
@@ -153,6 +156,8 @@ export default async function ArticlePage({
       categories={listCategoriesPublic(author.username).map(({ id, name }) => ({ id, name }))}
       viewerId={viewer?.id || 0}
       isAdmin={!!viewer?.isAdmin}
+      initialPreview={{ slug: row.slug, title: row.title, summary: '', publishedLabel: formatDateLong(isoToUnix(row.published_at || row.created_at)), categoryName: '' }}
+      initialOutline={outline}
     />
   )
 }
@@ -164,7 +169,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   try { assertArticleVisible(row, await getViewer()) } catch { return { title: '文章不存在', robots: { index: false } } }
   const publicArticle = row.visibility === 'public' && row.moderation_status === 'approved'
   const previewable = publicArticle || (row.visibility === 'unlisted' && row.moderation_status === 'approved')
+  const name = siteName()
+  const title = `${row.title}-${name}`
+  const description = previewable
+    ? (extractHeadings(row.content).map((heading) => heading.text).join('；') || row.summary || row.title).replace(/\s+/g, ' ').slice(0, 160)
+    : '这是一篇受保护的文章'
   const url = new URL(`/${encodeURIComponent(row.slug)}`, await publicBase()).toString()
-  return { title: row.title, description: previewable ? row.summary : '这是一篇受保护的文章', alternates: { canonical: url },
-    robots: { index: publicArticle, follow: publicArticle }, openGraph: { title: row.title, description: previewable ? row.summary : '这是一篇受保护的文章', url, type: 'article' } }
+  return { title: { absolute: title }, description, alternates: { canonical: url },
+    robots: { index: publicArticle, follow: publicArticle },
+    openGraph: { title, description, url, siteName: name, type: 'article', locale: 'zh_CN' },
+    twitter: { card: 'summary', title, description } }
 }

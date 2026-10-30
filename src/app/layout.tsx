@@ -1,5 +1,5 @@
 import { siteName } from '@/server/tenant'
-import { publicBase } from '@/server/metadata'
+import { publicBase, siteDescription } from '@/server/metadata'
 import { siteOwner } from '@/server/tenant'
 import { getSetting } from '@/lib/settings'
 import { expandUrl } from '@/server/images'
@@ -31,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const icons = custom || avatar
     ? { icon, apple: icon }
     : { icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }, { url: '/favicon.png', type: 'image/png' }], apple: '/apple-touch-icon.png' }
-  return { metadataBase: await publicBase(), title: { default: name, template: `%s · ${name}` }, description: '一个独立的个人博客', icons }
+  return { metadataBase: await publicBase(), title: { default: name, template: `%s · ${name}` }, description: siteDescription(), icons }
 }
 
 export default function RootLayout({

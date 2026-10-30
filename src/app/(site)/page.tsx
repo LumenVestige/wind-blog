@@ -9,7 +9,9 @@ import {
   Tag,
   X,
 } from 'lucide-react'
-import { siteOwner } from '@/server/tenant'
+import type { Metadata } from 'next'
+import { siteName, siteOwner } from '@/server/tenant'
+import { publicBase, siteDescription } from '@/server/metadata'
 import { listByUsername } from '@/server/blog/articles'
 import { listCategoriesPublic } from '@/server/blog/categories'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
@@ -27,6 +29,19 @@ import { FEED_PAGE_SIZES, parsePage, parsePageSize } from '@/lib/pagination'
 import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const name = siteName()
+  const description = siteDescription()
+  const url = new URL('/', await publicBase()).toString()
+  return {
+    title: { absolute: name },
+    description,
+    alternates: { canonical: url },
+    openGraph: { title: name, description, url, siteName: name, type: 'website', locale: 'zh_CN' },
+    twitter: { card: 'summary', title: name, description },
+  }
+}
 
 function one(v: string | string[] | undefined): string {
   return typeof v === 'string' ? v : ''

@@ -19,6 +19,8 @@ export function InstantArticle({
   categories = [],
   viewerId = 0,
   isAdmin = false,
+  initialPreview,
+  initialOutline = EMPTY_TOC,
 }: {
   themeId: 'mizuki' | 'chirpy' | 'simple'
   username: string
@@ -26,11 +28,14 @@ export function InstantArticle({
   categories?: { id: number; name: string }[]
   viewerId?: number
   isAdmin?: boolean
+  initialPreview?: ArticlePreview
+  initialOutline?: ArticleDisplay['toc']
 }) {
   const params = useParams<{ slug: string }>()
   const slug = params.slug
   const [cachedPreview, setPreview] = useState<ArticlePreview | null>(null)
-  const preview = cachedPreview?.slug === slug ? cachedPreview : null
+  const preview = cachedPreview?.slug === slug ? cachedPreview : initialPreview?.slug === slug ? initialPreview : null
+  const [clientReady, setClientReady] = useState(false)
   const [loaded, setArticle] = useState<ArticlePayload | null>(null)
   const article = loaded?.slug === slug ? loaded : null
   const [failed, setFailed] = useState(false)
@@ -39,6 +44,7 @@ export function InstantArticle({
 
   useLayoutEffect(() => {
     let cancelled = false
+    setClientReady(true)
     // Hydrate the server's placeholder, then consume a page-local navigation
     // handoff before painting. A cache hit must not paint an empty body first.
     // Keep the same request across Strict Mode's repeated effect setup.
@@ -115,6 +121,15 @@ export function InstantArticle({
       locked={article.requiresPassword}
       articleId={article.id}
     />
+  ) : !clientReady && initialPreview ? (
+    <div id="article-body" className="mz-prose">
+      <nav aria-label="文章大纲">
+        <h2>文章大纲</h2>
+        {initialOutline.length ? <ol>{initialOutline.map((heading) => (
+          <li key={heading.id}><a href={`#${heading.id}`}>{heading.text}</a></li>
+        ))}</ol> : <p>{initialPreview.title}</p>}
+      </nav>
+    </div>
   ) : failed ? (
     <div className="flex justify-center py-10" aria-live="polite">
       <p className="text-sm text-muted-foreground">完整页面加载失败</p>
