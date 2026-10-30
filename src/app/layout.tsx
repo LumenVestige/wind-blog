@@ -16,6 +16,8 @@ import '@/styles/motion.css'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeScript } from '@/components/blog/theme-script'
 import { defaultColorScheme } from '@/server/blog/site'
+import { DeferredFonts } from '@/components/blog/deferred-fonts'
+import { mapleFontBase, wenkaiStylesheet } from '@/lib/font-assets'
 
 export async function generateMetadata(): Promise<Metadata> {
   const name = siteName()
@@ -33,13 +35,17 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const wenkaiEnabled = getSetting('wenkai_enabled', '0') === '1'
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang="zh-CN" data-chinese-font={wenkaiEnabled ? 'wenkai' : 'system'} suppressHydrationWarning>
       <head>
+        <link rel="preload" href={`${mapleFontBase}/files/maple-mono-latin-400-normal.woff2`} as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="stylesheet" href={`${mapleFontBase}/style.css`} />
         <ThemeScript scheme={defaultColorScheme()} />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
+        <DeferredFonts href={wenkaiEnabled ? wenkaiStylesheet : null} />
         <Toaster richColors position="top-center" />
       </body>
     </html>

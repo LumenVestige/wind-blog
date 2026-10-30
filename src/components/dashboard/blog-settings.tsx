@@ -323,6 +323,19 @@ function Appearance({ initial }: { initial: SettingsSnapshot['appearance'] }) {
         </ToggleGroup>
         <FieldDescription>读者仍可自行切换明暗模式。</FieldDescription>
       </Field>
+      <Field orientation="horizontal">
+        <FieldContent>
+          <FieldLabel htmlFor="wenkai-enabled">中文使用霞鹜文楷</FieldLabel>
+          <FieldDescription>
+            默认使用系统中文字体。英文和数字统一使用 Maple Mono。
+          </FieldDescription>
+        </FieldContent>
+        <Switch
+          id="wenkai-enabled"
+          checked={value.wenkaiEnabled}
+          onCheckedChange={(enabled) => change('wenkaiEnabled', enabled)}
+        />
+      </Field>
       <TextField
         id="subtitle"
         label="博客简介"

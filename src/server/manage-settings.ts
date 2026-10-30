@@ -30,7 +30,11 @@ export function manageSettingsSnapshot(userId: number): SettingsSnapshot {
       faviconUrl: getSetting('favicon_url'),
       icpNumber: getSetting('icp_number'),
     },
-    appearance: { colorScheme: config.colorScheme, subtitle: config.subtitle },
+    appearance: {
+      colorScheme: config.colorScheme,
+      subtitle: config.subtitle,
+      wenkaiEnabled: getSetting('wenkai_enabled', '0') === '1',
+    },
     content: {
       homeIntroMd: config.homeIntroMd,
       aboutMd: config.aboutMd,
@@ -134,11 +138,15 @@ export function saveManageSettings(
     } else if (key === 'appearance') {
       if (!['light', 'dark', 'system'].includes(String(value.colorScheme)))
         throw new ApiError('请选择有效的明暗模式', 1, 400)
+      if (value.wenkaiEnabled !== undefined && typeof value.wenkaiEnabled !== 'boolean')
+        throw new ApiError('中文字体开关格式不正确', 1, 400)
       saveThemeConfig(userId, {
         themeId: 'mizuki',
         colorScheme: String(value.colorScheme),
         subtitle: text(value.subtitle, '博客简介', 200),
       })
+      if (value.wenkaiEnabled !== undefined)
+        setSettings({ wenkai_enabled: value.wenkaiEnabled ? '1' : '0' })
     } else if (key === 'content') {
       for (const field of ['homeIntroMd', 'aboutMd', 'friendsMd']) {
         if (typeof value[field] !== 'string' || value[field].length > 200000)

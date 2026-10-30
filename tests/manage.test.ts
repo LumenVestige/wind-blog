@@ -110,6 +110,29 @@ describe('modular management settings', () => {
     expect(rejected.status).toBe(400)
     expect(getSetting('site_name')).toBe('我的博客')
   })
+  it('defaults to system Chinese fonts, persists WenKai and protects concurrent changes', async () => {
+    const initial = (await snapshot()).appearance
+    expect(initial.values.wenkaiEnabled).toBe(false)
+    const enabled = await save('appearance', { ...initial.values, wenkaiEnabled: true }, initial.version)
+    expect(enabled.status).toBe(200)
+    expect(enabled.json.data.values.wenkaiEnabled).toBe(true)
+    expect(getSetting('wenkai_enabled')).toBe('1')
+    expect((await save('appearance', initial.values, initial.version)).status).toBe(409)
+    const invalid = await save('appearance', {
+      ...enabled.json.data.values, subtitle: '不能写入', wenkaiEnabled: 'false',
+    })
+    expect(invalid.status).toBe(400)
+    expect((await snapshot()).appearance.values).toEqual(enabled.json.data.values)
+    // Older clients omitting the new option must preserve the current choice.
+    expect((await save('appearance', {
+      colorScheme: initial.values.colorScheme, subtitle: initial.values.subtitle,
+    })).status).toBe(200)
+    expect((await snapshot()).appearance.values.wenkaiEnabled).toBe(true)
+    const disabled = await save('appearance', { ...initial.values, wenkaiEnabled: false })
+    expect(disabled.status).toBe(200)
+    expect((await snapshot()).appearance.values.wenkaiEnabled).toBe(false)
+    expect(getSetting('wenkai_enabled')).toBe('0')
+  })
   it('rejects a stale module while allowing independent modules to save', async () => {
     const before = await snapshot()
     expect(

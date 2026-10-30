@@ -54,7 +54,7 @@
 }
 
 .markdown-body .md-code-lang {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-site);
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -454,7 +454,7 @@ img.md-img-zoomable {
 }
 
 .markdown-body .math-fallback {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-site);
   font-size: 0.88em;
   opacity: 0.9;
 }

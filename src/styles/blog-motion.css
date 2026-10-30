@@ -16,7 +16,7 @@
   background: var(--popover);
   color: var(--popover-foreground);
   box-shadow: 0 8px 28px rgb(0 0 0 / 12%);
-  font-family: 'Noto Sans SC', system-ui, sans-serif;
+  font-family: var(--font-site);
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.65;

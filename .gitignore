@@ -24,3 +24,6 @@ next-env.d.ts
 
 /dist/
 /.nvmrc
+
+# Generated from installed font packages by prepare-fonts.mjs
+/public/fonts/

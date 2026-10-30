@@ -4,7 +4,6 @@
  * Scoped under [data-blog-theme="chirpy"]
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Source+Sans+Pro:wght@400;600;700;900&display=swap');
 
 [data-blog-theme='chirpy'] {
   --chirpy-sidebar-width: 260px;
@@ -54,17 +53,7 @@
 
   color: var(--text-color);
   background: var(--main-bg);
-  font-family:
-    'Source Sans Pro',
-    'Lato',
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    'Noto Sans',
-    'Microsoft YaHei',
-    sans-serif;
+  font-family: var(--font-site);
   font-size: 16px;
   line-height: 1.5;
   min-height: 100svh;
@@ -872,7 +861,7 @@
 /* 简述：公式/加粗/行内代码，无链接无标题 */
 .chirpy-card-text .markdown-summary .md-summary-code,
 .markdown-summary .md-summary-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-site);
   font-size: 0.9em;
   padding: 0.05em 0.3em;
   border-radius: 0.25rem;
@@ -1132,7 +1121,7 @@
   width: 4.5rem;
   text-align: right;
   color: var(--text-muted-color);
-  font-family: Lato, sans-serif;
+  font-family: var(--font-site);
   font-size: 0.95rem;
 }
 

@@ -5,7 +5,7 @@ export interface SettingsValues {
     faviconUrl: string
     icpNumber: string
   }
-  appearance: { colorScheme: 'system' | 'light' | 'dark'; subtitle: string }
+  appearance: { colorScheme: 'system' | 'light' | 'dark'; subtitle: string; wenkaiEnabled: boolean }
   content: { homeIntroMd: string; aboutMd: string; friendsMd: string }
   social: { socialLinks: { type: string; url: string; label?: string }[] }
   interaction: { commentsEnabled: boolean; likesEnabled: boolean }
