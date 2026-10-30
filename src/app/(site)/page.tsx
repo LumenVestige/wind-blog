@@ -1,7 +1,6 @@
 import Link from '@/components/blog/blog-navigation'
 import {
   Calendar,
-  ChevronRight,
   Eye,
   FolderOpen,
   Heart,
@@ -14,7 +13,7 @@ import { listByUsername } from '@/server/blog/articles'
 import { listCategoriesPublic } from '@/server/blog/categories'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { expandUrl } from '@/server/images'
-import { ArticleLink } from '@/components/blog/article-link'
+import { ArticleLink, FeedArticleTitle } from '@/components/blog/article-link'
 import { FeedSearch } from '@/components/blog/feed-search'
 import { FeedTabs } from '@/components/blog/feed-tabs'
 import { Markdown } from '@/components/blog/markdown'
@@ -270,7 +269,7 @@ export default async function BlogHomePage({
                   className="mz-feed-card"
                 >
                   <div className="mz-feed-body">
-                    <h2 className="mz-feed-title"><span className="mz-feed-title-text">{a.title}</span><ChevronRight className="mz-feed-enter" aria-hidden="true" /></h2>
+                    <FeedArticleTitle title={a.title} />
                     <div className="mz-feed-preview">
                       <div className="mz-feed-excerpt">
                         {a.summary ? <MarkdownSummary content={a.summary} /> : null}
