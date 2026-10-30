@@ -12,6 +12,7 @@ import { getSetting } from '@/lib/settings'
 import { MizukiShell } from '@/components/blog/mizuki-shell'
 import type { BlogShellData } from '@/components/blog/shell-types'
 import { navigationArticles } from '@/server/blog/navigation'
+import { BlogNavigationProvider } from '@/components/blog/blog-navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,8 +66,8 @@ export default async function BlogLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <MizukiShell data={data} scheme={cfg.colorScheme}>
+    <BlogNavigationProvider><MizukiShell data={data} scheme={cfg.colorScheme}>
       {children}
-    </MizukiShell>
+    </MizukiShell></BlogNavigationProvider>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import Link, { usePendingBlogHref } from '@/components/blog/blog-navigation'
-import { usePathname } from 'next/navigation'
+import { useBlogPathname } from './blog-navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Archive, ChevronDown, FolderOpen, Home, Info, ListTree, LogIn, Menu, Settings, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -28,7 +28,7 @@ export function SiteNavbar({
   articleTitle?: string | null
   articleToc?: TocItem[]
 }) {
-  const pathname = usePathname()
+  const pathname = useBlogPathname()
   const pendingHref = usePendingBlogHref()
   const activePathname = pendingHref ? new URL(pendingHref, 'http://blog.local').pathname : pathname
   const [menuOpen, setMenuOpen] = useState(false)

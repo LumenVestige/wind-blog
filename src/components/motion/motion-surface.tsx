@@ -1,10 +1,9 @@
 'use client'
 
 import { Suspense, useEffect, useRef, useState } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
 import gsap from 'gsap'
 import { createPortal } from 'react-dom'
-import { usePendingBlogHref } from '@/components/blog/blog-navigation'
+import { usePendingBlogHref, useBlogPathname, useBlogSearchParams } from '@/components/blog/blog-navigation'
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const targets = {
@@ -14,8 +13,8 @@ const targets = {
 }
 
 function Surface({ mode }: { mode: 'blog' | 'admin' }) {
-  const pathname = usePathname()
-  const params = useSearchParams()
+  const pathname = useBlogPathname()
+  const params = useBlogSearchParams()
   const pendingHref = usePendingBlogHref()
   const route = pathname + '?' + params.toString() + (mode === 'blog' ? `|${pendingHref || ''}` : '')
   const bar = useRef<HTMLDivElement>(null)

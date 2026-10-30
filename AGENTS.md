@@ -4,6 +4,7 @@
 
 - 首次访问进入 `/setup` 初始化唯一站长；之后禁止注册（`POST /api/setup`、`/user/auth/register` 在已初始化时返回 403）
 - 主题：仅维护 Mizuki（`src/components/blog/mizuki-shell.tsx`、`src/styles/blog-mizuki.css`）；旧 Chirpy / Simple 配置统一解析为 Mizuki。`blog-chirpy.css` 暂保留共用的正文和移动目录样式。
+- 博客仅首次打开/刷新时 SSR；进入站内后使用 History API + JSON API 在客户端渲染。导航、预取和刷新不可调用 Next Router 的 push/prefetch/refresh 触发 RSC；文章 hover/focus 预取须接到 JSON 接口，点击复用请求。
 
 ## 结构
 

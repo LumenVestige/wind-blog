@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server'
 import { parseHTML } from 'linkedom'
 
 const router = vi.hoisted(() => ({ refresh: vi.fn() }))
-vi.mock('next/navigation', () => ({ useRouter: () => router }))
+vi.mock('@/components/blog/blog-navigation', () => ({ useBlogRouter: () => router }))
 vi.mock('@/lib/api-client', async (original) => ({
   ...await original<typeof import('@/lib/api-client')>(), api: { post: vi.fn() },
 }))
@@ -38,7 +38,7 @@ beforeEach(() => {
   router.refresh.mockClear()
 })
 afterEach(async () => {
-  if (root) await act(() => root!.unmount())
+  if (root) await act(async () => root!.unmount())
   root = undefined
   vi.unstubAllGlobals()
 })
@@ -58,7 +58,7 @@ describe('SSR article reader', () => {
     const title = container.querySelector('h1')
     const body = container.querySelector('#article-body')
     const { hydrateRoot } = await import('react-dom/client')
-    await act(() => { root = hydrateRoot(container, page()) })
+    await act(async () => { root = hydrateRoot(container, page()) })
     expect(container.querySelector('h1')).toBe(title)
     expect(container.querySelector('#article-body')).toBe(body)
     expect(container.querySelector('[data-count]')?.textContent).toBe('4')
@@ -67,9 +67,9 @@ describe('SSR article reader', () => {
 
   it('does not count locked or private article views', async () => {
     const { createRoot } = await import('react-dom/client')
-    await act(() => { root = createRoot(document.getElementById('root')!); root.render(page({ countRead: false })) })
+    await act(async () => { root = createRoot(document.getElementById('root')!); root.render(page({ countRead: false })) })
     expect(api.post).not.toHaveBeenCalled()
-    await act(() => root!.render(page({ article: { ...props.article, html: '', requiresPassword: true } })))
+    await act(async () => root!.render(page({ article: { ...props.article, html: '', requiresPassword: true } })))
     expect(document.getElementById('article-body')).toBeNull()
     expect(api.post).not.toHaveBeenCalled()
   })
@@ -77,7 +77,7 @@ describe('SSR article reader', () => {
   it('refreshes revoked or edited prefetched content instead of leaving stale body visible', async () => {
     vi.mocked(api.post).mockRejectedValue(new ClientApiError('Article changed', 409, 409))
     const { createRoot } = await import('react-dom/client')
-    await act(() => { root = createRoot(document.getElementById('root')!); root.render(page()) })
+    await act(async () => { root = createRoot(document.getElementById('root')!); root.render(page()) })
     expect(document.getElementById('article-body')).toBeNull()
     expect(document.querySelector('h1')?.textContent).toBe('SSR title')
     expect(router.refresh).toHaveBeenCalledOnce()

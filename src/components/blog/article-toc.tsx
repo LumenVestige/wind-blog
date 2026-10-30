@@ -172,7 +172,7 @@ export function ArticleToc({
     const behavior = reducedMotion() ? 'instant' : 'smooth'
     if (item.id === 'article-top') {
       window.scrollTo({ top: 0, behavior })
-      history.replaceState(null, '', location.pathname + location.search)
+      history.replaceState(history.state, '', location.pathname + location.search)
     } else {
       const el = document.getElementById(item.id)
       if (!el) return

@@ -1,7 +1,7 @@
 'use client'
 
 import Link, { usePendingBlogHref } from '@/components/blog/blog-navigation'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { useBlogPathname as usePathname, useBlogSearchParams as useSearchParams } from './blog-navigation'
 import { cn } from '@/lib/utils'
 
 type Category = { id: number; name: string; articleCount: number }

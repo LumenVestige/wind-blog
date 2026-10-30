@@ -1,61 +1,24 @@
-import { getViewer } from '@/server/session'
-import { get } from '@/db'
-import { publicBase } from '@/server/metadata'
+import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
+import { ApiError } from '@/lib/api'
+import { getViewer } from '@/server/session'
+import { publicBase } from '@/server/metadata'
 import { siteOwner } from '@/server/tenant'
-import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { getPagePublic } from '@/server/blog/pages'
-import { Markdown } from '@/components/blog/markdown'
+import { customPageData } from '@/server/blog/page-data'
+import { BlogPageView } from '@/components/blog/blog-page-view'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CustomPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
+export default async function CustomPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const author = siteOwner()
-  const username = author.username
-  const themeId = siteConfigData(ensureSiteConfig(author.id)).themeId
-  let page
   try {
-    page = getPagePublic(username, slug)
-  } catch {
-    const viewer = await getViewer()
-    const draft = viewer?.id === author.id || viewer?.isAdmin ? get<{ title: string; content_md: string; slug: string }>('SELECT title, content_md, slug FROM blog_pages WHERE user_id = ? AND slug = ?', author.id, slug) : undefined
-    if (!draft) notFound()
-    page = { title: draft.title + '（草稿预览）', contentMd: draft.content_md }
+    const data = customPageData(slug, { viewer: await getViewer(), req: new Request('http://local', { headers: { cookie: (await cookies()).toString() } }) })
+    return <BlogPageView data={data} />
+  } catch (error) {
+    if (error instanceof ApiError && [403, 404].includes(error.status)) notFound()
+    throw error
   }
-
-  if (themeId === 'chirpy') {
-    return (
-      <article className="chirpy-article px-1 pt-6">
-        <header>
-          <h1>{page.title}</h1>
-        </header>
-        <div className="chirpy-prose">
-          <Markdown source={page.contentMd} className="" />
-        </div>
-      </article>
-    )
-  }
-  if (themeId === 'mizuki') {
-    return (
-      <article className="mz-article">
-        <h1>{page.title}</h1>
-        <div className="mz-prose">
-          <Markdown source={page.contentMd} className="" />
-        </div>
-      </article>
-    )
-  }
-  return (
-    <div className="mx-auto max-w-2xl rounded-xl border bg-card p-6 shadow-sm">
-      <h1 className="mb-4 text-xl font-semibold">{page.title}</h1>
-      <Markdown source={page.contentMd} />
-    </div>
-  )
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {

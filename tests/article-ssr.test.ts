@@ -7,7 +7,7 @@ import { renderToString } from 'react-dom/server'
 const session = vi.hoisted(() => ({ viewer: null as { id: number; username: string; isAdmin: boolean } | null, cookies: new Map<string, string>() }))
 vi.mock('@/server/session', () => ({ getViewer: async () => session.viewer }))
 vi.mock('next/headers', () => ({
-  cookies: async () => ({ get: (key: string) => session.cookies.has(key) ? { value: session.cookies.get(key) } : undefined, toString: () => '' }),
+  cookies: async () => ({ get: (key: string) => session.cookies.has(key) ? { value: session.cookies.get(key) } : undefined, toString: () => [...session.cookies].map(([key, value]) => `${key}=${value}`).join('; ') }),
   headers: async () => new Headers({ host: 'test.local' }),
 }))
 vi.mock('next/navigation', () => ({

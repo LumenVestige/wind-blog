@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useBlogRouter } from './blog-navigation'
 import { api, ClientApiError } from '@/lib/api-client'
 import { ArticleBodyContent, ArticleView, type ArticleViewData } from './article-view'
 import { ArticleNav, type ArticleNavData } from './article-nav'
@@ -21,11 +21,11 @@ export type ArticleReaderProps = {
   isAdmin: boolean
 }
 
-/** Full body HTML is supplied by SSR/RSC, including during hydration. The
- * browser only binds interactions and records an actual opened page.
+/** Initial HTML comes from SSR; later navigations supply the same props via JSON.
+ * Record a visit only when this reader mounts, never during prefetch.
  */
 export function ArticleReader({ article, toc, revision, countRead, adjacent, ...props }: ArticleReaderProps) {
-  const router = useRouter()
+  const router = useBlogRouter()
   const key = `${article.id}:${article.updatedAt}:${revision}:${article.requiresPassword}`
   const pending = useRef<{ key: string; promise: Promise<Counts> } | null>(null)
   const [counts, setCounts] = useState<{ key: string; value: Counts } | null>(null)
@@ -48,7 +48,7 @@ export function ArticleReader({ article, toc, revision, countRead, adjacent, ...
       }
     })
     return () => { cancelled = true }
-  }, [article.id, article.updatedAt, article.requiresPassword, countRead, key, revision, router])
+  }, [article.id, article.updatedAt, article.requiresPassword, countRead, key, revision, router.refresh])
 
   const current = counts?.key === key ? { ...article, ...counts.value } : article
   const body = invalid === key

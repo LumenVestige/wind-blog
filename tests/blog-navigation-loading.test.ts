@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement, type ReactNode } from 'react'
 import { parseHTML } from 'linkedom'
+import { installBlogHistory } from './helpers/blog-history'
+import type { BlogPageResponse } from '@/lib/blog-page'
 
 const route = vi.hoisted(() => ({ pathname: '/', search: '' }))
-const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }))
-vi.mock('next/navigation', () => ({ usePathname: () => route.pathname, useSearchParams: () => new URLSearchParams(route.search), useRouter: () => router }))
-vi.mock('@/lib/article-prefetch', () => ({ canPrefetchArticle: () => true, createArticleIntent: vi.fn() }))
+const nextRouter = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }))
+vi.mock('next/navigation', () => ({ usePathname: () => route.pathname, useSearchParams: () => new URLSearchParams(route.search), useRouter: () => nextRouter }))
+vi.mock('@/lib/blog-page-client', () => ({ loadBlogPage: vi.fn(), forgetBlogPage: vi.fn() }))
 vi.mock('@/lib/article-preview', () => ({ readArticlePreview: (slug: string) => ({ slug, title: `Title ${slug}` }), saveArticlePreview: vi.fn() }))
+vi.mock('@/components/blog/blog-page-view', () => ({ BlogPageView: ({ data }: { data: { title: string; html: string } }) =>
+  createElement('article', { className: 'mz-article' }, createElement('header', null, createElement('h1', null, data.title)), createElement('p', null, data.html)) }))
 vi.mock('@/lib/article-resource-warmup', () => ({
   warmArticleResources: vi.fn(),
   warmPageLoadingResources: vi.fn(async () => ({
@@ -17,17 +21,20 @@ vi.mock('@/lib/article-resource-warmup', () => ({
   })),
 }))
 
-import { BlogNavigationProvider, BlogPageContent, useBlogRouter } from '@/components/blog/blog-navigation'
+import { loadBlogPage } from '@/lib/blog-page-client'
+import { BlogNavigationProvider, BlogPageContent, useBlogRouter, useBlogPathname } from '@/components/blog/blog-navigation'
 
 let root: import('react-dom/client').Root | undefined
-let navigate: ReturnType<typeof useBlogRouter>['push']
+let router: ReturnType<typeof useBlogRouter>
+let browserHistory: ReturnType<typeof installBlogHistory>
 let motions: { finish: () => void; cancel: ReturnType<typeof vi.fn>; element: HTMLElement }[]
 let reduced: boolean
+let requests: { href: string; resolve: (value: BlogPageResponse) => void; reject: (error: Error) => void }[]
+const response = (href: string): BlogPageResponse => ({ href, title: `Title ${href}`, page: { kind: 'page', title: `Title ${href}`, html: `Ready body ${href}` } })
 
-function Driver() { navigate = useBlogRouter().push; return null }
+function Driver() { router = useBlogRouter(); return createElement('span', { 'data-path': '' }, useBlogPathname()) }
 function page(body: ReactNode = 'Original page') {
-  return createElement(BlogNavigationProvider, null,
-    createElement(Driver),
+  return createElement(BlogNavigationProvider, null, createElement(Driver),
     createElement('div', { className: 'mz-shell' },
       createElement('main', { className: 'mz-content' }, createElement(BlogPageContent, null, body)),
       createElement('aside', { className: 'mz-sidebar' }, 'Sidebar')))
@@ -35,17 +42,15 @@ function page(body: ReactNode = 'Original page') {
 
 beforeEach(() => {
   vi.useFakeTimers()
-  route.pathname = '/'
-  route.search = ''
-  router.push.mockClear(); router.replace.mockClear(); router.prefetch.mockClear()
-  motions = []
-  reduced = false
+  route.pathname = '/'; route.search = ''
+  Object.values(nextRouter).forEach((mock) => mock.mockClear())
+  motions = []; requests = []; reduced = false
+  vi.mocked(loadBlogPage).mockReset().mockImplementation((href) => new Promise((resolve, reject) => requests.push({ href, resolve, reject })))
   const dom = parseHTML('<html><body><div id="root"></div></body></html>')
-  vi.stubGlobal('window', dom.window)
-  vi.stubGlobal('document', dom.document)
-  vi.stubGlobal('HTMLElement', dom.HTMLElement)
-  vi.stubGlobal('Event', dom.window.Event)
+  vi.stubGlobal('window', dom.window); vi.stubGlobal('document', dom.document)
+  vi.stubGlobal('HTMLElement', dom.HTMLElement); vi.stubGlobal('Element', dom.Element); vi.stubGlobal('Event', dom.window.Event)
   vi.stubGlobal('location', new URL('http://localhost/'))
+  browserHistory = installBlogHistory()
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.stubGlobal('getComputedStyle', () => ({ opacity: '1', translate: 'none' }))
   vi.stubGlobal('matchMedia', () => ({ get matches() { return reduced }, addEventListener() {}, removeEventListener() {} }))
@@ -60,115 +65,118 @@ beforeEach(() => {
 afterEach(async () => {
   if (root) await act(() => root!.unmount())
   root = undefined
-  vi.useRealTimers()
-  vi.unstubAllGlobals()
+  for (const mock of Object.values(nextRouter)) expect(mock).not.toHaveBeenCalled()
+  vi.useRealTimers(); vi.unstubAllGlobals()
 })
-
-async function mount() {
+async function mount(body?: ReactNode) {
   const { createRoot } = await import('react-dom/client')
-  await act(() => { root = createRoot(document.getElementById('root')!); root.render(page()) })
+  await act(() => { root = createRoot(document.getElementById('root')!); root.render(page(body)) })
 }
+async function finishExit(index = 0) { await act(async () => { motions[index].finish() }) }
+async function ready(index = 0) { await act(async () => { requests[index].resolve(response(requests[index].href)) }) }
 
-describe('route loading and exit animation handoff', () => {
-  it('prefetches on click but holds the visible route commit until the exit finishes', async () => {
+describe('JSON navigation and exit animation handoff', () => {
+  it('starts the JSON request on click, shows a loading frame after exit and commits client content when ready', async () => {
     await mount()
-    await act(() => navigate('/one'))
-    expect(router.prefetch).toHaveBeenCalledExactlyOnceWith('/one')
-    expect(router.push).not.toHaveBeenCalled()
+    expect(requests).toHaveLength(0)
+    await act(() => router.push('/one'))
+    expect(requests.map((request) => request.href)).toEqual(['/one'])
+    expect(browserHistory.pushState).not.toHaveBeenCalled()
     expect(document.querySelector('.mz-navigation-underlay')?.getAttribute('aria-hidden')).toBe('true')
-    expect(document.querySelector('.blog-page-transition')?.hasAttribute('hidden')).toBe(false)
-    const exit = motions[0]
-    expect(exit.element).not.toBe(document.querySelector('main'))
-    await act(async () => { exit.finish(); await Promise.resolve() })
-    expect(router.push).toHaveBeenCalledExactlyOnceWith('/one', { scroll: undefined })
+    await finishExit()
     expect(document.querySelector('h1')?.textContent).toBe('Title one')
-    expect(document.querySelector('.mz-article-skeleton')).not.toBeNull()
     expect(document.querySelector('.blog-page-transition')?.hasAttribute('hidden')).toBe(true)
-    expect(exit.cancel).not.toHaveBeenCalled()
-    expect(motions[1].cancel).not.toHaveBeenCalled()
-    route.pathname = '/one'
-    location.pathname = '/one'
-    await act(() => root!.render(page(createElement('article', { className: 'mz-article' },
-      createElement('header', null, createElement('h1', null, 'Title one')), createElement('p', null, 'Ready body')))))
-    expect(document.querySelector('.blog-page-transition')?.hasAttribute('hidden')).toBe(false)
+    expect(motions[0].cancel).not.toHaveBeenCalled()
+    await ready()
+    expect(location.pathname).toBe('/one')
+    expect(document.querySelector('[data-path]')?.textContent).toBe('/one')
+    expect(document.title).toBe('Title /one')
+    expect(document.querySelector('.blog-page-transition')?.textContent).toContain('Ready body /one')
     expect(document.querySelector('[role="status"]')).toBeNull()
-    expect(document.querySelector('h1')?.textContent).toBe('Title one')
-    expect(document.querySelector('main')?.textContent).toContain('Ready body')
-    expect(exit.cancel).toHaveBeenCalledOnce()
-    expect(motions[1].cancel).toHaveBeenCalledOnce()
+    expect(motions[0].cancel).toHaveBeenCalledOnce()
   })
 
-  it('keeps a cached target out of the outgoing surface and presents it immediately after the exit', async () => {
+  it('holds a prefetched/fast response until exit completes and does not fade the article parent', async () => {
     await mount()
-    await act(() => navigate('/archives'))
-    const exit = motions[0]
+    await act(() => router.push('/one'))
+    await ready()
     expect(document.querySelector('.blog-page-transition')?.textContent).toBe('Original page')
-    expect(router.push).not.toHaveBeenCalled()
-    expect(exit.cancel).not.toHaveBeenCalled()
-    router.push.mockImplementationOnce(() => {
-      route.pathname = '/archives'; location.pathname = '/archives'
-      root!.render(page('Archives ready'))
-    })
-    await act(async () => { exit.finish(); await Promise.resolve() })
+    expect(browserHistory.pushState).not.toHaveBeenCalled()
+    await finishExit()
     expect(document.querySelector('[role="status"]')).toBeNull()
-    expect(document.querySelector('main')?.textContent).toBe('Archives ready')
-    expect(exit.cancel).toHaveBeenCalledOnce()
+    expect(document.querySelector('main')?.textContent).toContain('Ready body /one')
+    // Exit + sidebar exit + sidebar entrance; no page opacity above article blocks.
+    expect(motions.map((motion) => motion.element)).not.toContain(document.querySelector('main'))
+    expect(motions).toHaveLength(3)
   })
 
   it.each(['/archives', '/categories', '/tags', '/p/contact', '/'])('provides a loading surface for slow navigation to %s', async (href) => {
+    if (href === '/') { route.pathname = '/archives'; location.pathname = '/archives' }
     await mount()
-    if (href === '/') { route.pathname = '/archives'; location.pathname = '/archives'; await act(() => root!.render(page())) }
-    const first = motions.length
-    await act(() => navigate(href))
-    await act(async () => { motions[first].finish(); await Promise.resolve() })
+    await act(() => router.push(href))
+    await finishExit()
     expect(document.querySelector('[role="status"]')).not.toBeNull()
     expect(document.querySelector('.blog-page-transition')?.hasAttribute('hidden')).toBe(true)
   })
 
-  it('ignores an old exit completion after a second click', async () => {
+  it('ignores an old exit and response after a second click', async () => {
     await mount()
-    await act(() => navigate('/one'))
-    const first = motions[0]
-    await act(() => navigate('/two'))
-    const second = motions[2]
-    await act(async () => { first.finish(); await Promise.resolve() })
-    expect(document.querySelector('.mz-navigation-underlay')?.getAttribute('aria-hidden')).toBe('true')
-    await act(async () => { second.finish(); await Promise.resolve() })
-    expect(document.querySelector('h1')?.textContent).toBe('Title two')
-    expect(router.push).toHaveBeenCalledExactlyOnceWith('/two', { scroll: undefined })
+    await act(() => router.push('/one'))
+    await act(() => router.push('/two'))
+    await ready(0); await finishExit(0)
+    expect(browserHistory.pushState).not.toHaveBeenCalled()
+    await finishExit(2); await ready(1)
+    expect(location.pathname).toBe('/two')
+    expect(document.querySelector('main')?.textContent).toContain('Ready body /two')
+    expect(browserHistory.pushState).toHaveBeenCalledOnce()
   })
 
-  it('keeps feed tabs and the search toolbar mounted during a slow sort change', async () => {
-    const { createRoot } = await import('react-dom/client')
-    const feed = () => createElement('section', null,
-      createElement('nav', { 'aria-label': 'Sort' }, 'Latest / Hot'),
-      createElement('input', { placeholder: 'Search' }),
-      createElement('div', { 'data-feed-list': '' }, 'Feed'))
-    await act(() => { root = createRoot(document.getElementById('root')!); root.render(page(feed())) })
-    const tabs = document.querySelector('nav')
-    const search = document.querySelector('input')
-    const first = motions.length
-    await act(() => navigate('/?sort=hot', { scroll: false }))
-    await act(async () => { motions[first].finish(); await Promise.resolve() })
+  it('keeps feed tabs and the search toolbar mounted while a slow query change loads', async () => {
+    await mount(createElement('section', null, createElement('nav', null, 'Latest / Hot'), createElement('input'), createElement('div', { 'data-feed-list': '' }, 'Feed')))
+    const tabs = document.querySelector('nav'), search = document.querySelector('input')
+    await act(() => router.push('/?sort=hot', { scroll: false }))
+    expect(motions[0].element).toBe(document.querySelector('[data-feed-list]'))
+    await finishExit()
     expect(document.querySelector('.blog-page-transition')?.hasAttribute('hidden')).toBe(false)
-    expect(document.querySelector('.mz-navigation-stage')?.classList.contains('is-feed-waiting')).toBe(true)
-    expect(document.querySelector('nav')).toBe(tabs)
-    expect(document.querySelector('input')).toBe(search)
-    expect(document.querySelector('[role="status"]')).not.toBeNull()
-    route.search = 'sort=hot'; location.search = '?sort=hot'
-    await act(() => root!.render(page(feed())))
-    expect(document.querySelector('nav')).toBe(tabs)
-    expect(document.querySelector('input')).toBe(search)
-    expect(document.querySelector('.mz-navigation-underlay')).toBeNull()
+    expect(document.querySelector('nav')).toBe(tabs); expect(document.querySelector('input')).toBe(search)
+    await ready()
+    expect(location.search).toBe('?sort=hot')
+    expect(window.scrollTo).not.toHaveBeenCalled()
   })
 
-  it('immediately shows the loading surface when reduced motion bypasses the exit', async () => {
-    await mount()
-    reduced = true
-    await act(() => navigate('/one'))
+  it('shows loading immediately for reduced motion, then renders JSON without animation', async () => {
+    await mount(); reduced = true
+    await act(() => router.push('/one'))
     expect(motions).toHaveLength(0)
-    expect(document.querySelector('h1')?.textContent).toBe('Title one')
     expect(document.querySelector('[role="status"]')).not.toBeNull()
-    expect(router.push).toHaveBeenCalledOnce()
+    await ready()
+    expect(location.pathname).toBe('/one'); expect(motions).toHaveLength(0)
+  })
+
+  it('loads history traversal and refresh through JSON and restores the matching URL', async () => {
+    await mount(); reduced = true
+    await act(() => router.push('/one')); await ready()
+    await act(() => router.push('/two')); await ready(1)
+    const nextPop = vi.fn()
+    window.addEventListener('popstate', nextPop)
+    await act(() => browserHistory.go(-1)); await ready(2)
+    expect(loadBlogPage).toHaveBeenLastCalledWith('/one', true)
+    expect(document.querySelector('main')?.textContent).toContain('Ready body /one')
+    expect(nextPop).not.toHaveBeenCalled()
+    await act(() => router.refresh()); await ready(3)
+    expect(loadBlogPage).toHaveBeenLastCalledWith('/one', true)
+    expect(browserHistory.pushState).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows a retryable JSON failure and ignores a superseded request', async () => {
+    await mount(); reduced = true
+    await act(() => router.push('/one'))
+    await act(async () => requests[0].reject(new Error('文章不存在')))
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('文章不存在')
+    expect(document.querySelector('[role="status"]')).toBeNull()
+    expect(location.pathname).toBe('/one')
+    await act(() => router.refresh()); await ready(1)
+    expect(document.querySelector('[role="alert"]')).toBeNull()
+    expect(document.querySelector('main')?.textContent).toContain('Ready body /one')
   })
 })

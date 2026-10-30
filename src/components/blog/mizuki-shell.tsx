@@ -1,10 +1,10 @@
 'use client'
 
 import Link from '@/components/blog/blog-navigation'
-import { BlogNavigationProvider, BlogPageContent } from './blog-navigation'
+import { BlogPageContent } from './blog-navigation'
 import { ArticleResourceWarmup } from './article-resource-warmup'
 import { MotionSurface } from '@/components/motion/motion-surface'
-import { usePathname } from 'next/navigation'
+import { useBlogPathname } from './blog-navigation'
 import { Suspense, useEffect, useState } from 'react'
 import { ArrowUp, Calendar, Eye } from 'lucide-react'
 import { formatDateCn } from '@/lib/blog-present'
@@ -16,7 +16,6 @@ import { BlogSiteFooter } from './site-footer'
 import { CategoryFilterList, CategoryLinks, TagFilterList, TagLinks } from './category-filter-list'
 import { BlogChrome } from './blog-chrome'
 import { useIsDark } from './use-is-dark'
-import { useBlogRouteScroll } from './use-blog-route-scroll'
 import type { BlogShellData } from './shell-types'
 
 /** Characters kept after the ellipsis in sidebar titles. */
@@ -34,9 +33,8 @@ export function MizukiShell({
   scheme: string
   children: React.ReactNode
 }) {
-  const pathname = usePathname()
+  const pathname = useBlogPathname()
   const articlePage = isArticlePathname(pathname)
-  useBlogRouteScroll()
   const base = ''
   const dark = useIsDark()
 
@@ -49,7 +47,7 @@ export function MizukiShell({
   }, [])
 
   return (
-    <BlogNavigationProvider>
+    <>
     <ArticleResourceWarmup />
     <BlogChrome>
       {({ panel, articleTitle, articleToc }) => {
@@ -150,6 +148,6 @@ export function MizukiShell({
         )
       }}
     </BlogChrome>
-    </BlogNavigationProvider>
+    </>
   )
 }

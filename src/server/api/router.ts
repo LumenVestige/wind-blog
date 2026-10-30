@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { ApiError, fail } from '@/lib/api'
 import type { Ctx, Handler } from './types'
+import { blogPageH } from './blog-page'
 import { manageSettingsGetH, manageSettingsSaveH, manageCommentsH } from './manage'
 import {
   activateH, siteSettingsGetH, siteSettingsSaveH,
@@ -90,6 +91,7 @@ import {
 } from './admin'
 
 const routes: Record<string, Handler> = {
+  'GET blog/page': blogPageH,
   'GET manage/settings': manageSettingsGetH,
   'GET manage/comments': manageCommentsH,
   'POST manage/settings': manageSettingsSaveH,

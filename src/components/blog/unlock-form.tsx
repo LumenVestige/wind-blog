@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useBlogRouter } from './blog-navigation'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,7 @@ import { api, ClientApiError } from '@/lib/api-client'
 export function UnlockForm({ articleId }: { articleId: number }) {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const router = useBlogRouter()
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
