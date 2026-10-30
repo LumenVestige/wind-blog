@@ -13,11 +13,20 @@ type Navigate = (href: string, options?: { scroll?: boolean; replace?: boolean }
 const Navigation = createContext<{ navigate: Navigate; pendingHref: string | null } | null>(null)
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)'
 
-function RouteObserver({ onCommit }: { onCommit: () => void }) {
+function RouteObserver({ onCommit }: { onCommit: (animate: boolean) => void }) {
   const pathname = usePathname()
   const search = useSearchParams().toString()
+  const committed = useRef<string | null>(null)
   // Search-only changes (sort, filters and pagination) need the same entrance.
-  useLayoutEffect(onCommit, [pathname, search, onCommit])
+  useLayoutEffect(() => {
+    const route = `${pathname}?${search}`
+    if (committed.current === route) return
+    const initial = committed.current === null
+    committed.current = route
+    // SSR content is already visible. Hydration (including Strict Mode's
+    // repeated effects) must never hide it just to replay an entrance.
+    onCommit(!initial)
+  }, [pathname, search, onCommit])
   return null
 }
 
@@ -41,10 +50,12 @@ export function BlogNavigationProvider({ children }: { children: ReactNode }) {
     animations.current = []
   }, [])
 
-  const enter = useCallback(() => {
+  const enter = useCallback((animate = true) => {
     const feedOnly = previousPath.current === '/' && location.pathname === '/'
     previousPath.current = location.pathname
     reset()
+    if (!animate) return
+    document.querySelector<HTMLElement>('.mz-shell')?.setAttribute('data-blog-transitions', '')
     const content = document.querySelector<HTMLElement>('.mz-content')
     if (!content || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const surface = feedOnly ? content.querySelector<HTMLElement>('[data-feed-list]') || content : content

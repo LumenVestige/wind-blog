@@ -19,6 +19,10 @@ export function useFadeOutOnUnmount<T extends HTMLElement>(duration = FADE_OUT_M
     return () => {
       const node = ref.current
       if (!node || typeof document === 'undefined') return
+      const shell = node.closest('.mz-shell')
+      // A direct visit replaces delayed placeholders immediately, matching
+      // the first page's no-entrance policy. Later navigation keeps its fade.
+      if (shell && !shell.hasAttribute('data-blog-transitions')) return
       if (
         performance.now() - mountedAt.current < 240 ||
         window.matchMedia('(prefers-reduced-motion: reduce)').matches

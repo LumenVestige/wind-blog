@@ -143,7 +143,6 @@ html:has([data-blog-theme='mizuki']) {
   -webkit-backdrop-filter: blur(6px) saturate(1.1);
   box-shadow: var(--mz-shadow);
   border: 1px solid var(--mz-line);
-  animation: mz-fade-in 180ms var(--mz-ease) backwards;
   transition:
     box-shadow var(--mz-duration) var(--mz-ease),
     background var(--mz-duration) var(--mz-ease);

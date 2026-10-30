@@ -9,6 +9,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { ArrowUp, Calendar, Eye } from 'lucide-react'
 import { formatDateCn } from '@/lib/blog-present'
 import { cn } from '@/lib/utils'
+import { isArticlePathname } from '@/lib/blog-route'
 import { ThemeInit } from './theme-toggle'
 import { SiteNavbar } from './site-navbar'
 import { BlogSiteFooter } from './site-footer'
@@ -34,6 +35,7 @@ export function MizukiShell({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const articlePage = isArticlePathname(pathname)
   useBlogRouteScroll()
   const base = ''
   const dark = useIsDark()
@@ -53,7 +55,7 @@ export function MizukiShell({
       {({ panel, articleTitle, articleToc }) => {
         // Articles keep only their outline; archives place their filters on the left.
         const showSidebar =
-          !SIDEBARLESS_PATHS.has(pathname) && (articleTitle == null || !!panel)
+          !SIDEBARLESS_PATHS.has(pathname) && (!articlePage || articleTitle == null || !!panel)
         return (
     <div data-blog-theme="mizuki" className={cn('mz-shell', dark && 'dark')}>
       <ThemeInit scheme={scheme} />
@@ -65,7 +67,7 @@ export function MizukiShell({
           className={cn(
             'mz-grid',
             showSidebar && 'has-sidebar',
-            articleTitle != null && 'is-article',
+            articlePage && 'is-article',
             pathname === '/archives' && 'is-archives',
           )}
         >
@@ -76,7 +78,7 @@ export function MizukiShell({
           {showSidebar && (
           <aside className="mz-sidebar" aria-label="侧栏">
             {/* Article pages keep only the outline (passed in as `panel`). */}
-            {pathname !== '/archives' && articleTitle == null && data.recentPosts.length > 0 && (
+            {pathname !== '/archives' && !articlePage && data.recentPosts.length > 0 && (
               <div className="mz-widget">
                 <h2 className="mz-widget-title">最近更新</h2>
                 <ul className="mz-panel-list">
@@ -110,7 +112,7 @@ export function MizukiShell({
               </div>
             )}
 
-            {articleTitle == null && data.categories.length > 0 && (
+            {!articlePage && data.categories.length > 0 && (
               <div className="mz-widget">
                 <h2 className="mz-widget-title">分类</h2>
                 <Suspense fallback={<CategoryLinks categories={data.categories} />}>
@@ -119,7 +121,7 @@ export function MizukiShell({
               </div>
             )}
 
-            {articleTitle == null && data.tags.length > 0 && (
+            {!articlePage && data.tags.length > 0 && (
               <div className="mz-widget">
                 <h2 className="mz-widget-title">标签</h2>
                 <Suspense fallback={<TagLinks tags={data.tags} />}>

@@ -34,7 +34,6 @@ function Surface({ mode }: { mode: 'blog' | 'admin' }) {
       mode === 'blog' ? '.mz-nav-links' : '[data-sidebar="content"]',
     )
     if (!host) return
-    host.dataset.motionNav = ''
     setNavHost(host)
     return () => {
       host.removeAttribute('data-motion-nav')
@@ -197,12 +196,20 @@ function Surface({ mode }: { mode: 'blog' | 'admin' }) {
         return
       }
       const hostRect = navHost.getBoundingClientRect()
-      gsap.to(indicator.current, {
+      const position = {
         x: rect.left - hostRect.left + navHost.scrollLeft,
         y: rect.top - hostRect.top + navHost.scrollTop,
         width: rect.width,
         height: rect.height,
         opacity: 1,
+      }
+      if (!navHost.hasAttribute('data-motion-nav')) {
+        // Keep the server-rendered selected background until its replacement
+        // has a real position. The first marker never flies in from (0, 0).
+        gsap.set(indicator.current, position)
+        navHost.dataset.motionNav = ''
+      } else gsap.to(indicator.current, {
+        ...position,
         duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches
           ? 0
           : 0.28,

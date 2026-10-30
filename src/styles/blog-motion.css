@@ -25,6 +25,18 @@
 .mz-article-header > .mz-article-info { animation-delay: 100ms; }
 .mz-article > #article-body { animation-delay: 175ms; }
 
+/* First visits paint directly. Enable entrances only after an in-site route
+   change; data arriving on a direct article visit also stays steady. */
+.mz-shell:not([data-blog-transitions]) :is(
+  .mz-pagination,
+  .mz-feed-filter,
+  .mz-page-title,
+  .mz-article-nav:not([aria-busy='true']),
+  .mz-article-header > h1,
+  .mz-article-header > .mz-article-info:not(:has(.mz-article-meta[aria-hidden='true'])),
+  .mz-article > #article-body
+) { animation: none; }
+
 /* Fast responses arrive inside the entrance. Only longer waits reveal bars. */
 .mz-article-header > .mz-skeleton-title,
 .mz-article-header > .mz-article-info:has(.mz-article-meta[aria-hidden='true']),
@@ -33,6 +45,22 @@
 .mz-article-nav[aria-busy='true'] {
   animation: mz-fade-in 160ms var(--mz-ease) 280ms backwards;
 }
+
+/* Server-streamed route fallback: fast requests never flash a skeleton. */
+.mz-page-loading {
+  pointer-events: none;
+  animation: mz-loading-reveal 160ms var(--mz-ease) 300ms backwards;
+}
+@keyframes mz-loading-reveal {
+  from { opacity: 0; visibility: hidden; }
+  to { opacity: 1; visibility: visible; }
+}
+.mz-page-loading .mz-article { animation: none; min-height: 26rem; }
+.mz-loading-toolbar { height: 2.75rem; margin-bottom: 1rem; }
+.mz-loading-toolbar > span { display: block; width: 10rem; height: 100%; border-radius: var(--mz-radius); }
+.mz-loading-lines { display: flex; flex-direction: column; gap: 0.85rem; margin: 0.75rem 0; }
+.mz-loading-title { height: 1.5rem; width: 72%; }
+.mz-loading-meta { height: 0.7rem; width: 50%; margin-top: 0.5rem; }
 
 @keyframes mz-document-enter {
   from { opacity: 0; translate: 0 32px; }
@@ -264,6 +292,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  [data-blog-theme] .mz-page-loading {
+    animation: mz-loading-reveal 0s linear 300ms backwards !important;
+  }
   .blog-page-transition,
   .toc-reading-range,
   .toc-outline *,
