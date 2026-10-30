@@ -1550,9 +1550,39 @@ html:has([data-blog-theme='mizuki']) {
 }
 
 .mz-prose {
-  font-size: 1rem;
-  line-height: 1.75;
-  color: var(--mz-text-75);
+  /* Match the reference article's reading size and contrast in both themes. */
+  font-size: 0.95rem;
+  line-height: 1.7;
+  letter-spacing: normal;
+  word-spacing: normal;
+  color: var(--foreground);
+}
+
+.mz-prose .markdown-body p {
+  margin: 0.55em 0;
+}
+
+.mz-prose .markdown-body :is(ul, ol) {
+  margin: 0.5em 0;
+  padding-left: 1.4em;
+}
+
+.mz-prose .markdown-body ul { list-style-type: disc; }
+.mz-prose .markdown-body ol { list-style-type: decimal; }
+
+.mz-prose .markdown-body li {
+  margin: 0.25em 0;
+}
+
+.mz-prose .markdown-body :is(h1, h2, h3, h4, h5, h6) {
+  margin: 1.1em 0 0.5em;
+  font-weight: 650;
+  letter-spacing: normal;
+  color: inherit;
+}
+
+.mz-prose .markdown-body > :first-child {
+  margin-top: 0;
 }
 
 .mz-prose h1,
@@ -1972,13 +2002,13 @@ html:has([data-blog-theme='mizuki']) {
   border-radius: 999px;
 }
 
-/* Bars follow .mz-prose metrics: 1rem text on a 1.75 line box. */
+/* Bars follow .mz-prose metrics: 0.95rem text on a 1.7 line box. */
 .mz-article-skeleton {
   display: flex;
   flex-direction: column;
   gap: 1.05em;
   padding-top: 0.5em;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .mz-skeleton-line {

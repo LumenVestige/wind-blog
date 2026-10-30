@@ -72,14 +72,18 @@ export function BlogEditor({
   articleId,
   username,
   returnTo = 'list',
+  initialTitle = '',
+  initialVisibility = 'public',
 }: {
   articleId?: number
   username: string
-  /** Where to go after saving: the article page or the admin article list. */
-  returnTo?: 'article' | 'list'
+  /** Return to the screen that started this editing task. */
+  returnTo?: 'article' | 'list' | 'content'
+  initialTitle?: string
+  initialVisibility?: 'public' | 'unlisted'
 }) {
-  const [value, setValue] = useState<Draft>(empty)
-  const [baseline, setBaseline] = useState(JSON.stringify(empty))
+  const [value, setValue] = useState<Draft>(() => ({ ...empty, title: initialTitle, visibility: initialVisibility }))
+  const [baseline, setBaseline] = useState(() => JSON.stringify({ ...empty, title: initialTitle, visibility: initialVisibility }))
   const [categories, setCategories] = useState<{ id: number; name: string }[]>(
     [],
   )
@@ -223,12 +227,11 @@ export function BlogEditor({
             ? '已更新'
             : '已发布',
       )
-      // Opened from an article page → back to it (slug may have changed);
-      // opened from the admin → back to the article list.
+      // Keep navigation-page authoring inside its settings workflow.
       router.push(
         returnTo === 'article' && saved?.slug
           ? `/${encodeURIComponent(saved.slug)}`
-          : '/manage/articles',
+          : returnTo === 'content' ? '/manage/settings/content' : '/manage/articles',
       )
       router.refresh()
     } catch (e) {
@@ -458,11 +461,13 @@ export function BlogEditor({
                       <SelectContent>
                         <SelectGroup>
                           <SelectItem value="public">公开</SelectItem>
+                          <SelectItem value="unlisted">仅链接可见</SelectItem>
                           <SelectItem value="password">密码保护</SelectItem>
                           <SelectItem value="private">私密</SelectItem>
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                    {value.visibility === 'unlisted' && <FieldDescription>不进入首页、归档、搜索等列表，知道链接的访客可以阅读。关联关于或友链的文章会保持此可见性。</FieldDescription>}
                   </Field>
                   {value.visibility === 'password' && (
                     <Field>

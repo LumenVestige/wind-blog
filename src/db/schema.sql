@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS blog_articles (
   content            TEXT NOT NULL DEFAULT '',
   cover_url          TEXT NOT NULL DEFAULT '',
   image_hashes       TEXT NOT NULL DEFAULT '[]',   -- JSON array of content hashes
-  visibility         TEXT NOT NULL DEFAULT 'public', -- public|private|password
+  visibility         TEXT NOT NULL DEFAULT 'public', -- public|private|password|unlisted (link-only)
   password_hash      TEXT NOT NULL DEFAULT '',     -- bcrypt
   recommend          INTEGER NOT NULL DEFAULT 0,
   sync_to_main_profile INTEGER NOT NULL DEFAULT 1,

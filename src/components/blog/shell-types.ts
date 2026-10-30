@@ -11,7 +11,8 @@ export interface BlogShellData {
   avatar: string
   subtitle: string
   socialLinks: ShellSocialLink[]
-  showFriends: boolean
+  aboutArticle: { id: number; slug: string; title: string } | null
+  friendsArticle: { id: number; slug: string; title: string } | null
   isOwner: boolean
   icpNumber: string
   recentPosts: { id: number; slug: string; title: string; publishedAt: number; viewCount: number }[]

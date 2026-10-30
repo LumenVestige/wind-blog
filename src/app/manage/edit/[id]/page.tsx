@@ -19,7 +19,7 @@ export default async function EditArticlePage({
       key={id}
       username={siteOwner().username}
       articleId={Number(id)}
-      returnTo={from === 'article' ? 'article' : 'list'}
+      returnTo={from === 'article' ? 'article' : from === 'content' ? 'content' : 'list'}
     />
   )
 }

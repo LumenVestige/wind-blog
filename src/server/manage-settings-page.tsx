@@ -4,6 +4,7 @@ import { expandUrl } from '@/server/images'
 import { manageSettingsSnapshot } from '@/server/manage-settings'
 import { BlogSettings } from '@/components/dashboard/blog-settings'
 import type { SettingsSection } from '@/lib/admin-settings'
+import { navigationArticleOptions } from '@/server/blog/navigation'
 export async function ManageSettingsContent({
   section,
 }: {
@@ -16,6 +17,7 @@ export async function ManageSettingsContent({
       key={section}
       section={section}
       snapshot={manageSettingsSnapshot(user.id)}
+      contentArticles={section === 'content' ? navigationArticleOptions(user.id) : []}
       account={{
         username: user.username,
         email: user.email,

@@ -13,6 +13,7 @@ import {
   type SettingsSnapshot,
   type SettingsValues,
 } from '@/lib/admin-settings'
+import { navigationArticleIds, saveNavigationArticles } from '@/server/blog/navigation'
 import { typographySettings } from '@/server/typography'
 import { fontSettingKeys, fontSettingOptions } from '@/lib/typography'
 
@@ -37,11 +38,7 @@ export function manageSettingsSnapshot(userId: number): SettingsSnapshot {
       subtitle: config.subtitle,
       ...typographySettings(),
     },
-    content: {
-      homeIntroMd: config.homeIntroMd,
-      aboutMd: config.aboutMd,
-      friendsMd: config.friendsMd,
-    },
+    content: navigationArticleIds(userId),
     social: { socialLinks: config.socialLinks },
     interaction: {
       commentsEnabled: getSetting('comments_enabled', '1') === '1',
@@ -158,15 +155,7 @@ export function saveManageSettings(
         setSettings({ wenkai_enabled: value.wenkaiEnabled ? '1' : '0' })
       setSettings(fonts)
     } else if (key === 'content') {
-      for (const field of ['homeIntroMd', 'aboutMd', 'friendsMd']) {
-        if (typeof value[field] !== 'string' || value[field].length > 200000)
-          throw new ApiError('页面内容格式不正确或超出长度限制', 1, 400)
-      }
-      saveThemeConfig(userId, {
-        homeIntroMd: value.homeIntroMd as string,
-        aboutMd: value.aboutMd as string,
-        friendsMd: value.friendsMd as string,
-      })
+      saveNavigationArticles(userId, value)
     } else if (key === 'social') {
       if (!Array.isArray(value.socialLinks) || value.socialLinks.length > 20)
         throw new ApiError('最多添加 20 个社交链接', 1, 400)

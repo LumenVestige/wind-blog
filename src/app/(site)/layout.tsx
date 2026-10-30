@@ -11,6 +11,7 @@ import { isInitialized, siteOwner, siteName } from '@/server/tenant'
 import { getSetting } from '@/lib/settings'
 import { MizukiShell } from '@/components/blog/mizuki-shell'
 import type { BlogShellData } from '@/components/blog/shell-types'
+import { navigationArticles } from '@/server/blog/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,7 @@ export default async function BlogLayout({ children }: { children: React.ReactNo
   const username = author.username
   const cfg = siteConfigData(ensureSiteConfig(author.id))
   const viewer = await getViewer()
+  const navigation = navigationArticles(author.id)
 
   const pages = listPagesPublic(username).map((p) => ({
     slug: p.slug,
@@ -51,7 +53,8 @@ export default async function BlogLayout({ children }: { children: React.ReactNo
     avatar: expandUrl(author.avatar),
     subtitle: cfg.subtitle,
     socialLinks: cfg.socialLinks,
-    showFriends: !!cfg.friendsMd.trim(),
+    aboutArticle: navigation.about,
+    friendsArticle: navigation.friends,
     isOwner: !!viewer && (viewer.id === author.id || viewer.isAdmin),
     icpNumber: getSetting('icp_number', ''),
     recentPosts,

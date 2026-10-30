@@ -52,7 +52,7 @@ export function ManageArticles({ username }: { username: string }) {
   const params = useSearchParams(),
     router = useRouter(),
     keyword = params.get('q') || '',
-    status = ['all', 'public', 'draft', 'password', 'private'].includes(
+    status = ['all', 'public', 'unlisted', 'draft', 'password', 'private'].includes(
       params.get('status') || '',
     )
       ? params.get('status')!
@@ -104,6 +104,7 @@ export function ManageArticles({ username }: { username: string }) {
             <TabsList className="h-auto flex-wrap justify-start">
               <TabsTrigger value="all">全部</TabsTrigger>
               <TabsTrigger value="public">公开</TabsTrigger>
+              <TabsTrigger value="unlisted">仅链接可见</TabsTrigger>
               <TabsTrigger value="draft">草稿</TabsTrigger>
               <TabsTrigger value="password">密码保护</TabsTrigger>
               <TabsTrigger value="private">私密</TabsTrigger>
@@ -190,6 +191,8 @@ export function ManageArticles({ username }: { username: string }) {
                           ? '草稿'
                           : article.visibility === 'public'
                             ? '已公开'
+                            : article.visibility === 'unlisted'
+                              ? '仅链接可见'
                             : article.visibility === 'password'
                               ? '密码保护'
                               : '私密'}
@@ -223,7 +226,7 @@ export function ManageArticles({ username }: { username: string }) {
                                 </Link>
                               </DropdownMenuItem>
                               {!article.isDraft &&
-                                article.visibility !== 'private' && (
+                                ['public', 'password'].includes(article.visibility) && (
                                   <DropdownMenuItem
                                     disabled={busy}
                                     onSelect={async () => {

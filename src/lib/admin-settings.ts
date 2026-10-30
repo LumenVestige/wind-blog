@@ -8,7 +8,7 @@ export interface SettingsValues {
     icpNumber: string
   }
   appearance: { colorScheme: 'system' | 'light' | 'dark'; subtitle: string } & TypographySettings
-  content: { homeIntroMd: string; aboutMd: string; friendsMd: string }
+  content: { aboutArticleId: number; friendsArticleId: number }
   social: { socialLinks: { type: string; url: string; label?: string }[] }
   interaction: { commentsEnabled: boolean; likesEnabled: boolean }
   storage: {

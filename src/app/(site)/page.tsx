@@ -1,6 +1,7 @@
 import Link from '@/components/blog/blog-navigation'
 import {
   Calendar,
+  ChevronRight,
   Eye,
   FolderOpen,
   Heart,
@@ -13,10 +14,9 @@ import { listByUsername } from '@/server/blog/articles'
 import { listCategoriesPublic } from '@/server/blog/categories'
 import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
 import { coverThumbnailUrl, expandUrl, publicBase } from '@/server/images'
-import { ArticleLink, FeedArticleTitle } from '@/components/blog/article-link'
+import { ArticleLink } from '@/components/blog/article-link'
 import { FeedSearch } from '@/components/blog/feed-search'
 import { FeedTabs } from '@/components/blog/feed-tabs'
-import { Markdown } from '@/components/blog/markdown'
 import { MarkdownSummary } from '@/components/blog/markdown-summary'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -102,23 +102,6 @@ export default async function BlogHomePage({
   const activeCat = categoryId ? catName(categoryId) : undefined
   const baseQuery = { q: keyword, categoryId, tag: tags, sort }
 
-  const intro =
-    cfg.homeIntroMd.trim() && !keyword && !categoryId && !tag ? (
-      themeId === 'chirpy' ? (
-        <div className="chirpy-prose mb-4 px-1 pt-4">
-          <Markdown source={cfg.homeIntroMd} className="" />
-        </div>
-      ) : themeId === 'mizuki' ? (
-        <div className="mz-prose mb-4">
-          <Markdown source={cfg.homeIntroMd} className="" />
-        </div>
-      ) : (
-        <div className="mb-4 rounded-xl border bg-card p-4 shadow-sm">
-          <Markdown source={cfg.homeIntroMd} />
-        </div>
-      )
-    ) : null
-
   const pager = (
     <BlogPagination
       page={page}
@@ -132,7 +115,6 @@ export default async function BlogHomePage({
   if (themeId === 'chirpy') {
     return (
       <div>
-        {intro}
         {(keyword || activeCat || tag) && (
           <div className="mt-4 flex flex-wrap items-center gap-2 px-1 text-sm text-[var(--text-muted-color)]">
             {keyword ? <span>搜索：{keyword}</span> : null}
@@ -206,7 +188,6 @@ export default async function BlogHomePage({
     ] as const
     return (
       <div>
-        {intro}
         <div className="mz-feed-toolbar">
           <div className="mz-feed-toolbar-start">
             <FeedTabs sort={sort} items={tabs.map((t) => ({
@@ -270,7 +251,7 @@ export default async function BlogHomePage({
                   className="mz-feed-card"
                 >
                   <div className="mz-feed-body">
-                    <FeedArticleTitle title={a.title} />
+                    <h2 className="mz-feed-title"><span className="mz-feed-title-text">{a.title}</span><ChevronRight className="mz-feed-enter" aria-hidden="true" /></h2>
                     <div className="mz-feed-preview">
                       <div className="mz-feed-excerpt">
                         {a.summary ? <MarkdownSummary content={a.summary} /> : null}
@@ -345,7 +326,6 @@ export default async function BlogHomePage({
         </div>
       </section>
 
-      {intro}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <form action={`/`} className="flex flex-1 gap-2">

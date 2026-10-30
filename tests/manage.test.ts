@@ -210,22 +210,23 @@ describe('modular management settings', () => {
       ).status,
     ).toBe(400)
   })
-  it('saves and clears content without modifying appearance', async () => {
+  it('links and clears navigation articles without modifying appearance', async () => {
+    const page = createArticle(owner, { title: '关于文章', content: '关于正文' })
     expect(
       (
         await save('content', {
-          homeIntroMd: '# 首页',
-          aboutMd: '关于',
-          friendsMd: '友链',
+          aboutArticleId: page.id,
+          friendsArticleId: 0,
         })
       ).status,
     ).toBe(200)
     expect(
-      (await save('content', { homeIntroMd: '', aboutMd: '', friendsMd: '' }))
+      (await save('content', { aboutArticleId: 0, friendsArticleId: 0 }))
         .status,
     ).toBe(200)
     expect((await snapshot()).appearance.values.subtitle).toBe('新简介')
-    expect((await snapshot()).content.values.aboutMd).toBe('')
+    expect((await snapshot()).content.values.aboutArticleId).toBe(0)
+    expect(get<{ visibility: string }>('SELECT visibility FROM blog_articles WHERE id = ?', page.id)?.visibility).toBe('unlisted')
   })
   it('rejects malformed social links rather than silently dropping entries', async () => {
     expect(

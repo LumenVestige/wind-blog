@@ -1,6 +1,8 @@
 'use client'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import type { NavigationArticleOption } from '@/server/blog/navigation'
 import { ChevronDown, Monitor, Moon, Plus, Sun, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, ClientApiError } from '@/lib/api-client'
@@ -14,7 +16,6 @@ import { settingsNav } from '@/lib/admin-nav'
 import { ActionButton } from '@/components/ui/action-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Field,
   FieldContent,
@@ -41,7 +42,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Collapsible,
   CollapsibleContent,
@@ -390,55 +390,38 @@ function Appearance({ initial }: { initial: SettingsSnapshot['appearance'] }) {
     </ModuleForm>
   )
 }
-function Content({ initial }: { initial: SettingsSnapshot['content'] }) {
-  const form = useModule('content', initial),
-    { value, change } = form
+function Content({ initial, articles }: { initial: SettingsSnapshot['content']; articles: NavigationArticleOption[] }) {
+  const form = useModule('content', initial), { value, change } = form
   return (
-    <ModuleForm
-      title="页面内容"
-      description="编辑首页介绍、关于页和友链页。支持 Markdown。"
-      state={form}
-    >
-      <Tabs defaultValue="homeIntroMd">
-        <TabsList>
-          <TabsTrigger value="homeIntroMd">首页介绍</TabsTrigger>
-          <TabsTrigger value="aboutMd">关于</TabsTrigger>
-          <TabsTrigger value="friendsMd">友链</TabsTrigger>
-        </TabsList>
-        {(
-          [
-            {
-              key: 'homeIntroMd',
-              label: '首页介绍',
-              help: '显示在首页文章列表上方。',
-            },
-            {
-              key: 'aboutMd',
-              label: '关于页内容',
-              help: '介绍你自己与这个博客。',
-            },
-            {
-              key: 'friendsMd',
-              label: '友链页内容',
-              help: '留空时隐藏友链入口。',
-            },
-          ] as const
-        ).map((item) => (
-          <TabsContent key={item.key} value={item.key}>
-            <Field>
-              <FieldLabel htmlFor={item.key}>{item.label}</FieldLabel>
-              <Textarea
-                id={item.key}
-                value={value[item.key]}
-                onChange={(event) => change(item.key, event.target.value)}
-                className="min-h-80 font-mono"
-                maxLength={200000}
-              />
-              <FieldDescription>{item.help}</FieldDescription>
-            </Field>
-          </TabsContent>
-        ))}
-      </Tabs>
+    <ModuleForm title="导航文章" description="关于和友链直接打开关联文章。选择后设为仅链接可见，不进入首页或归档；不关联时隐藏入口。" state={form}>
+      {([
+        { key: 'aboutArticleId', label: '关于', preset: 'about' },
+        { key: 'friendsArticleId', label: '友链', preset: 'friends' },
+      ] as const).map((item) => {
+        const selected = articles.find((article) => article.id === value[item.key])
+        const unavailable = selected && (selected.isDraft || !selected.approved || !['public', 'unlisted'].includes(selected.visibility))
+        return <Field key={item.key}>
+          <FieldLabel htmlFor={item.key}>{item.label}入口</FieldLabel>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Select value={String(value[item.key])} onValueChange={(id) => change(item.key, Number(id))}>
+              <SelectTrigger id={item.key} className="min-w-0 flex-1"><SelectValue placeholder="不显示此入口" /></SelectTrigger>
+              <SelectContent><SelectGroup>
+                <SelectItem value="0">不显示此入口</SelectItem>
+                {!!value[item.key] && !selected && <SelectItem value={String(value[item.key])} disabled>关联文章已删除，请重新选择</SelectItem>}
+                {articles.map((article) => <SelectItem key={article.id} value={String(article.id)} disabled={article.isDraft || !article.approved || !['public', 'unlisted'].includes(article.visibility)}>
+                  {article.title}{article.isDraft ? '（草稿）' : article.visibility === 'private' ? '（私密）' : article.visibility === 'password' ? '（密码保护）' : ''}
+                </SelectItem>)}
+              </SelectGroup></SelectContent>
+            </Select>
+            <Button variant="outline" asChild><Link href={`/manage/new?preset=${item.preset}`}>新建文章</Link></Button>
+          </div>
+          <FieldDescription>{unavailable ? '当前关联文章未公开可读，导航入口暂不显示。发布后会恢复。' : '正文在文章编辑器中维护，访客可通过导航或文章链接阅读。'}</FieldDescription>
+          {selected && <div className="flex gap-4 text-sm">
+            <Link className="text-primary hover:underline" href={`/manage/edit/${selected.id}?from=content`}>编辑文章</Link>
+            {!unavailable && <Link className="text-primary hover:underline" href={`/${selected.slug}`} target="_blank" rel="noopener noreferrer">查看文章</Link>}
+          </div>}
+        </Field>
+      })}
     </ModuleForm>
   )
 }
@@ -709,10 +692,12 @@ export function BlogSettings({
   section = 'general',
   snapshot,
   account,
+  contentArticles = [],
 }: {
   section?: SettingsSection | 'account'
   snapshot: SettingsSnapshot
   account: { username: string; email: string; avatar: string }
+  contentArticles?: NavigationArticleOption[]
 }) {
   const title =
     settingsNav.find((item) => item.id === section)?.label || '基本信息'
@@ -725,7 +710,7 @@ export function BlogSettings({
         ) : section === 'appearance' ? (
           <Appearance initial={snapshot.appearance} />
         ) : section === 'content' ? (
-          <Content initial={snapshot.content} />
+          <Content initial={snapshot.content} articles={contentArticles} />
         ) : section === 'social' ? (
           <Social initial={snapshot.social} />
         ) : section === 'interaction' ? (

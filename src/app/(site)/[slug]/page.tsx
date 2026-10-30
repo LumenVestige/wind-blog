@@ -163,7 +163,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!row) return { title: '文章不存在', robots: { index: false } }
   try { assertArticleVisible(row, await getViewer()) } catch { return { title: '文章不存在', robots: { index: false } } }
   const publicArticle = row.visibility === 'public' && row.moderation_status === 'approved'
+  const previewable = publicArticle || (row.visibility === 'unlisted' && row.moderation_status === 'approved')
   const url = new URL(`/${encodeURIComponent(row.slug)}`, await publicBase()).toString()
-  return { title: row.title, description: publicArticle ? row.summary : '这是一篇受保护的文章', alternates: { canonical: url },
-    robots: { index: publicArticle, follow: publicArticle }, openGraph: { title: row.title, description: publicArticle ? row.summary : '这是一篇受保护的文章', url, type: 'article' } }
+  return { title: row.title, description: previewable ? row.summary : '这是一篇受保护的文章', alternates: { canonical: url },
+    robots: { index: publicArticle, follow: publicArticle }, openGraph: { title: row.title, description: previewable ? row.summary : '这是一篇受保护的文章', url, type: 'article' } }
 }

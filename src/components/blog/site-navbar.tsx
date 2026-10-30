@@ -11,7 +11,7 @@ import type { TocItem } from './article-toc'
 
 export type SiteNavbarData = Pick<
   BlogShellData,
-  'siteName' | 'displayName' | 'avatar' | 'isOwner' | 'pages' | 'staticSites' | 'showFriends'
+  'siteName' | 'displayName' | 'avatar' | 'isOwner' | 'pages' | 'staticSites' | 'aboutArticle' | 'friendsArticle'
 >
 
 /**
@@ -138,12 +138,12 @@ export function SiteNavbar({
     }
   }, [articleTitle, pathname])
 
-  const navItems = [
+  const navItems: { href: string; label: string; icon: typeof Home; end?: boolean; articleSlug?: string }[] = [
     { href: '/', label: '首页', icon: Home, end: true },
     { href: '/archives', label: '归档', icon: Archive },
     ...(data.staticSites.length ? [{ href: '/static', label: '静态页', icon: FolderOpen }] : []),
-    ...(data.showFriends ? [{ href: '/friends', label: '友链', icon: Users }] : []),
-    { href: '/about', label: '关于', icon: Info },
+    ...(data.friendsArticle ? [{ href: `/${data.friendsArticle.slug}`, articleSlug: data.friendsArticle.slug, label: '友链', icon: Users, end: true }] : []),
+    ...(data.aboutArticle ? [{ href: `/${data.aboutArticle.slug}`, articleSlug: data.aboutArticle.slug, label: '关于', icon: Info, end: true }] : []),
   ]
 
   function active(href: string, end?: boolean) {
@@ -183,7 +183,7 @@ export function SiteNavbar({
 
           <nav className="mz-nav-links" aria-label="博客导航" ref={navLinksRef}>
             {navItems.map((it) => (
-              <Link key={it.href} href={it.href} aria-current={active(it.href, it.end) ? 'page' : undefined} className={cn('mz-nav-link', active(it.href, it.end) && 'is-active')}>
+              <Link key={it.label} href={it.href} articleSlug={it.articleSlug} aria-current={active(it.href, it.end) ? 'page' : undefined} className={cn('mz-nav-link', active(it.href, it.end) && 'is-active')}>
                 <it.icon className="size-3.5 opacity-70" />
                 {it.label}
               </Link>
@@ -263,8 +263,9 @@ export function SiteNavbar({
         <div className="mz-mobile-panel">
           {navItems.map((it) => (
             <Link
-              key={it.href}
+              key={it.label}
               href={it.href}
+              articleSlug={it.articleSlug}
               onClick={() => setMenuOpen(false)}
               className={cn('mz-nav-link', active(it.href, it.end) && 'is-active')}
             >

@@ -3,6 +3,7 @@ import { all, fromBool, get, run, toBool, transaction } from '@/db'
 import { signingSecret } from '@/lib/jwt'
 import type { AuthUser } from '@/lib/jwt'
 import { ApiError } from '@/lib/api'
+import { getSetting } from '@/lib/settings'
 import { buildSummary, extractImageUrls } from '@/lib/markdown'
 import { hashAccessPassword, verifyAccessPasswordAsync } from '@/lib/password'
 import { isValidSlug, randomSlugSuffix, slugify, uniqueSlug } from '@/lib/slug'
@@ -122,7 +123,7 @@ export function serializeArticle(
   const canSeeBody =
     owner ||
     isAdmin ||
-    row.visibility === 'public' ||
+    ['public', 'unlisted'].includes(row.visibility) ||
     (row.visibility === 'password' && !!opts.unlockTokenValid)
 
   const editorOptions = get<{ summary_mode: string; is_draft: number }>('SELECT summary_mode, is_draft FROM blog_article_options WHERE article_id = ?', row.id)
@@ -296,7 +297,7 @@ export interface WriteReq {
 
 function normalizeVisibility(v: unknown, fallback = 'public'): string {
   const s = String(v || '').trim()
-  if (s === 'public' || s === 'private' || s === 'password') return s
+  if (['public', 'private', 'password', 'unlisted'].includes(s)) return s
   return fallback
 }
 
@@ -384,7 +385,10 @@ export function updateArticle(
     if (!title) throw new ApiError('标题不能为空', 1, 400)
     if (title.length > 200) throw new ApiError('标题过长', 1, 400)
     const content = stripGeneratedFooter(req.content ?? row.content)
-    const visibility = req.isDraft ? 'private' : normalizeVisibility(req.visibility, row.visibility)
+    let visibility = req.isDraft ? 'private' : normalizeVisibility(req.visibility, row.visibility)
+    // Republishing from an older editor/plugin must not put navigation pages
+    // into the public feed. Draft/private changes still take effect normally.
+    if (visibility === 'public' && ['about_article_id', 'friends_article_id'].some((key) => Number(getSetting(key)) === id)) visibility = 'unlisted'
 
     let passwordHash = row.password_hash
     if (req.clearPassword || visibility !== 'password') {
@@ -428,7 +432,7 @@ export function updateArticle(
       `UPDATE blog_articles SET
          slug = ?, title = ?, summary = ?, content = ?, cover_url = ?, image_hashes = ?,
          visibility = ?, password_hash = ?, recommend = ?, sync_to_main_profile = ?, category_id = ?,
-         pinned_at = CASE WHEN ? = 'private' THEN NULL ELSE pinned_at END,
+         pinned_at = CASE WHEN ? IN ('private', 'unlisted') THEN NULL ELSE pinned_at END,
          updated_at = datetime('now')
        WHERE id = ?`,
       slug,
@@ -486,7 +490,7 @@ export function listMine(
   const params: unknown[] = [userId]
   if (opts.status === 'draft') {
     where.push('EXISTS (SELECT 1 FROM blog_article_options o WHERE o.article_id = a.id AND o.is_draft = 1)')
-  } else if (opts.status && ['public', 'private', 'password'].includes(opts.status)) {
+  } else if (opts.status && ['public', 'private', 'password', 'unlisted'].includes(opts.status)) {
     where.push('a.visibility = ? AND NOT EXISTS (SELECT 1 FROM blog_article_options o WHERE o.article_id = a.id AND o.is_draft = 1)')
     params.push(opts.status)
   }
@@ -844,7 +848,7 @@ export function pinArticle(
   const row = get<ArticleRow>('SELECT * FROM blog_articles WHERE id = ?', id)
   if (!row) throw new ApiError('文章不存在', 1, 404)
   if (row.user_id !== userId) throw new ApiError('无权操作', 1, 403)
-  if (pinned && row.visibility === 'private') throw new ApiError('私密文章不可置顶', 1, 400)
+  if (pinned && !['public', 'password'].includes(row.visibility)) throw new ApiError('只有列表中可见的文章才能置顶', 1, 400)
   if (pinned) {
     const min = get<{ m: number }>(
       'SELECT COALESCE(MIN(pin_order),0) AS m FROM blog_articles WHERE user_id = ? AND pinned_at IS NOT NULL',
@@ -981,7 +985,7 @@ export async function unlockArticle(
 /** One access policy used by SSR, detail APIs and comment endpoints. */
 export function assertArticleVisible(row: ArticleRow, viewer: AuthUser | null): void {
   if (viewer && (viewer.id === row.user_id || viewer.isAdmin)) return
-  if (!['public', 'password'].includes(row.visibility) || row.moderation_status !== 'approved') {
+  if (!['public', 'password', 'unlisted'].includes(row.visibility) || row.moderation_status !== 'approved') {
     throw new ApiError('文章不存在', 1, 404)
   }
 }

@@ -291,7 +291,7 @@ export const articleAdjacentH: Handler = async (ctx) => {
 export const articlePrefetchH: Handler = (ctx) => {
   const owner = getOwner()
   const row = owner ? getArticleBySlug(owner.username, str(getQuery(ctx.req).get('slug'))) : undefined
-  if (!row || row.visibility !== 'public' || row.moderation_status !== 'approved') {
+  if (!row || !['public', 'unlisted'].includes(row.visibility) || row.moderation_status !== 'approved') {
     throw new ApiError('文章不存在', 1, 404)
   }
   assertArticleVisible(row, null)
@@ -302,7 +302,7 @@ export const articlePrefetchH: Handler = (ctx) => {
 export const articleViewH: Handler = async (ctx) => {
   const body = await readJson(ctx.req)
   const row = getArticleById(num(body.id))
-  if (!row || row.visibility !== 'public' || row.moderation_status !== 'approved') {
+  if (!row || !['public', 'unlisted'].includes(row.visibility) || row.moderation_status !== 'approved') {
     throw new ApiError('文章不存在', 1, 404)
   }
   assertArticleVisible(row, null)
@@ -348,7 +348,7 @@ export const articleGetH: Handler = async (ctx) => {
   if (row.visibility === 'public' && row.moderation_status !== 'approved' && !owner) {
     throw new ApiError('文章不存在', 1, 404)
   }
-  if (row.visibility !== 'private' && (row.visibility === 'public' || owner || unlockValid)) {
+  if (row.visibility !== 'private' && (['public', 'unlisted'].includes(row.visibility) || owner || unlockValid)) {
     row.view_count = recordView(row.id)
   }
   const likedSet = new Set<number>()
