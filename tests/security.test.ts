@@ -17,6 +17,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { LightMarkdown } from '@/components/blog/light-markdown'
 import { seedAdmin } from '@/db/seed'
 import { UpyunClient } from '@/lib/upyun'
+import { imageFixtures } from './helpers/image-fixtures'
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wind-security-'))
 let token = ''
@@ -212,9 +213,20 @@ describe('audit security and behavior regressions', () => {
     expect((await call('user/blog/page/create', { title: 'hidden', showInNav: 'false' }, auth())).json.data.showInNav).toBe(false)
   })
 
-  it('rejects active SVG, mislabeled and oversized images', () => {
-    expect(() => guardImage('image/svg+xml', new TextEncoder().encode('<svg onload="alert(1)"/>'))).toThrow()
-    expect(() => guardImage('image/png', new TextEncoder().encode('<html>'))).toThrow()
+  it.each(imageFixtures)('recognizes $contentType by contents despite a different declared type', ({ contentType, ext, data }) => {
+    for (const declared of [contentType, 'image/png', 'image/jpeg']) {
+      expect(guardImage(declared, data)).toEqual({ ext, contentType })
+    }
+  })
+
+  it('rejects non-images, unsupported formats, empty and oversized images', () => {
+    for (const contentType of ['image/png', 'image/svg+xml']) {
+      for (const source of ['<html><svg/></html>', 'not an image', '<!-- <svg/> -->']) {
+        expect(() => guardImage(contentType, new TextEncoder().encode(source))).toThrow()
+      }
+      expect(() => guardImage(contentType, new Uint8Array())).toThrow()
+    }
+    expect(() => guardImage('image/bmp', new TextEncoder().encode('BM'))).toThrow()
     expect(() => guardImage('image/png', new Uint8Array(10 * 1024 * 1024 + 1))).toThrow()
   })
 

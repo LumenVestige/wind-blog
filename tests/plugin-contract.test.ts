@@ -3,11 +3,14 @@
  * envelope-unwrapping rules, verifying wind-blog is drop-in compatible:
  * a user only needs to point the plugin's `baseUrl` at this server.
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { saveUpyun } from '@/lib/settings'
+import { UpyunClient } from '@/lib/upyun'
+import { imageFixtures } from './helpers/image-fixtures'
 
 type Dispatch = typeof import('@/server/api/router').dispatch
 let dispatch: Dispatch
@@ -256,6 +259,36 @@ describe('Obsidian plugin compatibility', () => {
     )
     expect(check.missing).toContain('https://cdn.test/blog/9/hash.png')
     expect(check.missingHashes).toContain('a'.repeat(64))
+  })
+
+  it.each(['blog', 'blog_cover', 'avatar'])('uploads mislabeled images for %s using their actual format', async (purpose) => {
+    saveUpyun({ bucket: 'test', operator: 'owner', password: 'test-password', domain: 'cdn.test.local', scheme: 'https' })
+    const put = vi.spyOn(UpyunClient.prototype, 'put').mockResolvedValue(undefined)
+    try {
+      for (const image of imageFixtures) {
+        // The plugin derives MIME from the filename, even for JPEG bytes in a .png file.
+        const form = new FormData()
+        form.append('purpose', purpose)
+        form.append('file', new Blob([new Uint8Array(image.data)], { type: 'image/png' }), 'pasted-image.png')
+        const response = await fetch('http://test.local/api/user/upload', {
+          method: 'POST', headers: { Authorization: `Bearer ${client.token}` }, body: form,
+        })
+        const result = await response.json()
+        const hash = crypto.createHash('sha256').update(image.data).digest('hex')
+        const objectKey = `/blog/${purpose === 'avatar' ? 'avatar/' : ''}${hash}${image.ext}`
+        const url = `https://cdn.test.local${objectKey}`
+        expect(response.status).toBe(200)
+        expect(result).toMatchObject({ code: 0, url, hash, data: { url, hash } })
+        expect(put).toHaveBeenLastCalledWith(objectKey, new Uint8Array(image.data), image.contentType)
+        if (purpose !== 'avatar') {
+          const check = await client.blogImagesCheck([url], [hash])
+          expect(check.existing).toContain(url)
+          expect(check.existingHashes).toContain(hash)
+        }
+      }
+    } finally {
+      put.mockRestore()
+    }
   })
 
   it('serves plugin update metadata', async () => {

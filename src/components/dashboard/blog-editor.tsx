@@ -343,7 +343,7 @@ export function BlogEditor({
                       <input
                         id="blog-image-input"
                         type="file"
-                        accept="image/jpeg,image/png,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon"
+                        accept="image/jpeg,image/png,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon,image/svg+xml"
                         className="hidden"
                         onChange={(event) => {
                           if (event.target.files?.[0])

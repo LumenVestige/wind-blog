@@ -139,7 +139,7 @@ export function AccountSettings({
                 <Input
                   id="avatar-file"
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon,image/svg+xml"
                   disabled={!configured || uploading}
                   onChange={(event) => {
                     setFile(event.target.files?.[0] || null)
@@ -156,7 +156,7 @@ export function AccountSettings({
                 </FieldDescription>
               ) : (
                 <FieldDescription>
-                  支持 JPG、PNG、WebP、GIF，最大 10MB。
+                  支持 JPG、PNG、WebP、GIF、ICO、SVG，最大 10MB。
                 </FieldDescription>
               )}
             </Field>

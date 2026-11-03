@@ -2,6 +2,7 @@ import { all, get, run } from '@/db'
 import { getUpyunClient, isUpyunConfigured, upyunUploadDir } from '@/lib/settings'
 import { sha256Hex } from '@/lib/upyun'
 import { ApiError } from '@/lib/api'
+import { DOMParser } from 'linkedom'
 
 export function publicBase(): string {
   return getUpyunClient().publicBaseUrl()
@@ -53,7 +54,17 @@ export function objectKeyFromUrl(u: string): string {
   return s
 }
 
-export function guardImage(ct: string, data: Uint8Array): { ext: string } {
+function isSvgImage(data: Buffer): boolean {
+  const source = data.toString('utf8').trimStart()
+  if (!source.startsWith('<')) return false
+  try {
+    return new DOMParser().parseFromString(source, 'image/svg+xml').documentElement?.localName === 'svg'
+  } catch {
+    return false
+  }
+}
+
+export function guardImage(ct: string, data: Uint8Array): { ext: string; contentType: string } {
   const type = (ct || '').toLowerCase().split(';')[0].trim()
   const map: Record<string, string> = {
     'image/jpeg': '.jpg',
@@ -64,22 +75,19 @@ export function guardImage(ct: string, data: Uint8Array): { ext: string } {
     'image/vnd.microsoft.icon': '.ico',
     'image/svg+xml': '.svg',
   }
-  const ext = map[type]
-  if (!ext) throw new ApiError('不支持的图片格式', 1, 400)
+  if (!map[type]) throw new ApiError('不支持的图片格式', 1, 400)
   if (data.length === 0 || data.length > 10 * 1024 * 1024) throw new ApiError('图片大小需为 1 字节至 10MB', 1, 400)
-  if (type === 'image/svg+xml') {
-    // SVG is active content when opened directly on a CDN. Substring filters
-    // cannot safely handle event attributes, entities or animation-based links.
-    throw new ApiError('请将 SVG 转为 PNG 或 WebP 后上传', 1, 400)
-  }
+  // Obsidian's plugin derives MIME from the filename; pasted images can have
+  // a different format. Use the bytes for both the object extension and MIME.
   const signature = Buffer.from(data)
-  const valid = type === 'image/png' ? signature.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) :
-    type === 'image/jpeg' ? signature[0] === 255 && signature[1] === 216 && signature[2] === 255 :
-    type === 'image/gif' ? /^GIF8[79]a$/.test(signature.subarray(0, 6).toString('ascii')) :
-    type === 'image/webp' ? signature.subarray(0, 4).toString('ascii') === 'RIFF' && signature.subarray(8, 12).toString('ascii') === 'WEBP' :
-    signature.subarray(0, 4).equals(Buffer.from([0,0,1,0]))
-  if (!valid) throw new ApiError('图片内容与声明格式不一致', 1, 400)
-  return { ext }
+  const contentType = signature.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) ? 'image/png' :
+    signature[0] === 255 && signature[1] === 216 && signature[2] === 255 ? 'image/jpeg' :
+    signature.subarray(0, 6).equals(Buffer.from('GIF87a')) || signature.subarray(0, 6).equals(Buffer.from('GIF89a')) ? 'image/gif' :
+    signature.subarray(0, 4).equals(Buffer.from('RIFF')) && signature.subarray(8, 12).equals(Buffer.from('WEBP')) ? 'image/webp' :
+    signature.subarray(0, 4).equals(Buffer.from([0,0,1,0])) ? 'image/x-icon' :
+    isSvgImage(signature) ? 'image/svg+xml' : ''
+  if (!contentType) throw new ApiError('图片内容不是支持的图片格式', 1, 400)
+  return { ext: map[contentType], contentType }
 }
 
 export interface UploadResult {
@@ -96,11 +104,11 @@ export async function storeBlogImage(
   if (!isUpyunConfigured()) {
     throw new ApiError('站点未配置又拍云图床', 1, 403)
   }
-  const { ext } = guardImage(contentType, data)
+  const { ext, contentType: detectedType } = guardImage(contentType, data)
   const hash = sha256Hex(data)
   const objectKey = `/${upyunUploadDir()}/${hash}${ext}`
   const client = getUpyunClient()
-  await client.put(objectKey, data, contentType)
+  await client.put(objectKey, data, detectedType)
   run(
     `INSERT INTO blog_image_assets (user_id, object_key, url, content_hash, purpose, status)
      VALUES (?, ?, ?, ?, 'content', 'ready')
@@ -122,11 +130,11 @@ export async function storeAvatarImage(
   if (!isUpyunConfigured()) {
     throw new ApiError('站点未配置又拍云图床', 1, 403)
   }
-  const { ext } = guardImage(contentType, data)
+  const { ext, contentType: detectedType } = guardImage(contentType, data)
   const hash = sha256Hex(data)
   const objectKey = `/${upyunUploadDir()}/avatar/${hash}${ext}`
   const client = getUpyunClient()
-  await client.put(objectKey, data, contentType)
+  await client.put(objectKey, data, detectedType)
   return { url: client.publicUrl(objectKey), hash, objectKey }
 }
 
