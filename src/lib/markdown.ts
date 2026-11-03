@@ -1086,7 +1086,7 @@ export function renderSummaryMarkdown(md: string): string {
 const MATH_PLACEHOLDER_RE = /@@MATH\d+@@/g
 
 /**
- * 剥 `![alt](url)` / `[label](url)`，只留标签文字。
+ * 剥 `![alt](url)` / `[label](url)`，只留标签文字，去掉图片布局修饰。
  * 标签按括号深度匹配，支持 `[[平台 题号] 题名](url)` 这类内含 `]` 的写法；
  * 非链接的 `[[wiki]]` 原样留下，交给后续 wiki 规则处理。
  */
@@ -1120,7 +1120,8 @@ function stripMdLinksAndImages(src: string): string {
           k++
         }
         if (paren === 0) {
-          out += src.slice(open + 1, close)
+          const label = src.slice(open + 1, close)
+          out += isImage ? parseObsidianImageAlt(label).alt : label
           i = k
           continue
         }
@@ -1175,6 +1176,10 @@ export function stripMarkdownToPlain(
   // 水平线 / Setext 下划线（整行 --- *** ___ ===）
   s = s.replace(/^\s*(?:-{3,}|\*{3,}|_{3,}|={3,})\s*$/gm, ' ')
 
+  // 图片布局里的 | 必须先解析；否则会被后面的表格清理当作普通分隔符。
+  s = stripMdLinksAndImages(s)
+  s = s.replace(/!\[([^\]]*)]\[[^\]]*]/g, (_, label: string) => parseObsidianImageAlt(label).alt)
+
   // 表格分隔行
   s = s.replace(/^\s*\|?(?:\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/gm, ' ')
   // 表格行：去掉管道，留单元格文字
@@ -1200,8 +1205,7 @@ export function stripMarkdownToPlain(
   // ATX 标题：# 可无空格（###标题）
   s = s.replace(/^#{1,6}\s*/gm, '')
 
-  // 图片 / 链接（标签可含嵌套 []，如 [[AtCoder x] 题名](url)）/ 引用式 / wiki
-  s = stripMdLinksAndImages(s)
+  // 引用式链接 / wiki
   s = s.replace(/\[([^\]]*)]\[[^\]]*]/g, '$1')
   s = s.replace(/!\[\[([^\]]+)\]\]/g, (_, raw: string) => {
     const pipe = raw.indexOf('|')

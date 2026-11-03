@@ -3,9 +3,9 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { dispatch } from '@/server/api/router'
-import { closeDb, get } from '@/db'
+import { closeDb, get, getDb, run } from '@/db'
 import { sha256Hex } from '@/lib/password'
-import { createArticle, serializeArticle, updateArticle } from '@/server/blog/articles'
+import { createArticle, getArticleById, listByUsername, serializeArticle, updateArticle } from '@/server/blog/articles'
 import { createComment, deleteComment, listComments } from '@/server/blog/comments'
 import { sha256Hex as browserHash } from '@/lib/api-client'
 import { cookieName, requestOrigin } from '@/server/http'
@@ -65,6 +65,27 @@ describe('single owner UX regressions', () => {
     expect(updated.summary).toBe('Manual excerpt'); expect(updated.cover_url).toBe('')
     expect(serializeArticle(updated, { viewerId: owner }).summaryIsDefault).toBe(false)
     expect(updateArticle(owner, original.id, { content: 'auto body', autoSummary: true }).summary).toBe('auto body')
+  })
+  it('repairs previously saved automatic image summaries on startup and preserves manual summaries', () => {
+    const content = '先占个坑\n![|51%](https://cdn.test/photo.jpg)'
+    const automatic = createArticle(owner, { title: 'Automatic image summary', content })
+    const manual = createArticle(owner, { title: 'Manual percentage', content, summary: '活动进度 51%' })
+    run("UPDATE blog_articles SET summary = '先占个坑 51%', updated_at = '2026-01-01 00:00:00' WHERE id = ?", automatic.id)
+    run("DELETE FROM schema_migrations WHERE key = 'article-image-summary-v1'")
+    closeDb()
+    getDb()
+    const repaired = getArticleById(automatic.id)!
+    expect(repaired.summary).toBe('先占个坑')
+    expect(repaired.content).toBe(content)
+    expect(repaired.updated_at).toBe('2026-01-01 00:00:00')
+    expect(getArticleById(manual.id)!.summary).toBe('活动进度 51%')
+    const list = listByUsername('owner', { pageSize: 100 }).list
+    expect(list.find(article => article.id === automatic.id)).toMatchObject({ summary: '先占个坑', summaryIsDefault: true })
+    expect(list.find(article => article.id === manual.id)).toMatchObject({ summary: '活动进度 51%', summaryIsDefault: false })
+    expect(get("SELECT 1 FROM schema_migrations WHERE key = 'article-image-summary-v1'")).toBeTruthy()
+    closeDb()
+    expect(getArticleById(automatic.id)!.summary).toBe('先占个坑')
+    expect(getArticleById(manual.id)!.summary).toBe('活动进度 51%')
   })
   it('keeps saved drafts private and publishes explicitly', async () => {
     const r = await call('user/blog/article/create', { title: 'Draft', content: 'not published', isDraft: true, visibility: 'public' }, auth())

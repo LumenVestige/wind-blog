@@ -12,6 +12,7 @@ import {
   extractHeadings,
   extractImageKeys,
   extractImageUrls,
+  plainTextFromMarkdown,
   renderMarkdown,
   renderSummaryMarkdown,
 } from '@/lib/markdown'
@@ -105,6 +106,28 @@ describe('markdown', () => {
   })
   it('builds a plain-text summary', () => {
     expect(buildSummary('## 标题\n\n这是一段**正文**。', 100)).toContain('这是一段正文')
+  })
+  it.each([
+    ['![|51%](https://cdn.test/a.jpg)', ''],
+    ['![|473](https://cdn.test/a.jpg)', ''],
+    ['![|473x300|center](https://cdn.test/a.jpg)', ''],
+    ['![比赛现场|51%|right](https://cdn.test/a.jpg)', '比赛现场'],
+    ['![比赛现场|473](https://cdn.test/a.jpg)', '比赛现场'],
+    ['![比赛现场|51%][photo]', '比赛现场'],
+  ])('omits image sizing from summaries: %s', (image, label) => {
+    const source = `先占个坑\n${image}`
+    const expected = label ? `先占个坑 ${label}` : '先占个坑'
+    expect(buildSummary(source)).toBe(expected)
+    expect(plainTextFromMarkdown(source)).toBe(expected)
+    expect(renderSummaryMarkdown(source)).toBe(expected)
+  })
+  it('retains real percentages and math while removing image layout modifiers', () => {
+    expect(buildSummary('进度 51%，还有 $10^{5}$ 项\n![|51%](https://cdn.test/a.jpg)'))
+      .toBe('进度 51%，还有 $10^{5}$ 项')
+    expect(buildSummary('| 说明 | 图片 |\n| --- | --- |\n| 现场 | ![比赛现场|51%](https://cdn.test/a.jpg) |'))
+      .toBe('说明 图片 现场 比赛现场')
+    expect(buildSummary('[[AtCoder abc465_d] X to Y](https://vjudge.net/problem/AtCoder-abc465d)'))
+      .toBe('[AtCoder abc465_d] X to Y')
   })
   it('extracts headings, images and object keys', () => {
     const src = '# A\n\n## B\n\n![x](https://cdn.test/blog/1/abc.png)\n\n<img src="/x/y.png">'

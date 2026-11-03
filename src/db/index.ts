@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
+import { buildSummary } from '@/lib/markdown'
 
 let _db: DatabaseSync | null = null
 let transactionDepth = 0
@@ -25,6 +26,7 @@ export function getDb(): DatabaseSync {
   db.exec('PRAGMA busy_timeout = 5000;')
   db.exec(schemaSql())
   ensureDefaultSettings(db)
+  repairArticleImageSummaries(db)
   _db = db
   return db
 }
@@ -123,6 +125,28 @@ function ensureDefaultSettings(db: DatabaseSync): void {
   )
   for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) {
     stmt.run(k, v)
+  }
+}
+
+/** Repair persisted auto summaries once; keep manual text and article timestamps. */
+function repairArticleImageSummaries(db: DatabaseSync): void {
+  const key = 'article-image-summary-v1'
+  if (db.prepare('SELECT 1 FROM schema_migrations WHERE key = ?').get(key)) return
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const rows = db.prepare(`SELECT a.id, a.content, a.summary FROM blog_articles a
+      JOIN blog_article_options o ON o.article_id = a.id
+      WHERE o.summary_mode = 'auto' AND instr(a.content, '![') > 0`).iterate()
+    const update = db.prepare('UPDATE blog_articles SET summary = ? WHERE id = ?')
+    for (const row of rows) {
+      const summary = buildSummary(String(row.content), 200)
+      if (summary !== row.summary) update.run(summary, row.id)
+    }
+    db.prepare('INSERT OR IGNORE INTO schema_migrations (key) VALUES (?)').run(key)
+    db.exec('COMMIT')
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
   }
 }
 
