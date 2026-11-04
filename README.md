@@ -92,7 +92,21 @@ npm test             # 单元 / API / 插件契约测试
 npm run db:migrate   # 应用 schema
 npm run db:seed      # 初始化站管
 npm run migrate      # 旧站迁移
+
+npm run setup-agent-skill   # 接入 / 更新 AgentSkill（可选，见下）
 ```
+
+## AgentSkill（可选）
+
+[AgentSkill](https://github.com/LumenVestige/AgentSkill) 是通用的 Agent 协作规范。接入或更新：
+
+```bash
+npm run setup-agent-skill
+```
+
+脚本会把 AgentSkill 克隆到 `scripts/dev/AgentSkill`（已存在则 `git pull --ff-only`，工作区有改动时跳过），再执行它的 `setup.sh` 初始化 `CLAUDE.md` 软链接、`.agents/`、Python 虚拟环境、Stop hook 和 `commit-msg` 标签校验。可重复执行。
+
+AgentSkill 是独立仓库，克隆目录和 `.agents/` 都不纳入本仓库版本管理。需要换用其他地址时设置 `AGENT_SKILL_REPO`。
 
 ## 技术栈
 
@@ -108,6 +122,7 @@ src/
   server/                  业务逻辑（users、blog/*、api 路由分发）
   components/              UI（ui 基础组件、blog、dashboard）
 scripts/migrate.ts         旧站迁移 CLI
+scripts/dev/agent-skill.mjs 接入 / 更新 AgentSkill
 tests/                     单元 / API / 插件契约测试
 ```
 
