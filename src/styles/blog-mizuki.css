@@ -1620,9 +1620,10 @@ html:has([data-blog-theme='mizuki']) {
 }
 
 @media (max-width: 640px) {
-  /* Natural-size images fill the column; explicit widths keep their layout. */
-  .mz-prose img:not([width]) {
-    width: 100%;
+  /* On small screens, images use the full column regardless of saved widths. */
+  .mz-prose img {
+    width: 100% !important;
+    height: auto !important;
   }
 }
 
