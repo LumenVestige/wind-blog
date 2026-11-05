@@ -36,6 +36,7 @@ export function SiteNavbar({
   const tocButtonRef = useRef<HTMLButtonElement>(null)
   const topRowRef = useRef<HTMLDivElement>(null)
   const [compact, setCompact] = useState(false)
+  const [docked, setDocked] = useState(false)
   const [titleDocked, setTitleDocked] = useState(false)
   const [titleWidth, setTitleWidth] = useState(0)
   const navInnerRef = useRef<HTMLDivElement>(null)
@@ -112,6 +113,25 @@ export function SiteNavbar({
     }
   }, [])
 
+  // At the top the bar floats with a gap; once the page scrolls it slides up
+  // flush with the viewport so content never shows through above it.
+  useEffect(() => {
+    let frame = 0
+    const check = () => {
+      frame = 0
+      setDocked((was) => window.scrollY > (was ? 2 : 12))
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(check) }
+    schedule()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+    }
+  }, [pathname])
+
   useEffect(() => {
     if (!articleTitle) {
       setTitleDocked(false)
@@ -154,7 +174,7 @@ export function SiteNavbar({
   const tocBaseLevel = Math.min(...articleToc.map((heading) => heading.level))
 
   return (
-    <div className={cn('mz-top-row', compact && 'is-compact')} ref={topRowRef}>
+    <div className={cn('mz-top-row', compact && 'is-compact', docked && 'is-docked')} ref={topRowRef}>
       <header className="mz-navbar" aria-label="导航">
         <div className="mz-nav-inner" ref={navInnerRef}>
           <div className={cn('mz-brand-slot', titleDocked && 'is-title')} ref={brandRef}>
