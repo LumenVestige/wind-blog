@@ -235,18 +235,6 @@ describe('blog lifecycle', () => {
     expect(second.json.data).toMatchObject({ liked: false, likeCount: 0 })
   })
 
-  it('creates and lists comments', async () => {
-    const create = await call('POST', '/user/blog/comment/create', {
-      token: tokens.alice,
-      body: { articleId, content: 'nice post' },
-    })
-    expect(create.json.code).toBe(0)
-    const list = await call('GET', `/user/blog/comment/list?articleId=${articleId}`)
-    const data = list.json.data as { list: { content: string }[]; total: number }
-    expect(data.total).toBe(1)
-    expect(data.list[0].content).toBe('nice post')
-  })
-
   it('saves config and resolves retired themes to Mizuki', async () => {
     const res = await call('POST', '/user/blog/theme/config', {
       token: tokens.alice,

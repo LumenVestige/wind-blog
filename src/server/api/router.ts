@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server'
 import { ApiError, fail } from '@/lib/api'
 import type { Ctx, Handler } from './types'
 import { blogPageH } from './blog-page'
-import { manageSettingsGetH, manageSettingsSaveH, manageCommentsH } from './manage'
+import { manageSettingsGetH, manageSettingsSaveH } from './manage'
 import {
   activateH, siteSettingsGetH, siteSettingsSaveH,
   activationStatusH,
@@ -28,10 +28,6 @@ import {
   categoryDeleteH,
   categoryMineH,
   categoryUpdateH,
-  commentCreateH, commentPendingH, commentApproveH,
-  commentDeleteH,
-  commentLikeH,
-  commentListH,
   imageUploadApplyH,
   imageUploadStatusH,
   upyunGetH,
@@ -93,7 +89,6 @@ import {
 const routes: Record<string, Handler> = {
   'GET blog/page': blogPageH,
   'GET manage/settings': manageSettingsGetH,
-  'GET manage/comments': manageCommentsH,
   'POST manage/settings': manageSettingsSaveH,
   'GET site/settings': siteSettingsGetH,
   'POST site/settings': siteSettingsSaveH,
@@ -154,13 +149,7 @@ const routes: Record<string, Handler> = {
   'GET user/blog/authors': authorsH,
   'GET user/blog/analytics': analyticsH,
 
-  // comments / likes
-  'GET user/blog/comment/list': commentListH,
-  'GET user/blog/comment/pending': commentPendingH,
-  'POST user/blog/comment/approve': commentApproveH,
-  'POST user/blog/comment/create': commentCreateH,
-  'POST user/blog/comment/delete': commentDeleteH,
-  'POST user/blog/comment/like': commentLikeH,
+  // likes
   'POST user/blog/like': likeH,
 
   // reports

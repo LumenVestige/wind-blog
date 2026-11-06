@@ -18,7 +18,7 @@ export function limitVisitor(req: Request, key: string, action: string) {
   // The trusted proxy must overwrite X-Forwarded-For. Also enforce an instance-wide ceiling.
   const address = process.env.TRUST_PROXY === '1' ? req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'direct' : 'direct'
   const digest = crypto.createHmac('sha256', signingSecret()).update(address).digest('hex')
-  rateLimit(`visitor:${action}:global`, action === 'comment' ? 300 : 3000)
-  rateLimit(`visitor:${action}:address:${digest}`, action === 'comment' ? 30 : 300)
-  rateLimit(`visitor:${action}:actor:${key}`, action === 'comment' ? 10 : 100)
+  rateLimit(`visitor:${action}:global`, 3000)
+  rateLimit(`visitor:${action}:address:${digest}`, 300)
+  rateLimit(`visitor:${action}:actor:${key}`, 100)
 }

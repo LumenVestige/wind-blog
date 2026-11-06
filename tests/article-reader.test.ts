@@ -21,9 +21,9 @@ import { api, ClientApiError } from '@/lib/api-client'
 import { ArticleReader, type ArticleReaderProps } from '@/components/blog/article-reader'
 const props: ArticleReaderProps = {
   themeId: 'mizuki', username: 'owner', revision: 'revision', countRead: true,
-  toc: [], adjacent: { prev: null, next: null }, isOwner: false, viewerId: 0, isAdmin: false,
+  toc: [], adjacent: { prev: null, next: null }, isOwner: false,
   article: { id: 1, slug: 'one', title: 'SSR title', content: '', html: '<p>Full <strong>SSR body</strong></p>', tags: [], categoryName: '',
-    publishedLabel: 'Today', updatedAt: 1, viewCount: 3, likeCount: 0, liked: false, commentCount: 0, requiresPassword: false, userId: 1 },
+    publishedLabel: 'Today', updatedAt: 1, viewCount: 3, likeCount: 0, liked: false, requiresPassword: false, userId: 1 },
 }
 const page = (overrides: Partial<ArticleReaderProps> = {}) => createElement(StrictMode, null, createElement(ArticleReader, { ...props, ...overrides }))
 let root: import('react-dom/client').Root | undefined
@@ -34,7 +34,7 @@ beforeEach(() => {
   vi.stubGlobal('document', dom.document)
   vi.stubGlobal('HTMLElement', dom.HTMLElement)
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-  vi.mocked(api.post).mockReset().mockResolvedValue({ viewCount: 4, likeCount: 0, commentCount: 0, liked: false })
+  vi.mocked(api.post).mockReset().mockResolvedValue({ viewCount: 4, likeCount: 0, liked: false })
   router.refresh.mockClear()
 })
 afterEach(async () => {

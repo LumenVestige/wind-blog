@@ -43,6 +43,7 @@ import {
   recordView,
   reorderPinned,
   serializeArticle,
+  toggleVisitorLike,
   unlockArticle,
   updateArticle,
   verifyUnlockToken,
@@ -56,12 +57,6 @@ import {
   updateCategory,
 } from '@/server/blog/categories'
 import { getArticleTags, listTagsPublic } from '@/server/blog/tags'
-import {
-  createComment, createGuestComment, getComment, toggleVisitorLike, pendingComments, moderateGuestComment,
-  deleteComment,
-  likeCommentToggle,
-  listComments,
-} from '@/server/blog/comments'
 import {
   activate,
   activationStatus,
@@ -312,7 +307,6 @@ export const articleViewH: Handler = async (ctx) => {
   return ok({
     viewCount: recordView(row.id),
     likeCount: row.like_count,
-    commentCount: row.comment_count,
     liked: !!user && !!get('SELECT id FROM blog_likes WHERE article_id = ? AND user_id = ?', row.id, user.id),
   })
 }
@@ -334,7 +328,6 @@ export const articleReadH: Handler = async (ctx) => {
   return ok({
     viewCount: row.visibility === 'private' ? row.view_count : recordView(row.id),
     likeCount: row.like_count,
-    commentCount: row.comment_count,
     liked,
   })
 }
@@ -575,7 +568,7 @@ export const analyticsH: Handler = async (ctx) => {
   return ok(analytics(user.id))
 }
 
-// ---------------- comments ----------------
+// ---------------- likes ----------------
 
 function articleCookie(ctx: Parameters<Handler>[0], id: number): string {
   return readCookie(ctx.req, cookieName(`wind_unlock_${id}`))
@@ -587,59 +580,6 @@ async function readable(ctx: Parameters<Handler>[0], id: number, token = '') {
   assertArticleReadable(row, await viewer(ctx), token || articleCookie(ctx, id))
 }
 
-export const commentListH: Handler = async (ctx) => {
-  const q = getQuery(ctx.req)
-  await readable(ctx, num(q.get('articleId')), str(q.get('unlockToken')))
-  const user = await viewer(ctx)
-  return okRaw({
-    data: listComments(
-      num(q.get('articleId')),
-      { page: num(q.get('page'), 1), pageSize: num(q.get('pageSize'), 20) },
-      user?.id || 0, visitorIdentity(ctx.req).fresh ? '' : visitorIdentity(ctx.req).key,
-    ),
-  })
-}
-
-export const commentCreateH: Handler = async (ctx) => {
-  const user = await viewer(ctx)
-  if (getSetting('comments_enabled', '1') !== '1') throw new ApiError('站长已关闭评论', 1, 403)
-  const body = await readJson(ctx.req)
-  await readable(ctx, num(body.articleId), str(body.unlockToken))
-  if (user) return ok(createComment(user.id, num(body.articleId), str(body.content), num(body.parentId)))
-  const identity = visitorIdentity(ctx.req)
-  limitVisitor(ctx.req, identity.key, 'comment')
-  const result = createGuestComment(num(body.articleId), str(body.content), num(body.parentId), identity.key, str(body.name))
-  return visitorCookie(ok(result), ctx.req, identity)
-}
-export const commentPendingH: Handler = async (ctx) => {
-  await requireSiteOwner(ctx.req)
-  return ok({ list: pendingComments() })
-}
-export const commentApproveH: Handler = async (ctx) => {
-  await requireSiteOwner(ctx.req)
-  const body = await readJson(ctx.req)
-  moderateGuestComment(num(body.id))
-  return ok({ success: true })
-}
-
-export const commentDeleteH: Handler = async (ctx) => {
-  const user = await requireUser(ctx.req)
-  const body = await readJson(ctx.req)
-  deleteComment(user.id, num(body.id), user.isAdmin)
-  return ok({ success: true })
-}
-
-export const commentLikeH: Handler = async (ctx) => {
-  if (getSetting('likes_enabled', '1') !== '1') throw new ApiError('站长已关闭点赞', 1, 403)
-  const user = await viewer(ctx), body = await readJson(ctx.req)
-  const comment = getComment(num(body.commentId))
-  if (!comment || comment.status !== 'approved') throw new ApiError('评论不存在', 1, 404)
-  await readable(ctx, comment.article_id, str(body.unlockToken))
-  if (user) return ok(likeCommentToggle(user.id, num(body.commentId)))
-  const identity = visitorIdentity(ctx.req)
-  limitVisitor(ctx.req, identity.key, 'like')
-  return visitorCookie(ok(toggleVisitorLike('comment', num(body.commentId), identity.key)), ctx.req, identity)
-}
 export const likeH: Handler = async (ctx) => {
   if (getSetting('likes_enabled', '1') !== '1') throw new ApiError('站长已关闭点赞', 1, 403)
   const user = await viewer(ctx), body = await readJson(ctx.req)
@@ -647,7 +587,7 @@ export const likeH: Handler = async (ctx) => {
   if (user) return ok(likeToggle(user.id, num(body.articleId)))
   const identity = visitorIdentity(ctx.req)
   limitVisitor(ctx.req, identity.key, 'like')
-  return visitorCookie(ok(toggleVisitorLike('article', num(body.articleId), identity.key)), ctx.req, identity)
+  return visitorCookie(ok(toggleVisitorLike(num(body.articleId), identity.key)), ctx.req, identity)
 }
 
 // ---------------- reports ----------------
@@ -878,13 +818,12 @@ export { toBool }
 
 export const siteSettingsGetH: Handler = async (ctx) => {
   await requireSiteOwner(ctx.req)
-  return ok({ siteName: getSetting('site_name', 'Wind Blog'), faviconUrl: expandUrl(getSetting('favicon_url', '')), icpNumber: getSetting('icp_number', ''), commentsEnabled: getSetting('comments_enabled', '1') === '1', likesEnabled: getSetting('likes_enabled', '1') === '1', upyunConfigured: upyunStatus().configured })
+  return ok({ siteName: getSetting('site_name', 'Wind Blog'), faviconUrl: expandUrl(getSetting('favicon_url', '')), icpNumber: getSetting('icp_number', ''), likesEnabled: getSetting('likes_enabled', '1') === '1', upyunConfigured: upyunStatus().configured })
 }
 export const siteSettingsSaveH: Handler = async (ctx) => {
   await requireSiteOwner(ctx.req)
   const body = await readJson(ctx.req), values: Record<string, string> = {}
   if (body.siteName !== undefined) { const name = str(body.siteName).trim(); if (!name || name.length > 64) throw new ApiError('站点名称需为 1–64 字', 1, 400); values.site_name = name }
-  if (body.commentsEnabled !== undefined) values.comments_enabled = bool(body.commentsEnabled) ? '1' : '0'
   if (body.likesEnabled !== undefined) values.likes_enabled = bool(body.likesEnabled) ? '1' : '0'
   if (body.faviconUrl !== undefined) {
     const url = str(body.faviconUrl).trim()

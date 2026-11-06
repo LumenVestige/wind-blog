@@ -7,7 +7,8 @@ import { usePendingBlogHref, useBlogPathname, useBlogSearchParams } from '@/comp
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const targets = {
-  blog: '[data-comment-row]',
+  // Blog pages currently opt in explicitly; the surface still drives the loading bar.
+  blog: '[data-motion-item]',
   admin:
     '[data-slot="card"], [data-slot="empty"], [data-slot="table-body"] > tr, [data-motion-item]',
 }

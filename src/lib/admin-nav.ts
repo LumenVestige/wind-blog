@@ -6,14 +6,12 @@ import {
   House,
   Image,
   Link2,
-  MessageSquare,
   Paintbrush,
   Pin,
   Settings2,
   ShieldCheck,
   SlidersHorizontal,
   Text,
-  UserRound,
 } from 'lucide-react'
 export const settingsNav = [
   { id: 'general', label: '基本信息', icon: Settings2 },
@@ -38,14 +36,7 @@ export const adminNav = [
       { label: '静态站点', href: '/manage/static-sites', icon: Image },
     ],
   },
-  {
-    label: '访客与数据',
-    icon: UserRound,
-    items: [
-      { label: '留言审核', href: '/manage/comments', icon: MessageSquare },
-      { label: '数据概览', href: '/manage/analytics', icon: BarChart3 },
-    ],
-  },
+  { label: '数据概览', icon: BarChart3, href: '/manage/analytics' },
   {
     label: '站点设置',
     icon: Settings2,

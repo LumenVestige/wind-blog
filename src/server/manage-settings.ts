@@ -41,7 +41,6 @@ export function manageSettingsSnapshot(userId: number): SettingsSnapshot {
     content: navigationArticleIds(userId),
     social: { socialLinks: config.socialLinks },
     interaction: {
-      commentsEnabled: getSetting('comments_enabled', '1') === '1',
       likesEnabled: getSetting('likes_enabled', '1') === '1',
     },
     storage: { ...upyunStatus(), password: '' },
@@ -180,15 +179,9 @@ export function saveManageSettings(
       })
       saveThemeConfig(userId, { socialLinks: links })
     } else if (key === 'interaction') {
-      if (
-        typeof value.commentsEnabled !== 'boolean' ||
-        typeof value.likesEnabled !== 'boolean'
-      )
+      if (typeof value.likesEnabled !== 'boolean')
         throw new ApiError('互动开关格式不正确', 1, 400)
-      setSettings({
-        comments_enabled: value.commentsEnabled ? '1' : '0',
-        likes_enabled: value.likesEnabled ? '1' : '0',
-      })
+      setSettings({ likes_enabled: value.likesEnabled ? '1' : '0' })
     } else {
       const bucket = text(value.bucket, '存储空间', 128, true),
         operator = text(value.operator, '操作员', 128, true)

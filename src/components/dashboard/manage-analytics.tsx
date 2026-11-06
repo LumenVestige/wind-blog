@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { AnimatedNumber } from '@/components/motion/animated-number'
-import { Eye, Files, Heart, MessageSquare, RefreshCw } from 'lucide-react'
+import { Eye, Files, Heart, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -29,14 +29,12 @@ interface Analytics {
   totalArticles: number
   totalViews: number
   totalLikes: number
-  totalComments: number
   topArticles: {
     id: number
     slug: string
     title: string
     viewCount: number
     likeCount: number
-    commentCount: number
   }[]
 }
 export function ManageAnalytics({ username }: { username: string }) {
@@ -72,11 +70,6 @@ export function ManageAnalytics({ username }: { username: string }) {
               },
               { label: '阅读量', value: query.data?.totalViews, icon: Eye },
               { label: '点赞数', value: query.data?.totalLikes, icon: Heart },
-              {
-                label: '留言数',
-                value: query.data?.totalComments,
-                icon: MessageSquare,
-              },
             ].map((item) => (
               <Card key={item.label}>
                 <CardHeader className="flex-row items-center justify-between">
@@ -107,7 +100,6 @@ export function ManageAnalytics({ username }: { username: string }) {
                       <TableHead>文章</TableHead>
                       <TableHead className="text-right">阅读</TableHead>
                       <TableHead className="text-right">点赞</TableHead>
-                      <TableHead className="text-right">留言</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -138,9 +130,6 @@ export function ManageAnalytics({ username }: { username: string }) {
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {item.likeCount.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {item.commentCount.toLocaleString()}
                         </TableCell>
                       </TableRow>
                     ))}

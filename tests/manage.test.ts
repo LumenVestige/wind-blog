@@ -7,11 +7,6 @@ import { closeDb, get, run } from '@/db'
 import { sha256Hex } from '@/lib/password'
 import { getSetting, setSetting } from '@/lib/settings'
 import { createArticle } from '@/server/blog/articles'
-import {
-  createComment,
-  createGuestComment,
-  moderateGuestComment,
-} from '@/server/blog/comments'
 import type { SettingsSnapshot } from '@/lib/admin-settings'
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wind-manage-'))
 let token = '',
@@ -82,9 +77,6 @@ describe('modular management settings', () => {
       (await call('GET', 'manage/settings', undefined, false)).status,
     ).toBe(401)
     expect((await call('POST', 'manage/settings', {}, false)).status).toBe(401)
-    expect(
-      (await call('GET', 'manage/comments', undefined, false)).status,
-    ).toBe(401)
   })
   it('saves general information atomically and returns normalized values', async () => {
     const result = await save('general', {
@@ -194,10 +186,7 @@ describe('modular management settings', () => {
     ).toBe(400)
     expect(
       (
-        await save('interaction', {
-          commentsEnabled: 'false',
-          likesEnabled: true,
-        })
+        await save('interaction', { likesEnabled: 'false' })
       ).status,
     ).toBe(400)
     expect(
@@ -320,39 +309,5 @@ describe('management lists', () => {
     )
     expect(privateList.json.data.total).toBe(1)
     expect(privateList.json.data.list[0].isDraft).toBe(false)
-  })
-  it('manages pending and published guest and legacy comments without changing IDs', async () => {
-    const pending = createGuestComment(
-      article,
-      '待审关键词',
-      0,
-      'visitor1',
-      '访客甲',
-    )
-    const approved = createGuestComment(
-      article,
-      '已审关键词',
-      0,
-      'visitor2',
-      '访客乙',
-    )
-    moderateGuestComment(approved.id)
-    const legacy = createComment(owner, article, '站长回复关键词')
-    const pendingList = await call('GET', 'manage/comments?keyword=待审关键词')
-    expect(pendingList.json.data.total).toBe(1)
-    expect(pendingList.json.data.list[0].id).toBe(pending.id)
-    const published = await call(
-      'GET',
-      'manage/comments?status=approved&keyword=关键词&pageSize=1',
-    )
-    expect(published.json.data.total).toBe(2)
-    expect(published.json.data.list).toHaveLength(1)
-    const all = await call(
-      'GET',
-      'manage/comments?status=approved&keyword=关键词',
-    )
-    expect(
-      all.json.data.list.map((item: { id: number }) => item.id).sort(),
-    ).toEqual([approved.id, legacy.id].sort())
   })
 })

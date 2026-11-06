@@ -13,10 +13,9 @@ export function overview() {
     total_articles: number
     total_views: number
     total_likes: number
-    total_comments: number
   }>(
     `SELECT COUNT(*) AS total_articles, COALESCE(SUM(view_count),0) AS total_views,
-            COALESCE(SUM(like_count),0) AS total_likes, COALESCE(SUM(comment_count),0) AS total_comments
+            COALESCE(SUM(like_count),0) AS total_likes
      FROM blog_articles`,
   )
   const pendingReview =
@@ -32,7 +31,6 @@ export function overview() {
     totalArticles: Number(totals?.total_articles) || 0,
     totalViews: Number(totals?.total_views) || 0,
     totalLikes: Number(totals?.total_likes) || 0,
-    totalComments: Number(totals?.total_comments) || 0,
     pendingReview: Number(pendingReview) || 0,
     rejected: Number(rejected) || 0,
   }
@@ -57,8 +55,7 @@ export function listAuthors(opts: { page?: number; pageSize?: number; keyword?: 
             sc.theme_id, sc.image_upload_enabled, sc.activated_at, sc.agreement_accepted_at,
             (SELECT COUNT(*) FROM blog_articles a WHERE a.user_id = u.id) AS article_count,
             (SELECT COALESCE(SUM(view_count),0) FROM blog_articles a WHERE a.user_id = u.id) AS view_count,
-            (SELECT COALESCE(SUM(like_count),0) FROM blog_articles a WHERE a.user_id = u.id) AS like_count,
-            (SELECT COALESCE(SUM(comment_count),0) FROM blog_articles a WHERE a.user_id = u.id) AS comment_count
+            (SELECT COALESCE(SUM(like_count),0) FROM blog_articles a WHERE a.user_id = u.id) AS like_count
      FROM blog_site_configs sc JOIN users u ON u.id = sc.user_id
      WHERE sc.activated_at IS NOT NULL ${keywordWhere}
      ORDER BY sc.activated_at DESC LIMIT ? OFFSET ?`,
@@ -80,7 +77,6 @@ export function listAuthors(opts: { page?: number; pageSize?: number; keyword?: 
       articleCount: Number(r.article_count) || 0,
       viewCount: Number(r.view_count) || 0,
       likeCount: Number(r.like_count) || 0,
-      commentCount: Number(r.comment_count) || 0,
       activated: true,
       activatedAt: isoToUnix(r.activated_at as string),
       agreementAcceptedAt: isoToUnix(r.agreement_accepted_at as string),
@@ -119,7 +115,7 @@ export function listArticles(opts: {
     get<{ c: number }>(`SELECT COUNT(*) AS c FROM blog_articles a ${whereSql}`, ...params)?.c || 0
   const rows = all<Record<string, unknown>>(
     `SELECT a.id, a.slug, a.title, a.summary, a.visibility, a.recommend, a.view_count, a.like_count,
-            a.comment_count, a.moderation_status, a.moderation_note, a.user_id, a.created_at, a.published_at,
+            a.moderation_status, a.moderation_note, a.user_id, a.created_at, a.published_at,
             a.moderated_at, u.username, u.name AS author_name
      FROM blog_articles a JOIN users u ON u.id = a.user_id
      ${whereSql} ORDER BY a.created_at DESC LIMIT ? OFFSET ?`,
@@ -137,7 +133,6 @@ export function listArticles(opts: {
       recommend: toBool(r.recommend),
       viewCount: Number(r.view_count) || 0,
       likeCount: Number(r.like_count) || 0,
-      commentCount: Number(r.comment_count) || 0,
       moderationStatus: String(r.moderation_status),
       moderationNote: String(r.moderation_note || ''),
       userId: Number(r.user_id),

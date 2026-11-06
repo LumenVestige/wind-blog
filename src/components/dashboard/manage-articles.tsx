@@ -45,7 +45,6 @@ interface Article {
   pinned: boolean
   viewCount: number
   likeCount: number
-  commentCount: number
   updatedAt: number
 }
 export function ManageArticles({ username }: { username: string }) {
@@ -199,8 +198,7 @@ export function ManageArticles({ username }: { username: string }) {
                       </AdminStatus>
                     </TableCell>
                     <TableCell className="hidden whitespace-nowrap text-xs text-muted-foreground lg:table-cell">
-                      {article.viewCount} 阅读 · {article.likeCount} 赞 ·{' '}
-                      {article.commentCount} 留言
+                      {article.viewCount} 阅读 · {article.likeCount} 赞
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">

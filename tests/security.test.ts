@@ -90,29 +90,28 @@ describe('audit security and behavior regressions', () => {
     process.env.JWT_SECRET = old
   })
 
-  it('hides password article summaries and blocks comment disclosure until unlock', async () => {
+  it('hides password article summaries and bodies until unlock', async () => {
     const article = await create({ visibility: 'password', password: ' pw ' })
-    await call('user/blog/comment/create', { articleId: article.id, content: 'secret comment' }, auth())
     const locked = await call(`user/blog/article/get?id=${article.id}`)
     expect(locked.json.data.summary).toBe('')
     expect((await call('user/blog/by-username?username=owner&keyword=secret%20body')).json.data.list.some((item: { id: number }) => item.id === article.id)).toBe(false)
     expect(locked.json.data.content).toBeUndefined()
-    expect((await call(`user/blog/comment/list?articleId=${article.id}`)).status).toBe(403)
+    expect((await call('user/blog/like', { articleId: article.id })).status).toBe(403)
     const unlocked = await call('user/blog/article/unlock', { id: article.id, password: ' pw ' })
     expect(unlocked.json.data.author.username).toBe('owner')
     expect(unlocked.json.data.content).toBe('secret body')
     const cookie = unlocked.headers.get('set-cookie')!.split(';')[0]
     expect(cookie).toContain(`wind_unlock_${article.id}=`)
-    expect((await call(`user/blog/comment/list?articleId=${article.id}`, undefined, { Cookie: cookie })).json.data.total).toBe(1)
+    expect((await call('user/blog/like', { articleId: article.id }, { Cookie: cookie })).json.data.liked).toBe(true)
     expect((await call(`user/blog/article/get?id=${article.id}`, undefined, { Cookie: cookie })).json.data.content).toBe('secret body')
     await call('user/blog/article/update', { id: article.id, password: 'new-password' }, auth())
     expect((await call(`user/blog/article/get?id=${article.id}`, undefined, { Cookie: cookie })).json.data.canSeeBody).toBe(false)
   })
 
-  it('does not expose private or unapproved article metadata through comments and unlock', async () => {
+  it('does not expose private or unapproved article metadata through likes and unlock', async () => {
     const article = await create({ visibility: 'private' })
     expect((await call('user/blog/article/unlock', { id: article.id, password: 'anything' })).status).toBe(404)
-    expect((await call(`user/blog/comment/list?articleId=${article.id}`)).status).toBe(404)
+    expect((await call('user/blog/like', { articleId: article.id })).status).toBe(404)
     const pending = await create({ visibility: 'password', password: 'password' })
     run("UPDATE blog_articles SET moderation_status = 'pending' WHERE id = ?", pending.id)
     expect((await call(`user/blog/article/get?id=${pending.id}`)).status).toBe(404)
@@ -178,20 +177,6 @@ describe('audit security and behavior regressions', () => {
     const res = await call('user/blog/article/mine?page=1.7&pageSize=2.5', undefined, auth())
     expect(res.json.data).toMatchObject({ page: 1, pageSize: 2 })
     expect((await call('user/blog/tags?username=owner&limit=-1')).json.code).toBe(0)
-  })
-
-  it('paginates root comments together with their replies and updates counts on deletion', async () => {
-    const article = await create()
-    const first = await call('user/blog/comment/create', { articleId: article.id, content: 'root1' }, auth())
-    await call('user/blog/comment/create', { articleId: article.id, content: 'reply', parentId: first.json.data.id }, auth())
-    await call('user/blog/comment/create', { articleId: article.id, content: 'root2' }, auth())
-    const page1 = await call(`user/blog/comment/list?articleId=${article.id}&pageSize=1`)
-    expect(page1.json.data.total).toBe(2)
-    expect(page1.json.data.list[0].replies[0].content).toBe('reply')
-    const page2 = await call(`user/blog/comment/list?articleId=${article.id}&pageSize=1&page=2`)
-    expect(page2.json.data.list[0].content).toBe('root2')
-    await call('user/blog/comment/delete', { id: first.json.data.id }, auth())
-    expect(getArticleById(article.id)?.comment_count).toBe(1)
   })
 
   it('protects images referenced by custom and fixed pages from cleanup', async () => {

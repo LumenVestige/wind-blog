@@ -82,7 +82,7 @@ it('animates a late title that was unknown to the preview, independently of the 
 
 it('animates the backdrop and ready metadata separately without fading their shared article ancestor', async () => {
   const article = { slug: 'one', title: 'One', publishedLabel: 'Today', publishedAt: 1,
-    categoryName: 'Default', tags: [], viewCount: 1, likeCount: 0, commentCount: 0 }
+    categoryName: 'Default', tags: [], viewCount: 1, likeCount: 0 }
   const render = (key: string, loading: boolean, views = 1) => createElement(ArticleHeadingMotion.Provider, { value: clock },
     createElement(MizukiArticleCard, { key, pathname: '/one', loading },
       createElement(MizukiArticleHeader, { article: { ...article, viewCount: views }, loading })))

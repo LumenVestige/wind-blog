@@ -82,11 +82,11 @@ export function articlePageData(slug: string, { viewer, req }: BlogPageContext):
       categoryId: row.category_id, categoryName: listCategoriesPublic(author.username).find((c) => c.id === row.category_id)?.name || '',
       publishedAt: info.publishedAt || info.createdAt, updatedAt: info.updatedAt,
       publishedLabel: formatDateLong(info.publishedAt || info.createdAt), viewCount: info.viewCount,
-      likeCount: info.likeCount, liked, commentCount: info.commentCount, requiresPassword, userId: row.user_id,
+      likeCount: info.likeCount, liked, requiresPassword, userId: row.user_id,
     },
     toc: rendered?.toc || [], revision: rendered?.revision || '', countRead: !requiresPassword && row.visibility !== 'private',
     adjacent: requiresPassword ? { prev: null, next: null } : adjacentArticles(row),
-    isOwner: owner, viewerId: viewer?.id || 0, isAdmin: !!viewer?.isAdmin,
+    isOwner: owner,
   } }
 }
 

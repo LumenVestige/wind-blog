@@ -18,7 +18,7 @@ import { expandUrl, imageHashesForBody } from '../images'
 const ARTICLE_SELECT = `
   a.id, a.user_id, a.slug, a.title, a.summary, a.content, a.cover_url, a.image_hashes,
   a.visibility, a.password_hash, a.recommend, a.sync_to_main_profile, a.category_id,
-  a.view_count, a.like_count, a.comment_count, a.moderation_status, a.moderation_note,
+  a.view_count, a.like_count, a.moderation_status, a.moderation_note,
   a.moderated_at, a.moderated_by, a.published_at, a.pinned_at, a.pin_order,
   a.created_at, a.updated_at,
   u.id AS author_id, u.username AS author_username, u.name AS author_name, u.avatar AS author_avatar
@@ -44,7 +44,6 @@ export interface ArticleRow {
   category_id: number | null
   view_count: number
   like_count: number
-  comment_count: number
   moderation_status: string
   moderation_note: string
   moderated_at: string | null
@@ -73,7 +72,6 @@ export interface ArticleInfo {
   tags: string[]
   viewCount: number
   likeCount: number
-  commentCount: number
   liked: boolean
   requiresPassword: boolean
   canSeeBody: boolean
@@ -140,7 +138,6 @@ export function serializeArticle(
     tags: opts.tags || [],
     viewCount: row.view_count,
     likeCount: row.like_count,
-    commentCount: row.comment_count,
     liked: opts.likedSet?.has(row.id) || false,
     requiresPassword: requiresPassword && !canSeeBody,
     canSeeBody,
@@ -790,12 +787,10 @@ export function analytics(userId: number) {
     total_articles: number
     total_views: number
     total_likes: number
-    total_comments: number
   }>(
     `SELECT COUNT(*) AS total_articles,
             COALESCE(SUM(view_count),0) AS total_views,
-            COALESCE(SUM(like_count),0) AS total_likes,
-            COALESCE(SUM(comment_count),0) AS total_comments
+            COALESCE(SUM(like_count),0) AS total_likes
      FROM blog_articles WHERE user_id = ?`,
     userId,
   )
@@ -805,10 +800,9 @@ export function analytics(userId: number) {
     title: string
     view_count: number
     like_count: number
-    comment_count: number
     visibility: string
   }>(
-    `SELECT id, slug, title, view_count, like_count, comment_count, visibility
+    `SELECT id, slug, title, view_count, like_count, visibility
      FROM blog_articles WHERE user_id = ?
      ORDER BY view_count DESC, like_count DESC LIMIT 10`,
     userId,
@@ -817,14 +811,12 @@ export function analytics(userId: number) {
     totalArticles: Number(totals?.total_articles) || 0,
     totalViews: Number(totals?.total_views) || 0,
     totalLikes: Number(totals?.total_likes) || 0,
-    totalComments: Number(totals?.total_comments) || 0,
     topArticles: top.map((t) => ({
       id: t.id,
       slug: t.slug,
       title: t.title,
       viewCount: t.view_count,
       likeCount: t.like_count,
-      commentCount: t.comment_count,
       visibility: t.visibility,
     })),
   }
@@ -918,6 +910,26 @@ export function likeToggle(
       articleId,
     )
     return { liked, likeCount: Number(count?.like_count) || 0 }
+  })
+}
+
+/** Anonymous likes are keyed by the signed visitor cookie instead of a user id. */
+export function toggleVisitorLike(
+  articleId: number,
+  actor: string,
+): { liked: boolean; likeCount: number; articleId: number } {
+  return transaction(() => {
+    if (!get('SELECT id FROM blog_articles WHERE id = ?', articleId)) throw new ApiError('内容不存在', 1, 404)
+    const exists = get(
+      "SELECT 1 FROM blog_visitor_likes WHERE kind = 'article' AND target_id = ? AND visitor_key = ?",
+      articleId,
+      actor,
+    )
+    if (exists) run("DELETE FROM blog_visitor_likes WHERE kind = 'article' AND target_id = ? AND visitor_key = ?", articleId, actor)
+    else run("INSERT INTO blog_visitor_likes (kind, target_id, visitor_key) VALUES ('article', ?, ?)", articleId, actor)
+    run('UPDATE blog_articles SET like_count = MAX(0, like_count + ?) WHERE id = ?', exists ? -1 : 1, articleId)
+    const count = get<{ like_count: number }>('SELECT like_count FROM blog_articles WHERE id = ?', articleId)
+    return { liked: !exists, likeCount: Number(count?.like_count) || 0, articleId }
   })
 }
 

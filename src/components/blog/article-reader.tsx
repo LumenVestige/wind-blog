@@ -7,7 +7,7 @@ import { ArticleBodyContent, ArticleView, type ArticleViewData } from './article
 import { ArticleNav, type ArticleNavData } from './article-nav'
 import type { TocItem } from './article-toc'
 
-type Counts = Pick<ArticleViewData, 'viewCount' | 'likeCount' | 'commentCount' | 'liked'>
+type Counts = Pick<ArticleViewData, 'viewCount' | 'likeCount' | 'liked'>
 export type ArticleReaderProps = {
   themeId: 'mizuki' | 'chirpy' | 'simple'
   username: string
@@ -17,8 +17,6 @@ export type ArticleReaderProps = {
   countRead: boolean
   adjacent: ArticleNavData
   isOwner: boolean
-  viewerId: number
-  isAdmin: boolean
 }
 
 /** Initial HTML comes from SSR; later navigations supply the same props via JSON.

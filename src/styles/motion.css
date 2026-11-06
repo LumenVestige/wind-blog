@@ -274,10 +274,6 @@
 .toc-reading-range {
   transition-duration: 320ms, 320ms, 180ms;
 }
-.motion-reply {
-  animation: motion-content-in 240ms var(--motion-ease);
-}
-[data-comment-row] button[aria-pressed='true'] svg,
 button[aria-pressed='true'] .lucide-heart {
   animation: motion-heart 380ms var(--motion-spring);
 }

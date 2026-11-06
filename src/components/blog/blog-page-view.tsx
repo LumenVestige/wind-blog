@@ -1,6 +1,6 @@
 'use client'
 
-import { Calendar, ChevronRight, Eye, FolderOpen, Heart, MessageCircle, Tag, X } from 'lucide-react'
+import { Calendar, ChevronRight, Eye, FolderOpen, Heart, Tag, X } from 'lucide-react'
 import type { BlogPageData } from '@/lib/blog-page'
 import { blogQuery, formatDateCn, formatDateSlash } from '@/lib/blog-present'
 import { Badge } from '@/components/ui/badge'
@@ -47,7 +47,7 @@ function Home({ data }: { data: Extract<BlogPageData, { kind: 'home' }> }) {
           </div>
           <div className="mz-feed-stats">
             <span><Calendar /><time>{formatDateCn(article.publishedAt || article.createdAt)}</time></span>
-            <span><Eye />{article.viewCount}</span><span><Heart />{article.likeCount}</span><span><MessageCircle />{article.commentCount}</span>
+            <span><Eye />{article.viewCount}</span><span><Heart />{article.likeCount}</span>
             {article.pinned && !sort ? <Badge variant="secondary">置顶</Badge> : null}
             {article.visibility === 'password' ? <span className="opacity-70">密码</span> : null}
           </div>

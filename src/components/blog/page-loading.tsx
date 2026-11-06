@@ -19,7 +19,7 @@ export function ArticleLoadingFrame({ preview, pathname }: { preview?: ArticlePr
     <MizukiArticleHeader loading article={{
       slug: preview?.slug || '', title: preview?.title || '', publishedAt: preview?.publishedAt, updatedAt: preview?.updatedAt,
       publishedLabel: preview?.publishedLabel || '', categoryId: preview?.categoryId, categoryName: preview?.categoryName || '',
-      tags: preview?.tags || [], viewCount: 0, likeCount: 0, commentCount: 0,
+      tags: preview?.tags || [], viewCount: 0, likeCount: 0,
     }} />
     <ArticleBodySkeleton />
   </MizukiArticleCard>

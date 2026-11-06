@@ -555,19 +555,8 @@ function Interaction({
     >
       <Field orientation="horizontal">
         <FieldContent>
-          <FieldLabel htmlFor="comments-enabled">允许访客留言</FieldLabel>
-          <FieldDescription>新留言审核通过后公开。</FieldDescription>
-        </FieldContent>
-        <Switch
-          id="comments-enabled"
-          checked={value.commentsEnabled}
-          onCheckedChange={(value) => change('commentsEnabled', value)}
-        />
-      </Field>
-      <Field orientation="horizontal">
-        <FieldContent>
           <FieldLabel htmlFor="likes-enabled">允许访客点赞</FieldLabel>
-          <FieldDescription>读者可为文章与公开留言点赞。</FieldDescription>
+          <FieldDescription>读者可为文章点赞。</FieldDescription>
         </FieldContent>
         <Switch
           id="likes-enabled"

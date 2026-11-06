@@ -10,7 +10,7 @@ export interface SettingsValues {
   appearance: { colorScheme: 'system' | 'light' | 'dark'; subtitle: string } & TypographySettings
   content: { aboutArticleId: number; friendsArticleId: number }
   social: { socialLinks: { type: string; url: string; label?: string }[] }
-  interaction: { commentsEnabled: boolean; likesEnabled: boolean }
+  interaction: { likesEnabled: boolean }
   storage: {
     bucket: string
     operator: string

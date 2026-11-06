@@ -9,7 +9,6 @@
  * Options:
  *   --new-register            register the new account if login fails
  *   --password-articles=private|skip|keep
- *   --include-comments        also migrate comments (attributed to the target account)
  *   --rewrite-domain old=new  rewrite image URL host from old CDN to new CDN
  *   --dry-run                 print the plan without writing anything
  *
@@ -29,7 +28,6 @@ interface Args {
   newPassword: string
   newRegister: boolean
   passwordArticles: 'private' | 'skip' | 'keep'
-  includeComments: boolean
   rewriteDomain?: [string, string]
   dryRun: boolean
 }
@@ -74,7 +72,6 @@ export function parseArgs(argv: string[]): Args {
     newPassword: map['new-password'] || map['old-password'],
     newRegister: flags.has('new-register'),
     passwordArticles: ['private', 'skip', 'keep'].includes(pwMode) ? pwMode : 'private',
-    includeComments: flags.has('include-comments'),
     rewriteDomain,
     dryRun: flags.has('dry-run'),
   }
@@ -406,42 +403,8 @@ async function main() {
     }
   }
 
-  // ---- comments (optional) ----
-  if (args.includeComments) {
-    let cCount = 0
-    for (const a of articles) {
-      try {
-        const newArticle = await newClient.get<{ id: number; visibility: string }>('/user/blog/article/get', {
-          username: args.newUsername,
-          slug: a.slug,
-        })
-        if (!newArticle?.id) continue
-        const list = await oldClient.get<{ list: OldComment[] }>('/user/blog/comment/list', {
-          articleId: a.id,
-          page: 1,
-          pageSize: 100,
-        })
-        for (const top of list?.list || []) {
-          await newClient.post('/user/blog/comment/create', {
-            articleId: newArticle.id,
-            content: top.content,
-          })
-          cCount++
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-    console.log(`✓ 评论完成（${cCount}，顶层评论归到目标账号）`)
-  }
-
   console.log('\n=== 迁移完成 ===')
   console.log(`访问你的博客：${args.newUrl}/`)
-}
-
-interface OldComment {
-  id: number
-  content: string
 }
 
 export { RemoteClient, main }

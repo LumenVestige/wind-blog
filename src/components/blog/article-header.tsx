@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock, Eye, Heart, MessageCircle } from 'lucide-react'
+import { Clock, Eye, Heart } from 'lucide-react'
 import Link from './blog-navigation'
 import { ArticleHeading } from './article-heading'
 import type { ArticleViewData } from './article-view'
@@ -8,7 +8,7 @@ import { useContext, useLayoutEffect, useRef } from 'react'
 import { ArticleHeadingMotion } from './article-heading'
 import { BLOG_MOTION } from '@/lib/blog-motion-events'
 
-type HeaderData = Pick<ArticleViewData, 'slug' | 'title' | 'publishedAt' | 'updatedAt' | 'publishedLabel' | 'categoryId' | 'categoryName' | 'tags' | 'readMinutes' | 'viewCount' | 'likeCount' | 'commentCount'>
+type HeaderData = Pick<ArticleViewData, 'slug' | 'title' | 'publishedAt' | 'updatedAt' | 'publishedLabel' | 'categoryId' | 'categoryName' | 'tags' | 'readMinutes' | 'viewCount' | 'likeCount'>
 
 function ArticleTitleSkeleton() {
   return <div className="mz-skeleton mz-skeleton-title" aria-hidden />
@@ -63,7 +63,6 @@ export function MizukiArticleHeader({ article, loading = false, isOwner = false,
           <span><Clock aria-hidden="true" />约 {article.readMinutes ?? 1} 分钟</span>
           <span><Eye aria-hidden="true" /><span className="sr-only">阅读</span>{article.viewCount}</span>
           <span><Heart aria-hidden="true" /><span className="sr-only">喜欢</span>{article.likeCount}</span>
-          <span><MessageCircle aria-hidden="true" /><span className="sr-only">评论</span>{article.commentCount}</span>
           {isOwner ? <span><Link href={editHref}>编辑</Link></span> : null}
         </div>
       )}

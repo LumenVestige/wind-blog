@@ -13,7 +13,7 @@ src/app/            页面（根路径博客、/manage/*；旧 /blog、/dashboar
 src/db/             schema.sql（唯一真源）、index.ts（连接/事务）、migrate.ts、seed.ts
 src/lib/            password / jwt / markdown / slug / upyun / settings / api（信封）
 src/server/users.ts 用户
-src/server/blog/    articles categories tags comments site pages static-sites reports admin
+src/server/blog/    articles categories tags site pages static-sites reports admin
 src/server/api/     auth / blog / admin 处理函数 + router.ts（路径分发）
 src/components/     ui（shadcn 风格）、blog、dashboard
 scripts/migrate.ts  旧站→新站迁移
@@ -48,7 +48,7 @@ npm run migrate -- --old-url ... --new-url ...
 - 改插件兼容接口后必须跑 `npm test`（含 `tests/plugin-contract.test.ts`）。
 - `.env.local` 与 `data/*.db` 不入库。
 
-- 访客不是用户：留言存在 `blog_guest_comments`，审核后公开；负数评论 ID 区分旧登录用户评论。
+- 评论功能已下线：相关接口、后台与前台入口均已移除。`blog_comments` / `blog_guest_comments` / `blog_comment_likes` 等表与 `blog_articles.comment_count` 仍留在 `schema.sql`，仅为保留历史数据，代码不再读写。
 - 文章摘要模式和草稿标记存在 `blog_article_options`，新增 schema 仍只写 `schema.sql`。
 - 多实例共用代码时必须分别设置 `DB_PATH`、`JWT_SECRET`、`INSTANCE_ID`；仅信任自行覆盖转发头的反向代理。
 

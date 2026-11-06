@@ -3,13 +3,12 @@ import { cn } from '@/lib/utils'
 
 import Link from '@/components/blog/blog-navigation'
 import { useEffect, useState } from 'react'
-import { Clock, Eye, Heart, Link2, MessageCircle } from 'lucide-react'
+import { Clock, Eye, Heart, Link2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { MarkdownView } from '@/components/blog/markdown-view'
 import { LikeButton } from '@/components/blog/like-button'
 import { UnlockForm } from '@/components/blog/unlock-form'
-import { CommentSection } from '@/components/blog/comment-section'
 import { ArticleToc, type TocItem } from '@/components/blog/article-toc'
 import { useBlogChrome } from '@/components/blog/blog-chrome'
 import { useFadeOutOnUnmount } from '@/components/motion/use-fade-out-on-unmount'
@@ -33,7 +32,6 @@ export interface ArticleViewData {
   viewCount: number
   likeCount: number
   liked: boolean
-  commentCount: number
   requiresPassword: boolean
   userId: number
 }
@@ -117,8 +115,7 @@ export function ArticleView({
   bodySlot,
   bodyOnly = false,
   loading = false,
-  viewerId,
-  isAdmin, commentsEnabled = true, likesEnabled = true,
+  likesEnabled = true,
 }: {
   themeId: 'mizuki' | 'chirpy' | 'simple'
   username: string
@@ -130,9 +127,6 @@ export function ArticleView({
   bodyOnly?: boolean
   /** Full article not fetched yet: Mizuki header renders placeholders. */
   loading?: boolean
-  viewerId: number
-  isAdmin: boolean
-  commentsEnabled?: boolean
   likesEnabled?: boolean
 }) {
   const chrome = useBlogChrome()
@@ -321,24 +315,6 @@ export function ArticleView({
       </section>
     ) : null
 
-  const comments = !locked ? (
-    <CommentSection
-      commentsEnabled={commentsEnabled}
-      likesEnabled={likesEnabled}
-      articleId={article.id}
-      viewerId={viewerId}
-      isAdmin={isAdmin}
-      articleOwnerId={article.userId}
-      className={
-        isChirpy
-          ? 'mt-10 rounded-[10px] bg-[var(--card-bg)] p-6 shadow-[var(--card-shadow)]'
-          : isMizuki
-            ? 'mz-section-card mt-0'
-            : 'rounded-xl border bg-card p-6 shadow-sm'
-      }
-    />
-  ) : null
-
   const meta = (
     <>
       <span>
@@ -358,10 +334,6 @@ export function ArticleView({
       <span className="inline-flex items-center gap-1">
         <Heart className="size-3.5" />
         {article.likeCount}
-      </span>
-      <span className="inline-flex items-center gap-1">
-        <MessageCircle className="size-3.5" />
-        {article.commentCount}
       </span>
       {isOwner ? (
         <span>
@@ -399,7 +371,6 @@ export function ArticleView({
         {likeBlock}
         {shareBlock}
         {relatedBlock}
-        {comments}
       </>
     )
   }
@@ -416,7 +387,6 @@ export function ArticleView({
         {!bodySlot ? likeBlock : null}
         {!bodySlot ? shareBlock : null}
         {!bodySlot ? relatedBlock : null}
-        {!bodySlot ? comments : null}
       </article>
     )
   }
@@ -431,7 +401,6 @@ export function ArticleView({
           {!bodySlot ? shareBlock : null}
         </MizukiArticleCard>
         {!bodySlot ? relatedBlock : null}
-        {!bodySlot ? comments : null}
       </div>
     )
   }
@@ -466,17 +435,12 @@ export function ArticleView({
             <Heart className="size-4" />
             {article.likeCount} 赞
           </span>
-          <span className="inline-flex items-center gap-1">
-            <MessageCircle className="size-4" />
-            {article.commentCount} 评论
-          </span>
         </div>
       </header>
       {body}
       {!bodySlot ? likeBlock : null}
       {!bodySlot ? shareBlock : null}
       {!bodySlot ? relatedBlock : null}
-      {!bodySlot ? comments : null}
     </article>
   )
 }
