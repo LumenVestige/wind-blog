@@ -147,7 +147,15 @@ html:has([data-blog-theme='mizuki']) {
   border: 1px solid var(--mz-line);
   transition:
     box-shadow var(--mz-duration) var(--mz-ease),
-    background var(--mz-duration) var(--mz-ease);
+    background var(--mz-duration) var(--mz-ease),
+    border-radius var(--mz-duration) var(--mz-ease);
+}
+
+/* Docked against the viewport the top corners would be sliced off mid-curve,
+   so square them off over the same beat as the slide. */
+.mz-top-row.is-docked .mz-nav-inner {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 @media (prefers-reduced-transparency: reduce) {
