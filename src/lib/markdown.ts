@@ -6,6 +6,7 @@ import { createHtmlDocument } from '@/lib/html-document'
 import {
   obsidianHighlightAtStart,
   preprocessObsidianMarkdown,
+  splitObsidianHighlight,
   stripObsidianHighlights,
   type ObsidianFootnote,
 } from '@/lib/obsidian-markdown'
@@ -607,18 +608,6 @@ function formatFencedCodeBlock(
  */
 export { extractMarkdownCodeText } from './markdown-code-text'
 
-const highlightColors = new Map([
-  ['🔴', 'red'], ['🟥', 'red'],
-  ['🟠', 'orange'], ['🟧', 'orange'],
-  ['🟡', 'yellow'], ['🟨', 'yellow'],
-  ['🟢', 'green'], ['🟩', 'green'],
-  ['🔵', 'blue'], ['🟦', 'blue'],
-  ['🟣', 'purple'], ['🟪', 'purple'],
-  ['🟤', 'brown'], ['🟫', 'brown'],
-  ['⚫', 'black'], ['⬛', 'black'],
-  ['⚪', 'white'], ['⬜', 'white'],
-])
-
 function ensureRenderer() {
   if (rendererReady) return
   rendererReady = true
@@ -702,12 +691,12 @@ function ensureRenderer() {
         if (this.lexer.state.inRawBlock || tokens.at(-1)?.raw.endsWith('=')) return
         const match = obsidianHighlightAtStart.exec(src)
         if (!match) return
-        const [prefix] = match[1]
+        const { text, color } = splitObsidianHighlight(match[1])
         return {
           type: 'obsidianHighlight',
           raw: match[0],
-          color: highlightColors.get(prefix),
-          tokens: this.lexer.inlineTokens(match[1]),
+          color,
+          tokens: this.lexer.inlineTokens(text),
         }
       },
       renderer(token) {

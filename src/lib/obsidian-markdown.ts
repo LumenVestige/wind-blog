@@ -99,9 +99,33 @@ export const obsidianHighlightAtStart = new RegExp(`^${HIGHLIGHT.source}`)
 // Only an even number of preceding backslashes leaves the opening delimiter unescaped.
 const plainHighlights = new RegExp(String.raw`(?<![=\\])((?:\\\\)*)${HIGHLIGHT.source}`, 'g')
 
+const highlightColors = new Map([
+  ['🔴', 'red'], ['🟥', 'red'],
+  ['🟠', 'orange'], ['🟧', 'orange'],
+  ['🟡', 'yellow'], ['🟨', 'yellow'],
+  ['🟢', 'green'], ['🟩', 'green'],
+  ['🔵', 'blue'], ['🟦', 'blue'],
+  ['🟣', 'purple'], ['🟪', 'purple'],
+  ['🟤', 'brown'], ['🟫', 'brown'],
+  ['⚫', 'black'], ['⬛', 'black'],
+  ['⚪', 'white'], ['⬜', 'white'],
+])
+
+export function splitObsidianHighlight(text: string): { text: string; color?: string } {
+  const [prefix] = text
+  const color = highlightColors.get(prefix)
+  if (!color) return { text }
+  const label = text.slice(prefix.length).replace(/^[\uFE0E\uFE0F]/, '').trimStart()
+  return label ? { text: label, color } : { text }
+}
+
 export function stripObsidianHighlights(text: string): string {
   if (!text.includes('==')) return text
-  return protectInlineCode(text, (source) => source.replace(plainHighlights, '$1$2'))
+  return protectInlineCode(text, (source) =>
+    source.replace(plainHighlights, (_, escapes: string, content: string) =>
+      escapes + splitObsidianHighlight(content).text,
+    ),
+  )
 }
 
 function stripComments(source: string): string {
