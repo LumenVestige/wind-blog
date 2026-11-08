@@ -94,6 +94,16 @@ function protectInlineCode(
   })
 }
 
+const HIGHLIGHT = /==([^=\s](?:[^=\r\n]|=(?!=))*?)(?<![=\s])==(?!=)/
+export const obsidianHighlightAtStart = new RegExp(`^${HIGHLIGHT.source}`)
+// Only an even number of preceding backslashes leaves the opening delimiter unescaped.
+const plainHighlights = new RegExp(String.raw`(?<![=\\])((?:\\\\)*)${HIGHLIGHT.source}`, 'g')
+
+export function stripObsidianHighlights(text: string): string {
+  if (!text.includes('==')) return text
+  return protectInlineCode(text, (source) => source.replace(plainHighlights, '$1$2'))
+}
+
 function stripComments(source: string): string {
   let inComment = false
   return mapOutsideFences(source, (line) => {
@@ -253,9 +263,6 @@ export function preprocessObsidianMarkdown(markdown: string): ObsidianMarkdownRe
       })
       result = result.replace(/\[\[([^\]]+)\]\]/g, (_, value: string) => {
         return renderWikiLink(value)
-      })
-      result = result.replace(/==([^=\n]+)==/g, (_, value: string) => {
-        return `<mark>${escapeHtml(value)}</mark>`
       })
       result = result.replace(
         /(?:^|\s)\^([A-Za-z0-9-]+)\s*$/,

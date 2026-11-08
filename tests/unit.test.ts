@@ -107,6 +107,34 @@ describe('markdown', () => {
   it('builds a plain-text summary', () => {
     expect(buildSummary('## 标题\n\n这是一段**正文**。', 100)).toContain('这是一段正文')
   })
+  it('renders Obsidian highlights beside equals signs and preserves emoji', () => {
+    const source = '## ==🔴PASS==\n\na == b 时显示 ==🟢**PASS**==，记录 ==x=y==。'
+    const html = renderMarkdown(source)
+    expect(html).toContain('id="pass"><mark class="obsidian-highlight-red">🔴PASS</mark></h2>')
+    expect(html).toContain('a == b 时显示 <mark class="obsidian-highlight-green">🟢<strong>PASS</strong></mark>，记录 <mark>x=y</mark>。')
+    expect(extractHeadings(source)).toEqual([{ level: 2, text: '🔴PASS', id: 'pass' }])
+    expect(buildSummary(source)).toBe('🔴PASS a == b 时显示 🟢PASS，记录 x=y。')
+  })
+  it('keeps highlight delimiters literal in escapes, code and link URLs', () => {
+    const html = renderMarkdown(
+      '\\==🔴PASS== 和 `==🔴PASS==`\n\n> ```text\n> ==🔴PASS==\n> ```\n\n' +
+      '[==🔴PASS==](https://example.test/?q===🔴PASS==)',
+    )
+    expect(html).toContain('==🔴PASS== 和 <code>==🔴PASS==</code>')
+    expect(html).toContain('class="md-code-src">==🔴PASS==</span>')
+    expect(html).toContain('href="https://example.test/?q===🔴PASS=="')
+    expect(html.match(/<mark\b/g)).toHaveLength(1)
+    expect(html).toContain('<mark class="obsidian-highlight-red">🔴PASS</mark></a>')
+  })
+  it('selects highlight colors from leading circles and squares', () => {
+    const html = renderMarkdown('==🔵蓝== ==🟧橙== ==🟡黄== ==🟪紫== ==🟤棕== ==⬛️黑== ==⚪白== ==文字🔴==')
+    expect(html).toContain(
+      '<mark class="obsidian-highlight-blue">🔵蓝</mark> <mark class="obsidian-highlight-orange">🟧橙</mark> ' +
+      '<mark class="obsidian-highlight-yellow">🟡黄</mark> <mark class="obsidian-highlight-purple">🟪紫</mark> ' +
+      '<mark class="obsidian-highlight-brown">🟤棕</mark> <mark class="obsidian-highlight-black">⬛️黑</mark> ' +
+      '<mark class="obsidian-highlight-white">⚪白</mark> <mark>文字🔴</mark>',
+    )
+  })
   it.each([
     ['![|51%](https://cdn.test/a.jpg)', ''],
     ['![|473](https://cdn.test/a.jpg)', ''],
