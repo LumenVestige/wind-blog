@@ -29,3 +29,6 @@ next-env.d.ts
 /public/fonts/
 /.agents/
 scripts/dev/AgentSkill
+/agent-workspace/config/
+/agent-workspace/.agent/
+/agent-workspace/*/specs/
