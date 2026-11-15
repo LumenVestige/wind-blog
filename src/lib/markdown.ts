@@ -4,7 +4,10 @@ import TurndownService from 'turndown'
 import { getHljs, highlightWith, loadHljs, mapHljsLang } from '@/lib/code-hl'
 import { createHtmlDocument } from '@/lib/html-document'
 import {
+  obsidianHighlightAtStart,
   preprocessObsidianMarkdown,
+  splitObsidianHighlight,
+  stripObsidianHighlights,
   type ObsidianFootnote,
 } from '@/lib/obsidian-markdown'
 
@@ -629,7 +632,7 @@ function ensureRenderer() {
     return formatFencedCodeBlock(body, langClass, language || mapped || '')
   }
 
-  renderer.link = function ({ href, title, text }: Tokens.Link): string {
+  renderer.link = function ({ href, title, text, tokens }: Tokens.Link): string {
     const safeHref = (href || '').trim()
     if (/^\s*javascript:/i.test(safeHref) || /^\s*vbscript:/i.test(safeHref)) {
       return escapeHtml(text)
@@ -639,7 +642,7 @@ function ensureRenderer() {
       /^https?:\/\//i.test(safeHref) || safeHref.startsWith('//')
         ? ' target="_blank" rel="noopener noreferrer"'
         : ''
-    return `<a href="${escapeHtml(safeHref)}"${t}${external}>${text}</a>`
+    return `<a href="${escapeHtml(safeHref)}"${t}${external}>${this.parser.parseInline(tokens)}</a>`
   }
 
   renderer.image = function ({ href, title, text }: Tokens.Image): string {
@@ -678,7 +681,30 @@ function ensureRenderer() {
     return `<span class="md-img-block${alignClass}" data-md-img="1">${img}</span>`
   }
 
-  marked.use({ renderer })
+  marked.use({
+    renderer,
+    extensions: [{
+      name: 'obsidianHighlight',
+      level: 'inline',
+      start: (src) => src.indexOf('=='),
+      tokenizer(src, tokens) {
+        if (this.lexer.state.inRawBlock || tokens.at(-1)?.raw.endsWith('=')) return
+        const match = obsidianHighlightAtStart.exec(src)
+        if (!match) return
+        const { text, color } = splitObsidianHighlight(match[1])
+        return {
+          type: 'obsidianHighlight',
+          raw: match[0],
+          color,
+          tokens: this.lexer.inlineTokens(text),
+        }
+      },
+      renderer(token) {
+        const colorClass = token.color ? ` class="obsidian-highlight-${token.color}"` : ''
+        return `<mark${colorClass}>${this.parser.parseInline(token.tokens ?? [])}</mark>`
+      },
+    }],
+  })
 }
 
 /** 预加载代码高亮（可选，首次渲染前调用更佳） */
@@ -720,14 +746,14 @@ function makeHeadingIdAssigner() {
 
 /** 去掉标题行内常见 Markdown 标记，便于展示与生成 id。 */
 function stripMdInline(s: string): string {
-  return stripMdLinksAndImages(s)
+  return stripObsidianHighlights(stripMdLinksAndImages(s))
     .replace(/`([^`]+)`/g, '$1')
     .replace(/[*~]+/g, '')
     // Strip `_emphasis_` but keep intraword underscores (`abc465_d`).
     .replace(/(^|[^A-Za-z0-9])_{1,2}(?=\S)/g, '$1')
     .replace(/_{1,2}(?![A-Za-z0-9])/g, '')
     .replace(/<[^>]+>/g, '')
-    .replace(/\\([\\`*_{}[\]()#+\-.!])/g, '$1')
+    .replace(/\\([\\`*_{}[\]()#+\-.!=])/g, '$1')
     .trim()
 }
 
@@ -1156,7 +1182,7 @@ export function stripMarkdownToPlain(
     })
   }
 
-  // 始终剥标签：Obsidian 预处理会注入 <mark>/<span> 等
+  // 始终剥标签：Obsidian 预处理会注入 <span> 等
   s = s
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(?:p|div|h[1-6]|li|tr)>/gi, '\n')
@@ -1171,6 +1197,7 @@ export function stripMarkdownToPlain(
   // 围栏代码块整段丢弃（简述不宜塞源码）；行内代码只留文字
   s = s.replace(/~~~[\w-]*\n?[\s\S]*?~~~/g, ' ')
   s = s.replace(/```[\w-]*\n?[\s\S]*?```/g, ' ')
+  s = stripObsidianHighlights(s)
   s = s.replace(/`([^`]+)`/g, '$1')
 
   // 水平线 / Setext 下划线（整行 --- *** ___ ===）
@@ -1217,8 +1244,7 @@ export function stripMarkdownToPlain(
   })
   s = s.replace(/<(https?:\/\/[^>\s]+)>/gi, '$1')
 
-  // 高亮 / 加粗 / 斜体 / 删除线（成对）
-  s = s.replace(/==([^=\n]+)==/g, '$1')
+  // 加粗 / 斜体 / 删除线（成对）
   s = s.replace(/\*\*\*(.+?)\*\*\*/g, '$1')
   s = s.replace(/\*\*(.+?)\*\*/g, '$1')
   s = s.replace(/__(.+?)__/g, '$1')
@@ -1244,7 +1270,7 @@ export function stripMarkdownToPlain(
   s = s.replace(/\[\s*\]|\(\s*\)/g, ' ')
 
   // 反斜杠转义：\# \* 等 → 字符本身
-  s = s.replace(/\\([\\`*_{}[\]()#+\-.!|>])/g, '$1')
+  s = s.replace(/\\([\\`*_{}[\]()#+\-.!|>=])/g, '$1')
 
   // 压成一段
   s = s.replace(/\n+/g, ' ').replace(/[ \t\u00a0]{2,}/g, ' ').trim()

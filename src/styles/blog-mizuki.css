@@ -13,6 +13,7 @@
   --mz-radius: 1rem;
   --mz-radius-sm: 0.75rem;
   --mz-nav-h: 4.25rem;
+  --mz-prose-size: 1.0625rem;
   --mz-ease: cubic-bezier(0.4, 0, 0.2, 1);
   --mz-duration: 180ms;
   --mz-enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -1529,12 +1530,17 @@ html:has([data-blog-theme='mizuki']) {
 }
 
 .mz-prose {
-  /* Match the reference article's reading size and contrast in both themes. */
-  font-size: 0.95rem;
+  font-size: var(--mz-prose-size);
   line-height: 1.7;
   letter-spacing: normal;
   word-spacing: normal;
   color: var(--foreground);
+}
+
+[data-prose-font='wenkai'] .mz-prose .markdown-body :is(strong, b) {
+  font-weight: 700;
+  /* WenKai's heaviest face is 700; a thin stroke makes emphasis easier to see. */
+  -webkit-text-stroke: 0.025em currentColor;
 }
 
 .mz-prose .markdown-body p {
@@ -1981,13 +1987,13 @@ html:has([data-blog-theme='mizuki']) {
   border-radius: 999px;
 }
 
-/* Bars follow .mz-prose metrics: 0.95rem text on a 1.7 line box. */
+/* Bars follow the prose size and approximate its 1.7 line box. */
 .mz-article-skeleton {
   display: flex;
   flex-direction: column;
   gap: 1.05em;
   padding-top: 0.5em;
-  font-size: 0.95rem;
+  font-size: var(--mz-prose-size);
 }
 
 .mz-skeleton-line {

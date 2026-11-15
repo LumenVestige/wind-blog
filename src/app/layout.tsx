@@ -42,7 +42,12 @@ export default function RootLayout({
   const typography = typographySettings()
   const fonts = typographyAssets(typography)
   return (
-    <html lang="zh-CN" style={typographyStyles(typography) as CSSProperties} suppressHydrationWarning>
+    <html
+      lang="zh-CN"
+      data-prose-font={typography.wenkaiEnabled ? 'wenkai' : undefined}
+      style={typographyStyles(typography) as CSSProperties}
+      suppressHydrationWarning
+    >
       <head>
         {fonts.preload && <link rel="preload" href={fonts.preload} as="font" type="font/woff2" crossOrigin="anonymous" />}
         {fonts.stylesheet && <link rel="stylesheet" href={fonts.stylesheet} />}
