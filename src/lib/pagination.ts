@@ -1,6 +1,12 @@
+import type { HomeLayout } from './blog-layout'
+
 export const PAGE_SIZES = [10, 20, 50, 100] as const
 /** Two-column feed: multiples of 12 keep the last row full. */
 export const FEED_PAGE_SIZES = [12, 24, 48] as const
+
+export function defaultFeedPageSize(layout: HomeLayout): number {
+  return layout === 'single' ? 6 : 12
+}
 
 export function parsePageSize(
   value: unknown,

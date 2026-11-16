@@ -3,6 +3,7 @@
 import { Calendar, ChevronRight, Eye, FolderOpen, Heart, Tag, X } from 'lucide-react'
 import type { BlogPageData } from '@/lib/blog-page'
 import { blogQuery, formatDateCn, formatDateSlash } from '@/lib/blog-present'
+import { defaultFeedPageSize } from '@/lib/pagination'
 import { Badge } from '@/components/ui/badge'
 import Link from './blog-navigation'
 import { ArticleLink } from './article-link'
@@ -35,7 +36,7 @@ function Home({ data }: { data: Extract<BlogPageData, { kind: 'home' }> }) {
       <FeedSearch keyword={keyword || ''} clearHref={blogQuery(username, { ...baseQuery, q: undefined })} hidden={{ categoryId, tag: tags, sort }} />
     </div>
     {list.length === 0 ? <div className="mz-empty" data-feed-list>{keyword || categoryId || tags.length ? '没有找到匹配的文章，请调整筛选条件。' : '还没有公开文章'}</div> :
-      <div className="mz-feed-grid" data-home-layout={data.homeLayout} data-feed-list>{list.map((article) => <ArticleLink key={article.id} className="mz-feed-card" preview={{
+      <div className="mz-feed-grid" data-home-layout={data.homeLayout} data-feed-list>{list.map((article) => <ArticleLink key={article.id} className={`mz-feed-card${article.coverUrl ? ' has-cover' : ''}`} preview={{
         slug: article.slug, title: article.title, summary: article.summary, publishedLabel: formatDateSlash(article.publishedAt || article.createdAt),
         categoryName: catName(article.categoryId), categoryId: article.categoryId, publishedAt: article.publishedAt || article.createdAt, updatedAt: article.updatedAt, tags: article.tags,
       }}>
@@ -43,7 +44,7 @@ function Home({ data }: { data: Extract<BlogPageData, { kind: 'home' }> }) {
           <h2 className="mz-feed-title"><span className="mz-feed-title-text">{article.title}</span><ChevronRight className="mz-feed-enter" aria-hidden="true" /></h2>
           <div className="mz-feed-preview">
             <div className="mz-feed-excerpt">{article.summaryHtml ? <div className="markdown-summary min-w-0 max-w-full [overflow-wrap:anywhere]" dangerouslySetInnerHTML={{ __html: article.summaryHtml }} /> : null}</div>
-            {article.coverUrl ? <span className="mz-feed-cover"><img src={article.thumbnailUrl} alt="" loading="lazy" /></span> : null}
+            {article.coverUrl && data.homeLayout !== 'single' ? <span className="mz-feed-cover"><img src={article.thumbnailUrl} alt="" loading="lazy" /></span> : null}
           </div>
           <div className="mz-feed-stats">
             <span><Calendar /><time>{formatDateCn(article.publishedAt || article.createdAt)}</time></span>
@@ -52,8 +53,9 @@ function Home({ data }: { data: Extract<BlogPageData, { kind: 'home' }> }) {
             {article.visibility === 'password' ? <span className="opacity-70">密码</span> : null}
           </div>
         </div>
+        {article.coverUrl && data.homeLayout === 'single' ? <span className="mz-feed-cover"><img src={article.thumbnailUrl} alt="" loading="lazy" /></span> : null}
       </ArticleLink>)}</div>}
-    <BlogPagination page={page} total={total} pageSize={pageSize} href={blogQuery(username, baseQuery)} label="文章列表分页" />
+    <BlogPagination page={page} total={total} pageSize={pageSize} defaultPageSize={defaultFeedPageSize(data.homeLayout)} href={blogQuery(username, baseQuery)} label="文章列表分页" />
   </div>
 }
 

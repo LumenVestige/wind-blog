@@ -3,7 +3,7 @@ import { ApiError } from '@/lib/api'
 import type { AuthUser } from '@/lib/jwt'
 import type { BlogPageData, BlogPageResponse } from '@/lib/blog-page'
 import { estimateReadMinutes, formatDateLong } from '@/lib/blog-present'
-import { FEED_PAGE_SIZES, parsePage, parsePageSize } from '@/lib/pagination'
+import { defaultFeedPageSize, FEED_PAGE_SIZES, parsePage, parsePageSize } from '@/lib/pagination'
 import { renderMarkdown, renderSummaryMarkdown } from '@/lib/markdown'
 import { cookieName, readCookie } from '@/server/http'
 import { coverThumbnailUrl, publicBase } from '@/server/images'
@@ -23,11 +23,13 @@ export type BlogPageContext = { viewer: AuthUser | null; req: Request }
 export function homePageData(params: URLSearchParams): Extract<BlogPageData, { kind: 'home' }> {
   const author = siteOwner()
   const cfg = siteConfigData(ensureSiteConfig(author.id))
+  const layout = homeLayout()
   const categoryId = Number(params.get('categoryId')) || undefined
   const tags = [...new Set(params.getAll('tag').map((tag) => tag.trim()).filter(Boolean))]
   const keyword = params.get('q') || params.get('keyword') || undefined
   const sort = params.get('sort') === 'hot' ? 'hot' as const : undefined
-  const pageSize = parsePageSize(params.get('pageSize'), 12, FEED_PAGE_SIZES)
+  const pageSize = parsePageSize(params.get('pageSize'), defaultFeedPageSize(layout),
+    layout === 'single' ? [6, ...FEED_PAGE_SIZES] : FEED_PAGE_SIZES)
   let page = parsePage(params.get('page'))
   const options = { pageSize, categoryId, tags, keyword, sort, titleOnly: true, pinnedFirst: true }
   let result = listByUsername(author.username, { ...options, page })
@@ -36,7 +38,7 @@ export function homePageData(params: URLSearchParams): Extract<BlogPageData, { k
     page = lastPage
     result = listByUsername(author.username, { ...options, page })
   }
-  return { kind: 'home', username: author.username, activated: cfg.activated, homeLayout: homeLayout(), categoryId, tags, keyword, sort,
+  return { kind: 'home', username: author.username, activated: cfg.activated, homeLayout: layout, categoryId, tags, keyword, sort,
     page, pageSize, total: result.total, categories: listCategoriesPublic(author.username),
     list: result.list.map((article) => ({ ...article, summaryHtml: renderSummaryMarkdown(article.summary), thumbnailUrl: coverThumbnailUrl(article.coverUrl, publicBase()) })) }
 }

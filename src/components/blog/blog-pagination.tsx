@@ -6,10 +6,11 @@ import { paginationItems, parsePage } from '@/lib/pagination'
 import { cn } from '@/lib/utils'
 
 /** Public feed pagination; filters and an explicitly selected page size survive. */
-export function BlogPagination({ page, total, pageSize, href, label = '文章列表分页' }: {
+export function BlogPagination({ page, total, pageSize, defaultPageSize = 12, href, label = '文章列表分页' }: {
   page: number
   total: number
   pageSize: number
+  defaultPageSize?: number
   href: string
   label?: string
 }) {
@@ -23,7 +24,7 @@ export function BlogPagination({ page, total, pageSize, href, label = '文章列
     const params = new URLSearchParams(search)
     if (next === 1) params.delete('page')
     else params.set('page', String(next))
-    if (pageSize !== 12) params.set('pageSize', String(pageSize))
+    if (pageSize !== defaultPageSize) params.set('pageSize', String(pageSize))
     return pathname + (params.size ? `?${params}` : '')
   }
   return (

@@ -1325,6 +1325,86 @@ html:has([data-blog-theme='mizuki']) {
   transform: scale(1.04);
 }
 
+/* Fade the cover itself so the card's light, dark and hover backgrounds show through. */
+.mz-feed-grid[data-home-layout='single'] {
+  gap: 1.1rem;
+}
+
+.mz-feed-grid[data-home-layout='single'] .mz-feed-card {
+  position: relative;
+  min-height: 15rem;
+  padding: 1.5rem 1.75rem;
+  overflow: hidden;
+  border-radius: var(--mz-radius);
+}
+
+.mz-feed-grid[data-home-layout='single'] .mz-feed-body {
+  position: relative;
+  z-index: 1;
+  gap: 0.85rem;
+}
+
+@media (min-width: 768px) {
+  .mz-feed-grid[data-home-layout='single'] .has-cover .mz-feed-body {
+    flex: 0 1 58%;
+  }
+}
+
+.mz-feed-grid[data-home-layout='single'] .mz-feed-title {
+  font-size: 1.25rem;
+}
+
+.mz-feed-grid[data-home-layout='single'] .mz-feed-title-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  overflow: hidden;
+}
+
+.mz-feed-grid[data-home-layout='single'] .mz-feed-excerpt {
+  font-size: 0.9375rem;
+  line-height: 1.8;
+}
+
+.mz-feed-grid[data-home-layout='single'] .mz-feed-cover {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 43%;
+  height: 100%;
+  border-radius: 0;
+  background: transparent;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 35%);
+  mask-image: linear-gradient(to right, transparent, #000 35%);
+}
+
+@media (max-width: 767px) {
+  .mz-feed-grid[data-home-layout='single'] .mz-feed-card {
+    flex-direction: column;
+    gap: 0;
+    min-height: 13rem;
+    padding: 0;
+  }
+  .mz-feed-grid[data-home-layout='single'] .mz-feed-body {
+    flex: 1;
+    padding: 1.25rem;
+  }
+  .mz-feed-grid[data-home-layout='single'] .mz-feed-title {
+    font-size: 1.125rem;
+  }
+  .mz-feed-grid[data-home-layout='single'] .mz-feed-cover {
+    position: relative;
+    inset: auto;
+    order: -1;
+    width: 100%;
+    height: 12rem;
+    margin-bottom: -1rem;
+    -webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent);
+    mask-image: linear-gradient(to bottom, #000 65%, transparent);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mz-feed-card,
   .mz-feed-cover img {
