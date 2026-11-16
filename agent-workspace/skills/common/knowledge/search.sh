@@ -63,7 +63,7 @@ search "功能 feature" $W/*/feature/*/*.md $W/*/feature/*/*/*.md
 search "bug 修复 bugfix" $W/*/bugfix/*/*.md $W/*/bugfix/*/*/*.md
 search "变更 change" $W/*/change/*/*.md $W/*/change/*/*/*.md
 search "调研 research" $W/*/research/*/*.md $W/*/research/*/*/*.md
-search "Note" $W/*/notes/*.md
+search "Note" $W/*/notes/*/*/*.md $W/*/notes/*.md
 search "约束" $W/skills/custom/sdd/constraints.md $W/skills/common/sdd/constraints.md $W/*/specs/constraints.md
 
 # 提交信息：全部关键词都出现的提交，最多 20 条。

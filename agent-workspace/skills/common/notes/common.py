@@ -3,6 +3,8 @@
 脚本在工作区副本 <项目根目录>/agent-workspace/skills/common/notes/ 中运行（init.sh 从 AgentDevWorkSpace 的 skills/ 复制），
 按自身位置找到项目根目录，按 agent-workspace/.agent/env/agentskill-path 找到 AgentDevWorkSpace。
 """
+import datetime
+import json
 import os
 import re
 import subprocess
@@ -50,6 +52,13 @@ def user_dir_name(root):
     return re.sub(r"[\x00-\x20\x7f!-/:-@\[-`{-~]+", "-", name).strip("-")
 
 
+# Note 类型：notes/ 下的一级目录。git-commit-change 因未记录的提交触发，large-scale-file-change 因工作区大规模改动触发。
+COMMIT_TYPE = "git-commit-change"
+LARGE_TYPE = "large-scale-file-change"
+NOTE_TYPES = (COMMIT_TYPE, LARGE_TYPE)
+DATE_DIR = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
 def notes_dir(root):
     """当前用户的 Note 目录：agent-workspace/<个人目录>/notes。"""
     name = user_dir_name(root)
@@ -58,9 +67,20 @@ def notes_dir(root):
     return root / "agent-workspace" / name / "notes"
 
 
+def day_dir(notes, note_type, day=None):
+    """某类型某天的 Note 目录：notes/<类型>/<YYYY-MM-DD>；day 缺省取今天。"""
+    return notes / note_type / f"{day or datetime.date.today():%Y-%m-%d}"
+
+
+def day_dirs(notes):
+    """当前用户各类型下的全部日期目录；notes/ 下旧的平铺 Note 不在其中。"""
+    return [d for t in NOTE_TYPES if (notes / t).is_dir()
+            for d in sorted((notes / t).iterdir()) if d.is_dir() and DATE_DIR.fullmatch(d.name)]
+
+
 def all_notes(root):
-    """所有人的 Note，用于判断提交是否已记录：别人的提交记在别人的个人目录中。"""
-    return (root / "agent-workspace").glob("*/notes/*.md")
+    """所有人的 Note（含 notes/ 下旧的平铺 Note），用于判断提交是否已记录：别人的提交记在别人的个人目录中。"""
+    return (root / "agent-workspace").glob("*/notes/**/*.md")
 
 
 def base_file(root):
@@ -69,6 +89,10 @@ def base_file(root):
 
 def update_stamp_file(root):
     return ENV / "last-update"
+
+
+def large_base_file(root):
+    return ENV / "large-change-base"
 
 
 def load_config(root):
@@ -80,7 +104,9 @@ def load_config(root):
             user = json5.loads(p.read_text(encoding="utf-8") or "{}")
         except ValueError as e:
             sys.exit(f"配置文件格式错误：{p}：{e}")
-        scan = {**cfg["scan"], **user.get("scan", {})}
+        user_scan = user.get("scan", {})
+        scan = {**cfg["scan"], **user_scan}
+        scan["large_change"] = {**cfg["scan"]["large_change"], **user_scan.get("large_change", {})}
         cfg.update(user)
         cfg["scan"] = scan
     return cfg
@@ -111,9 +137,7 @@ def unrecorded_commits(root, cfg):
     args = ["-C", str(root), "log", "--format=%H%x09%h %s", f"{base}..HEAD" if base else "HEAD"]
     if not scan.get("include_merges", False):
         args.append("--no-merges")
-    # Note 随项目提交：只改动各人 notes/ 的提交不计入，否则提交 Note 本身又会触发新的 Note。
-    excludes = [*scan.get("exclude_paths", []), "agent-workspace/*/notes/*"]
-    args += ["--", *scan.get("paths", []), *(f":(exclude){p}" for p in excludes)]
+    args += pathspec(scan)
     recorded = recorded_hashes(root)
     result = []
     for line in filter(None, git(*args).splitlines()):
@@ -121,6 +145,64 @@ def unrecorded_commits(root, cfg):
         if not any(full.startswith(h) for h in recorded):
             result.append((full, oneline))
     return result
+
+
+def pathspec(scan):
+    """按扫描配置生成 git pathspec（含开头的 --）。
+
+    Note 随项目提交：各人 notes/ 不计入，否则提交 Note 本身又会触发新的 Note。
+    """
+    excludes = [*scan.get("exclude_paths", []), "agent-workspace/*/notes/*"]
+    return ["--", *scan.get("paths", []), *(f":(exclude){p}" for p in excludes)]
+
+
+EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+
+
+def line_count(path):
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return 0
+    if b"\0" in data[:8000]:  # 二进制文件与 git numstat 一致，不计行数
+        return 0
+    return data.count(b"\n") + (1 if data and not data.endswith(b"\n") else 0)
+
+
+def working_changes(root, cfg):
+    """未提交的改动（相对 HEAD，含未跟踪文件），按扫描配置过滤：{文件: 增删行数}。二进制文件记 0 行。"""
+    spec = pathspec(cfg["scan"])
+    head = "HEAD" if git("-C", str(root), "rev-parse", "-q", "--verify", "HEAD") else EMPTY_TREE
+    result = {}
+    out = git("-C", str(root), "diff", head, "--numstat", "--no-renames", "-z", *spec)
+    for rec in filter(None, out.split("\0")):
+        added, deleted, path = rec.split("\t", 2)
+        result[path] = (int(added) if added.isdigit() else 0) + (int(deleted) if deleted.isdigit() else 0)
+    out = git("-C", str(root), "ls-files", "--others", "--exclude-standard", "-z", *spec)
+    for path in filter(None, out.split("\0")):
+        result[path] = line_count(root / path)
+    return result
+
+
+def load_large_base(root):
+    """上次记录的改动快照；不存在或损坏时返回 None。"""
+    try:
+        data = json.loads(large_base_file(root).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return {k: int(v) for k, v in data.items()} if isinstance(data, dict) else None
+
+
+def save_large_base(root, changes):
+    f = large_base_file(root)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(changes, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def large_change_growth(current, base):
+    """相对快照新增的改动：(新增改动的文件数, 新增行数)。"""
+    grown = {f: n - base.get(f, 0) for f, n in current.items() if f not in base or n > base[f]}
+    return len(grown), sum(grown.values())
 
 
 def reset_base(root):

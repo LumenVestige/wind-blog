@@ -19,7 +19,7 @@ agent-workspace/
     ├── bugfix/NNN-<slug>/              bug 修复
     ├── change/NNN-<slug>/              变更：重构、依赖升级、配置或行为调整
     ├── research/NNN-<slug>/            调研：资料收集、方案对比、实验验证与结论
-    └── notes/yy-MM-dd-HH-mm-ss-<topic>.md   Note：改动记录
+    └── notes/<类型>/<YYYY-MM-DD>/HH-mm-ss-<topic>.md   Note：改动记录，类型为 git-commit-change / large-scale-file-change
 ```
 
 feature / bugfix / change / research 的每个目录都有三个文件（`NNN` 是该类型内的编号）：
@@ -32,7 +32,7 @@ feature / bugfix / change / research 的每个目录都有三个文件（`NNN` �
 
 - 其他资料（调研、诊断、验证记录、脚本、截图等）按主题放在需求目录的 `NN-<主题>/` 子目录中，`summary.md`（可选）是需求的总结与验收说明；检索脚本会一并搜索子目录中的 `.md`。
 - `spec.md` 第三行是头部：`类型：…　编号：…　负责人：…　状态：草稿 | 已确认 | 已完成`。状态为草稿的只是提案，不代表已经实现。
-- Note 记录一次改动的结果：标题下有 `时间：`，`## Outcome` 写改了什么、现在的行为，`## Verification` 写验证过什么、哪些没覆盖，`## Git 提交` 列出对应的提交（hash + 提交信息）。
+- Note 记录一次改动的结果：标题下有 `时间：`，`## Outcome` 写改了什么、现在的行为，`## Verification` 写验证过什么、哪些没覆盖，`## Git 提交` 列出对应的提交（hash + 提交信息），large-scale-file-change 的 `## 文件改动` 列出当时未提交的改动；`*-merged.md` 是同一天多条 Note 的合并，每条以 `<!-- source: <原文件名> -->` 开头。
 - git 提交信息以 `[fix]` / `[feature]` / `[research]` / `[del]` / `[update]` 开头，多项改动用分号隔开。
 
 ## 如何检索
@@ -61,7 +61,7 @@ ls agent-workspace/<个人目录>/feature agent-workspace/<个人目录>/bugfix 
 grep -L '状态：已完成' agent-workspace/*/*/[0-9]*/spec.md
 grep -n '^- \[ \]' agent-workspace/*/*/[0-9]*/tasks.md
 # 最近的 Note
-ls agent-workspace/*/notes/ | sort -r | head
+ls -d agent-workspace/*/notes/*/*/ | sort -t/ -k5 -r | head
 ```
 
 ### 3. 追溯：提交、Note、需求、代码
