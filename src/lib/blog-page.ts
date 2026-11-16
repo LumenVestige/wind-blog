@@ -1,9 +1,10 @@
 import type { ArticleReaderProps } from '@/components/blog/article-reader'
 import type { ArticleInfo } from '@/server/blog/articles'
+import type { HomeLayout } from './blog-layout'
 
 export type BlogCategory = { id: number; name: string; articleCount: number }
 export type BlogPageData =
-  | { kind: 'home'; username: string; activated: boolean; categoryId?: number; tags: string[]; keyword?: string; sort?: 'hot';
+  | { kind: 'home'; username: string; activated: boolean; homeLayout: HomeLayout; categoryId?: number; tags: string[]; keyword?: string; sort?: 'hot';
       page: number; pageSize: number; total: number; categories: BlogCategory[]; list: (ArticleInfo & { summaryHtml: string; thumbnailUrl: string })[] }
   | { kind: 'archives'; categoryName: string; tags: string[]; filtered: boolean; list: ArticleInfo[] }
   | { kind: 'categories'; list: BlogCategory[] }

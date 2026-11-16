@@ -125,6 +125,33 @@ describe('modular management settings', () => {
     expect((await snapshot()).appearance.values.wenkaiEnabled).toBe(false)
     expect(getSetting('wenkai_enabled')).toBe('0')
   })
+  it('defaults to a double-column home feed and saves layouts without overwriting newer settings', async () => {
+    const initial = (await snapshot()).appearance
+    expect(initial.values.homeLayout).toBe('double')
+    const selected = { ...initial.values, homeLayout: 'single' }
+    const saved = await save('appearance', selected, initial.version)
+    expect(saved.status).toBe(200)
+    expect(saved.json.data.values.homeLayout).toBe('single')
+    expect(getSetting('home_layout')).toBe('single')
+    closeDb()
+    expect((await snapshot()).appearance.values).toEqual(selected)
+    expect((await save('appearance', initial.values, initial.version)).status).toBe(409)
+    expect((await save('appearance', {
+      colorScheme: initial.values.colorScheme, subtitle: initial.values.subtitle,
+    })).status).toBe(200)
+    expect((await snapshot()).appearance.values.homeLayout).toBe('single')
+    const interaction = (await snapshot()).interaction
+    expect((await save('interaction', { likesEnabled: !interaction.values.likesEnabled })).status).toBe(200)
+    expect((await snapshot()).appearance.values.homeLayout).toBe('single')
+    for (const homeLayout of ['grid', '', null, false, 1, ['single']]) {
+      expect((await save('appearance', { ...selected, subtitle: '不能写入', homeLayout })).status).toBe(400)
+      expect((await snapshot()).appearance.values).toEqual(selected)
+    }
+    expect((await save('appearance', initial.values)).status).toBe(200)
+    expect((await snapshot()).appearance.values.homeLayout).toBe('double')
+    expect(getSetting('home_layout')).toBe('double')
+    expect((await save('interaction', interaction.values)).status).toBe(200)
+  })
   it('saves independent font choices and preserves them for older clients', async () => {
     const initial = (await snapshot()).appearance
     expect(initial.values).toMatchObject({ uiFont: 'inherit', englishFont: 'maple', codeFont: 'maple' })

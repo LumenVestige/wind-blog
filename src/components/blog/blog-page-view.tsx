@@ -35,7 +35,7 @@ function Home({ data }: { data: Extract<BlogPageData, { kind: 'home' }> }) {
       <FeedSearch keyword={keyword || ''} clearHref={blogQuery(username, { ...baseQuery, q: undefined })} hidden={{ categoryId, tag: tags, sort }} />
     </div>
     {list.length === 0 ? <div className="mz-empty" data-feed-list>{keyword || categoryId || tags.length ? '没有找到匹配的文章，请调整筛选条件。' : '还没有公开文章'}</div> :
-      <div className="mz-feed-grid" data-feed-list>{list.map((article) => <ArticleLink key={article.id} className="mz-feed-card" preview={{
+      <div className="mz-feed-grid" data-home-layout={data.homeLayout} data-feed-list>{list.map((article) => <ArticleLink key={article.id} className="mz-feed-card" preview={{
         slug: article.slug, title: article.title, summary: article.summary, publishedLabel: formatDateSlash(article.publishedAt || article.createdAt),
         categoryName: catName(article.categoryId), categoryId: article.categoryId, publishedAt: article.publishedAt || article.createdAt, updatedAt: article.updatedAt, tags: article.tags,
       }}>

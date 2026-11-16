@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { ensureSiteConfig, siteConfigData } from '@/server/blog/site'
+import { ensureSiteConfig, siteConfigData, homeLayout } from '@/server/blog/site'
 import { listPagesPublic } from '@/server/blog/pages'
 import { listStaticPublic } from '@/server/blog/static-sites'
 import { listCategoriesPublic } from '@/server/blog/categories'
@@ -48,6 +48,7 @@ export default async function BlogLayout({ children }: { children: React.ReactNo
   }))
 
   const data: BlogShellData = {
+    homeLayout: homeLayout(),
     siteName: siteName(),
     username: author.username,
     displayName: author.name || author.username,

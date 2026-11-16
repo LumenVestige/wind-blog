@@ -13,6 +13,7 @@ import { dispatch } from '@/server/api/router'
 import { cookieName } from '@/server/http'
 import { passwordTag, signToken } from '@/lib/jwt'
 import { setSettings } from '@/lib/settings'
+import { homePageData } from '@/server/blog/page-data'
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wind-json-pages-'))
 let owner = 0, token = '', publicId = 0, lockedId = 0, categoryId = 0
@@ -41,6 +42,24 @@ beforeAll(async () => {
 afterAll(() => { closeDb(); fs.rmSync(dir, { recursive: true, force: true }) })
 
 describe('blog JSON data for SPA navigation and prefetch', () => {
+  it('uses the same saved home layout for SSR and JSON filtering and pagination', async () => {
+    const hrefs = ['/', '/?sort=hot', `/?categoryId=${categoryId}&tag=Android&page=2`, '/?q=Android&pageSize=24']
+    expect(homePageData(new URLSearchParams()).homeLayout).toBe('double')
+    expect((await page('/')).json.data.page.homeLayout).toBe('double')
+    for (const homeLayout of ['single', 'double']) {
+      setSettings({ home_layout: homeLayout })
+      for (const href of hrefs) {
+        const data = homePageData(new URL(href, 'http://test.local').searchParams)
+        expect(data.homeLayout).toBe(homeLayout)
+        expect((await page(href)).json.data.page).toEqual(JSON.parse(JSON.stringify(data)))
+      }
+    }
+    setSettings({ home_layout: 'unknown-legacy-value' })
+    expect(homePageData(new URLSearchParams()).homeLayout).toBe('double')
+    expect((await page('/')).json.data.page.homeLayout).toBe('double')
+    setSettings({ home_layout: 'double' })
+  })
+
   it('returns full article data in a private JSON envelope without counting prefetches', async () => {
     const before = views(publicId)
     for (let index = 0; index < 2; index++) {

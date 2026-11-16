@@ -55,7 +55,7 @@ export function MizukiShell({
         const showSidebar =
           !SIDEBARLESS_PATHS.has(pathname) && (!articlePage || articleTitle == null || !!panel)
         return (
-    <div data-blog-theme="mizuki" className={cn('mz-shell', pathname === '/' && 'is-home', dark && 'dark')}>
+    <div data-blog-theme="mizuki" data-home-layout={data.homeLayout} className={cn('mz-shell', pathname === '/' && 'is-home', dark && 'dark')}>
       <ThemeInit scheme={scheme} />
       <SiteNavbar data={data} articleTitle={articleTitle || null} articleToc={articleToc} />
 

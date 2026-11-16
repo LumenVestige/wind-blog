@@ -13,7 +13,7 @@ import { adjacentArticles, assertArticleVisible, getArticleBySlug, listByUsernam
 import { renderArticle } from './article-render'
 import { listCategoriesPublic } from './categories'
 import { getArticleTags } from './tags'
-import { ensureSiteConfig, siteConfigData } from './site'
+import { ensureSiteConfig, siteConfigData, homeLayout } from './site'
 import { navigationArticles } from './navigation'
 import { getPagePublic } from './pages'
 import { listStaticPublic } from './static-sites'
@@ -36,7 +36,7 @@ export function homePageData(params: URLSearchParams): Extract<BlogPageData, { k
     page = lastPage
     result = listByUsername(author.username, { ...options, page })
   }
-  return { kind: 'home', username: author.username, activated: cfg.activated, categoryId, tags, keyword, sort,
+  return { kind: 'home', username: author.username, activated: cfg.activated, homeLayout: homeLayout(), categoryId, tags, keyword, sort,
     page, pageSize, total: result.total, categories: listCategoriesPublic(author.username),
     list: result.list.map((article) => ({ ...article, summaryHtml: renderSummaryMarkdown(article.summary), thumbnailUrl: coverThumbnailUrl(article.coverUrl, publicBase()) })) }
 }

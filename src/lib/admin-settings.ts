@@ -1,4 +1,5 @@
 import type { TypographySettings } from './typography'
+import type { HomeLayout } from './blog-layout'
 
 export interface SettingsValues {
   general: {
@@ -7,7 +8,7 @@ export interface SettingsValues {
     faviconUrl: string
     icpNumber: string
   }
-  appearance: { colorScheme: 'system' | 'light' | 'dark'; subtitle: string } & TypographySettings
+  appearance: { colorScheme: 'system' | 'light' | 'dark'; subtitle: string; homeLayout: HomeLayout } & TypographySettings
   content: { aboutArticleId: number; friendsArticleId: number }
   social: { socialLinks: { type: string; url: string; label?: string }[] }
   interaction: { likesEnabled: boolean }

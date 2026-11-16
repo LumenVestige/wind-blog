@@ -1,3 +1,5 @@
+import type { HomeLayout } from '@/lib/blog-layout'
+
 export interface ShellSocialLink {
   type: string
   url: string
@@ -5,6 +7,7 @@ export interface ShellSocialLink {
 }
 
 export interface BlogShellData {
+  homeLayout: HomeLayout
   siteName: string
   username: string
   displayName: string
