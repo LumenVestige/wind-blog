@@ -6,12 +6,12 @@
 
 Note 位于 agent-workspace/<个人目录>/notes/<类型>/<YYYY-MM-DD>/HH-mm-ss-<topic>.md，类型为 git-commit-change 或 large-scale-file-change。
 
-配置：agent-workspace/config/notes.json5（JSON5，字段含义见其中的注释；缺少的键取本 skill 中 config.json5 的默认值）
+配置：agent-workspace/config/config.json5（JSON5，字段含义见其中的注释；缺少的键取本 skill 中 config.json5 的默认值）
 - enabled：false 时不触发 Note、不合并。
 - max_notes：当前用户每个日期目录中的 Note 超过该数量时，把最早的几条按时间顺序合并为一条，使数量回到上限；
   合并保留全部内容（含提交 hash），不删除内容，不处理别人的 Note。
-- auto_update / auto_update_interval_hours / update_url：本脚本不阻止结束时（LLM 任务已结束）调用 update.py 的 trigger()，
-  在后台检查版本、拉取更新或执行待执行的 setup.sh，不阻塞本 hook；与 enabled 相互独立。
+- auto_update / auto_update_interval_hours / update_url：每次运行都调用 update.py 的 trigger()，检查到期时在后台检查版本，
+  需要更新时立即拉取并执行 setup.sh，不阻塞本 hook；与 enabled 相互独立。
 - scan：触发条件。commits 为 true 时，基线之后存在未记录到任何 Note 的提交即触发 git-commit-change；
   include_merges 是否计入 merge 提交；paths / exclude_paths 只统计 / 不统计改动这些路径的提交和工作区改动（git pathspec）；
   large_change：未提交的改动相对上次记录（agent-workspace/.agent/env/large-change-base）新增的文件数或行数达到阈值时触发 large-scale-file-change。
@@ -139,11 +139,9 @@ def main():
     event = hook_input()
     root = project_root()
     cfg = load_config(root)
-    code = check_notes(root, cfg, event) if cfg["enabled"] else 0
-    # 阻止结束时 Agent 会继续工作，此时不触发更新；不阻止时 LLM 任务已结束，更新排在任务之后，在后台进行。
-    if code == 0:
-        update.trigger(root, cfg)
-    return code
+    # 检查到期时在后台更新，不阻塞本 hook。
+    update.trigger(root, cfg)
+    return check_notes(root, cfg, event) if cfg["enabled"] else 0
 
 
 if __name__ == "__main__":

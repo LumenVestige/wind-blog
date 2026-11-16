@@ -4,7 +4,7 @@
 用法（在项目根目录执行）：
   agent-workspace/.agent/env/venv/bin/python agent-workspace/skills/common/notes/create.py [--type <类型>] <topic-in-kebab-case>
 类型：git-commit-change（默认，因未记录的提交触发）或 large-scale-file-change（因工作区大规模改动触发）。
-文件名：agent-workspace/<个人目录>/notes/<类型>/<YYYY-MM-DD>/HH-mm-ss-<topic>.md，文件名不含日期；个人目录名由 git user.name 生成，同 init.sh。
+文件名：agent-workspace/<个人目录>/notes/<类型>/<YYYY-MM-DD>/HH-mm-ss-<topic>.md，文件名不含日期；个人目录名取统一 config.json5 的 personal/peronsal；默认 Git 用 git user.name，非 Git 用电脑用户名。
 
 自动填充：
 - `时间：` 摘要时间戳，取当前时间；

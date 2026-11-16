@@ -56,7 +56,7 @@ agent-workspace/<个人目录>/
 └── notes/                   Note（见 notes skill）
 ```
 
-- 个人目录名由 `git config user.name` 生成（转小写，空格和标点换成 `-`），例如 `Tony Chen` → `tony-chen`；
+- 个人目录名优先取配置 `personal`（兼容 `peronsal`）；默认 Git 根目录取 `git config user.name`，非 Git 目录取电脑用户名，转小写并把空格和标点换成 `-`。修改命名不迁移已有目录；
 - `NNN` 是该类型文件夹内三位递增编号，每种类型单独编号，从 `001` 开始；
 - slug 由名称生成，规则同个人目录名，中文保留，例如 `创建feature:Login Page` → `feature/001-login-page/`，`创建bugfix:登录 超时` → `bugfix/001-登录-超时/`；
 - 模板在本 skill 的 `templates/<类型>/` 下。

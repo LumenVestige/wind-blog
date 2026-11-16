@@ -3,7 +3,7 @@
 # 通常通过 new_feature.sh / new_bugfix.sh / new_change.sh / new_research.sh 调用。
 # 在当前用户的个人目录下新建 agent-workspace/<个人目录>/<类型>/NNN-<slug>/（类型为 feature、bugfix、change、research），
 # 复制该类型的 spec.md、plan.md、tasks.md 模板，填入名称、编号、负责人，最后输出目录的路径。
-# - 个人目录名同 init.sh：git user.name 的 ASCII 字母转小写，空白、标点和控制字符换成 -，合并连续的 -，去掉首尾的 -；
+# - 个人目录名取 config.json5 的 personal/peronsal；默认 Git 根目录取 git user.name，非 Git 取电脑用户名，统一规范化；
 # - slug 由名称按同样规则生成，例如 "Login Page" → login-page，中文原样保留；
 # - NNN 取该类型目录下已有的最大编号加一，每种类型单独编号，从 001 开始；同类型同名已存在时报错；
 # - 模板和约束规范优先取 skills/custom/sdd/，没有时取 skills/common/sdd/。
@@ -42,15 +42,18 @@ if [ "$(basename "$ws")" != agent-workspace ]; then
 fi
 root=$(dirname "$ws")
 
-user_name=$(git -C "$root" config user.name || :)
-user_dir=$(slug "$user_name")
-if [ -z "$user_dir" ]; then
-  echo "未配置 git user.name（或其中没有可用字符），找不到个人目录：请先执行 git config --global user.name <名字>" >&2
-  exit 1
-fi
+py="$ws/.agent/env/venv/bin/python"
+[ ! -f "$ws/.agent/env/python-path" ] || py=$(cat "$ws/.agent/env/python-path")
+helper="$ws/skills/common/_workspace_config.py"
+user_dir=$("$py" "$helper" "$root" --personal)
+user_name=$("$py" "$helper" "$root" --owner)
 
 if [ -d "$ws/skills/custom/sdd/templates" ]; then sdd=custom; else sdd=common; fi
 templates="$ws/skills/$sdd/sdd/templates/$type"
+if [ ! -f "$ws/$user_dir/specs/constraints.md" ]; then
+  mkdir -p "$ws/$user_dir/specs"
+  cp "$ws/skills/$sdd/sdd/personal-constraints.md" "$ws/$user_dir/specs/constraints.md"
+fi
 type_dir="$ws/$user_dir/$type"
 mkdir -p "$type_dir"
 

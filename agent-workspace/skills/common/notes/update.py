@@ -1,36 +1,25 @@
 #!/usr/bin/env python3
-"""AgentDevWorkSpace 自动更新：按版本号判断是否需要更新，在后台进程中进行，不阻塞、不打断正在执行的 LLM 任务。
+"""项目自动更新触发器：欢迎语和 Stop hook 查询版本、启动后台进程。
 
-触发（hook 只启动后台进程，立即返回，不向 stdout 输出）：
-- 会话开始：Claude Code / Codex 的 SessionStart hook（startup、clear）直接执行本脚本，每次都检查；
-- 每轮结束：verify.py（Stop hook）不阻止结束时调用 trigger()，距上次检查（agent-workspace/.agent/env/last-update）超过
-  auto_update_interval_hours 才检查。
-后台进程：
-- --check：请求 update_url（versions 库中 AgentDevWorkSpace/version 的原始内容），与 AgentDevWorkSpace 的 publish/version 比较；
-  低于远端时 git pull --ff-only（AgentDevWorkSpace 工作区有改动时跳过），拉取到新版本后写入 update-ready，等待执行 setup.sh。
-  检查可能与 LLM 任务并行，setup.sh 会覆盖 skills/common/ 和 hook 配置，所以不在这里执行；
-- --setup：存在 update-ready 时，由下一次 Stop（LLM 任务已结束）或 SessionStart（任务尚未开始）启动，执行 setup.sh，成功后删除标记。
-两种后台进程都降低优先级（nice），同一时间只运行一个（update.lock），输出写入 update.log；失败只记日志，下次触发时再试。
-配置：agent-workspace/config/notes.json5 的 auto_update（开关）、auto_update_interval_hours、update_url。
+实际更新委托 scripts/update.sh / agentdev update 共用的跨平台核心，不在项目副本中拉取代码或执行全局 setup。
+--welcome 输出版本提示；--run [--remote N] 后台检查全局安装并刷新当前工作区。
+update-ready 保留失败重试；锁与日志位于当前工作区 .agent/env/。旧 SessionStart 的无参数调用保持空操作。
 """
 import datetime
 import os
 import subprocess
 import sys
-import tempfile
 import time
-import urllib.request
 
 sys.dont_write_bytecode = True  # 不在工作区副本中生成 __pycache__
 
-from common import ENV, git, load_config, project_root, skill_dir, update_stamp_file
+from common import ENV, load_config, project_root, python_path, skill_dir, update_stamp_file
+from _version import parse_version, format_version, fetch_remote_version
 
 READY = ENV / "update-ready"
 LOCK = ENV / "update.lock"
 LOG = ENV / "update.log"
 LOG_LIMIT = 200_000  # 字节，超过时只保留后半部分
-FETCH_TIMEOUT = 10  # 秒
-PULL_TIMEOUT = 120  # 秒
 NICE = 10
 
 
@@ -86,13 +75,13 @@ def release():
         pass
 
 
-def spawn(mode):
-    """启动脱离 hook 的后台进程：新会话、不继承终端，hook 立即返回。"""
+def spawn(*args):
+    """启动脱离调用方的后台进程：新会话、不继承终端和输出管道，调用方立即返回。"""
     ENV.mkdir(parents=True, exist_ok=True)
     with LOG.open("a", encoding="utf-8") as err:
-        subprocess.Popen([str(ENV / "venv" / "bin" / "python"), os.path.abspath(__file__), mode],
+        subprocess.Popen([str(python_path(project_root())), os.path.abspath(__file__), *args],
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=err,
-                         start_new_session=True, close_fds=True)
+                         close_fds=True, start_new_session=True)
 
 
 def due(root, cfg):
@@ -104,112 +93,142 @@ def due(root, cfg):
     return not 0 <= time.time() - last < float(cfg["auto_update_interval_hours"]) * 3600
 
 
-def trigger(root, cfg, session_start=False):
-    """hook 调用：有待执行的 setup 时启动 --setup；否则在会话开始或检查到期时启动 --check。任何异常都不影响 hook。"""
+def trigger(root, cfg, now=False, remote=None):
+    """now 为 True 或检查到期时写入检查时间并启动后台进程；remote 为已取得的远端版本，后台进程不再请求。
+    启动了后台进程时返回 True。任何异常都不影响调用方。"""
     try:
         if not cfg.get("auto_update", True) or running():
-            return
-        if READY.exists():
-            spawn("--setup")
-            return
-        if session_start or due(root, cfg):
-            stamp = update_stamp_file(root)
-            stamp.parent.mkdir(parents=True, exist_ok=True)
-            stamp.write_text(f"{int(time.time())}\n")
-            spawn("--check")
+            return False
+        if not (now or due(root, cfg)):
+            return False
+        stamp = update_stamp_file(root)
+        stamp.parent.mkdir(parents=True, exist_ok=True)
+        stamp.write_text(f"{int(time.time())}\n")
+        spawn("--run", *(["--remote", format_version(remote)] if remote is not None else []))
+        return True
     except Exception as e:  # noqa: BLE001  hook 中不能因更新失败而报错
         log(f"触发更新失败：{e!r}")
+        return False
 
 
-def read_int(text):
-    text = (text or "").strip()
-    return int(text) if text.isdigit() else None
+def read_version(text):
+    try:
+        return parse_version(text, allow_legacy=True)
+    except ValueError:
+        return None
 
 
 def local_version(skill):
     try:
-        return read_int((skill / "publish" / "version").read_text(encoding="utf-8")) or 0
+        return read_version((skill / "publish/version").read_text(encoding="utf-8")) or (0, 0, 0)
     except OSError:
-        return 0
+        return (0, 0, 0)
 
 
-def check(root, cfg):
+def fetch_remote(cfg):
+    """共享主仓库版本源与旧地址迁移规则，不请求已废弃服务。"""
+    try:
+        return fetch_remote_version(cfg.get("update_url"))
+    except RuntimeError as error:
+        log(f"获取远端版本失败：{error}")
+        return None
+
+
+def check(root, cfg, remote=None):
+    """项目 hook 只负责触发；实际更新由独立 update 入口的跨平台核心执行。"""
     skill = skill_dir()
     if not skill:
-        log(f"找不到 AgentDevWorkSpace（{ENV / 'agentskill-path'}），跳过：请重新执行 AgentDevWorkSpace 的 setup.sh")
-        return
-    url = cfg["update_url"]
-    try:
-        with urllib.request.urlopen(url, timeout=FETCH_TIMEOUT) as r:
-            remote = read_int(r.read(64).decode("utf-8", "ignore"))
-    except Exception as e:  # noqa: BLE001
-        log(f"获取远端版本失败：{url}：{e!r}")
+        log("找不到 AgentDevWorkSpace，请先 agentdev setup，再 agentdev init")
         return
     if remote is None:
-        log(f"远端版本不是整数：{url}")
+        remote = fetch_remote(cfg)
+    if remote is None:
         return
-    local = local_version(skill)
-    if local >= remote:
-        log(f"已是最新：本地 {local}，远端 {remote}")
+    manager = skill / "scripts" / "agentdev.py"
+    if not manager.is_file():
+        log("旧版安装缺少全局更新入口，请先执行新版 setup，再 agentdev init")
         return
-    log(f"发现新版本：本地 {local}，远端 {remote}，拉取 {skill}")
-    if git("-C", str(skill), "status", "--porcelain", "--untracked-files=no"):
-        log("AgentDevWorkSpace 工作区有改动，跳过拉取")
-        return
-    # 输出写临时文件而不是管道：超时只杀 git，ssh 等子进程若还持有管道，subprocess.run 会一直等下去。
-    with tempfile.TemporaryFile("w+", encoding="utf-8") as out:
-        try:
-            r = subprocess.run(["git", "-C", str(skill), "pull", "--ff-only"], stdin=subprocess.DEVNULL, stdout=out, stderr=out,
-                               timeout=PULL_TIMEOUT, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
-        except subprocess.TimeoutExpired:
-            log(f"拉取超时（{PULL_TIMEOUT} 秒）")
-            return
-        out.seek(0)
-        if r.returncode:
-            log(f"拉取失败：\n{out.read()}")
-            return
-    now = local_version(skill)
-    if now <= local:
-        log(f"拉取后版本仍为 {now}，未更新")
-        return
-    READY.write_text(f"{now}\n")
-    log(f"已拉取版本 {now}，等待当前任务结束后执行 setup.sh")
+    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+    if (skill / ".agentdev-app").is_file():
+        env["AGENTDEV_HOME"] = str(skill.parent)
+    with LOG.open("a", encoding="utf-8") as out:
+        result = subprocess.run([str(python_path(root)), str(manager), "update", "--project", str(root),
+                                 "--remote", format_version(remote)], stdin=subprocess.DEVNULL,
+                                stdout=out, stderr=out, env=env, timeout=300)
+    if result.returncode:
+        READY.write_text(format_version(remote) + "\n")
+        log(f"更新失败（退出码 {result.returncode}），下次触发时重试")
+    else:
+        READY.unlink(missing_ok=True)
 
 
 def setup(root):
-    if not READY.exists():
-        return
+    """重试当前工作区初始化；setup 命令本身现在只负责全局安装。"""
     skill = skill_dir()
     if not skill:
-        log("找不到 AgentDevWorkSpace，无法执行 setup.sh")
         return
-    # AgentDevWorkSpace 初始化自身时 setup.sh 不接受显式根目录，靠执行目录判断。
-    args = [] if root.resolve() == skill.resolve() else [str(root)]
+    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+    if (skill / ".agentdev-app").is_file():
+        env["AGENTDEV_HOME"] = str(skill.parent)
     with LOG.open("a", encoding="utf-8") as out:
-        r = subprocess.run(["sh", str(skill / "scripts" / "setup.sh"), *args], cwd=root,
-                           stdin=subprocess.DEVNULL, stdout=out, stderr=out)
-    if r.returncode:
-        log(f"setup.sh 失败（退出码 {r.returncode}），保留待执行标记，下次再试")
-        return
-    READY.unlink(missing_ok=True)
-    log(f"已更新到版本 {local_version(skill)}")
+        result = subprocess.run([str(python_path(root)), str(skill / "scripts/agentdev.py"), "init", str(root)],
+                                stdin=subprocess.DEVNULL, stdout=out, stderr=out, env=env, timeout=120)
+    if result.returncode == 0:
+        READY.unlink(missing_ok=True)
+
+
+def welcome(root):
+    """欢迎语中的版本行：当场请求远端版本；本地落后或有待重试的 setup.sh 时立即启动后台更新。"""
+    cfg = load_config(root)
+    skill = skill_dir()
+    local = local_version(skill) if skill else None
+    remote = fetch_remote(cfg)
+    if running():
+        state = "正在后台更新"
+    elif local is None:
+        state = "找不到 AgentDevWorkSpace，请重新执行 setup.sh"
+    elif remote is None:
+        state = "获取远端版本失败，后台重试" if trigger(root, cfg, now=True) else "获取远端版本失败"
+    elif local < remote or READY.exists():
+        if not cfg.get("auto_update", True):
+            state = "有新版本，自动更新已关闭"
+        else:
+            state = "正在后台更新" if trigger(root, cfg, now=True, remote=remote) else "有新版本，启动更新失败"
+    else:
+        state = "已是最新"
+    local_text = format_version(local) if local is not None else "未知"
+    remote_text = format_version(remote) if remote is not None else "未知"
+    if local is not None and remote is not None and local < remote:
+        line = f"发现远端版本更新，由本地{local_text}版本更新到{remote_text}版本"
+        if state != "正在后台更新":
+            line += f"（{state}）"
+        print(line)
+    else:
+        print(f"AgentDevWorkSpace 版本：本地 {local_text}，远端 {remote_text}（{state}）")
 
 
 def main():
     root = project_root()
-    if len(sys.argv) == 1:  # SessionStart hook
-        trigger(root, load_config(root), session_start=True)
+    args = sys.argv[1:]
+    if not args:  # 旧版本注册的 SessionStart hook：检查已改由欢迎语触发
         return 0
-    mode = sys.argv[1]
-    if mode not in ("--check", "--setup"):
-        sys.exit(f"用法：{sys.argv[0]} [--check | --setup]")
-    os.nice(NICE)
+    if args == ["--welcome"]:
+        welcome(root)
+        return 0
+    if args[:1] != ["--run"] or not (len(args) == 1 or (len(args) == 3 and args[1] == "--remote" and read_version(args[2]) is not None)):
+        sys.exit(f"用法：{sys.argv[0]} --welcome | --run [--remote <版本号>]")
+    remote = read_version(args[2]) if len(args) == 3 else None
+    if hasattr(os, "nice"):
+        os.nice(NICE)
     if not acquire():
         return 0
     try:
-        check(root, load_config(root)) if mode == "--check" else setup(root)
+        if READY.exists():  # 上次更新后初始化失败，先补执行
+            log("补执行上次失败的工作区初始化")
+            setup(root)
+        check(root, load_config(root), remote)
     except Exception as e:  # noqa: BLE001
-        log(f"{mode} 异常：{e!r}")
+        log(f"更新异常：{e!r}")
     finally:
         release()
     return 0
