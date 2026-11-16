@@ -1,7 +1,7 @@
 # 个人约束
 
 个人的自定义开发约束，补充项目的通用开发约束（`agent-workspace/skills/common/sdd/constraints.md`；项目定制过 sdd 时在 `skills/custom/sdd/` 中），
-只对本个人目录下的 feature / bugfix / change 生效。与通用约束冲突时以通用约束为准，并在 spec 的约束检查中说明。
+只对本个人目录下的 feature / bugfix / change / research 生效。与通用约束冲突时以通用约束为准，并在 spec 的约束检查中说明。
 
 每条约束写成可以检查的规则，用编号（P1、P2…）方便引用，与通用约束的 C 编号区分；编号只增不改，删除的约束保留编号并标注"已废弃"。
 下面的条目是示例，按个人习惯修改或删除。

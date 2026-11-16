@@ -28,7 +28,8 @@ next-env.d.ts
 # Generated from installed font packages by prepare-fonts.mjs
 /public/fonts/
 /.agents/
-scripts/dev/AgentSkill
+/scripts/dev/AgentDevWorkSpace/
 /agent-workspace/config/
 /agent-workspace/.agent/
 /agent-workspace/*/specs/
+/agent-workspace/.agent/tmp/

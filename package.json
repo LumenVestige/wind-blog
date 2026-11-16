@@ -9,7 +9,7 @@
     "predev": "npm run fonts:prepare",
     "prebuild": "npm run fonts:prepare",
     "dev": "next dev",
-    "setup-agent-skill": "node scripts/dev/agent-skill.mjs",
+    "setup-agent-workspace": "node scripts/dev/agent-workspace.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

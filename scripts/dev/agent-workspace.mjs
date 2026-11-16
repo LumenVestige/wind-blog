@@ -1,33 +1,28 @@
 /**
  * Install or update AgentDevWorkSpace (agent collaboration rules) for this repository.
  * Clones git@github.com:LumenVestige/AgentDevWorkSpace.git into scripts/dev/AgentDevWorkSpace, then runs its
- * setup.sh against the repository root. Safe to re-run: an existing clone is fast-forwarded
- * (skipped when its work tree is dirty) and setup.sh is idempotent.
+ * setup.sh against the repository root. On repeat runs, an existing clone is updated with
+ * git pull --ff-only before setup.sh runs. An update failure stops initialization.
  *
- *   npm run setupagent
+ *   npm run setup-agent-workspace
  *
- * AgentDevWorkSpace is a separate repository; its setup.sh adds the clone and the AGENTS.md / CLAUDE.md
- * symlinks to .git/info/exclude, so nothing of it is committed here.
+ * The clone and local runtime configuration are ignored. Shared workspace skills and
+ * project instructions are versioned in this repository.
  */
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 
-const repo = process.env.AGENT_SKILL_REPO || 'git@github.com:LumenVestige/AgentDevWorkSpace.git'
+const repo = process.env.AGENT_WORKSPACE_REPO || 'git@github.com:LumenVestige/AgentDevWorkSpace.git'
 const root = path.resolve(fileURLToPath(new URL('../../', import.meta.url)))
 const skillDir = path.join(root, 'scripts/dev/AgentDevWorkSpace')
 
 const run = (file, args, options = {}) => execFileSync(file, args, { stdio: 'inherit', ...options })
-const capture = (file, args) => execFileSync(file, args, { encoding: 'utf8' })
 
 if (fs.existsSync(path.join(skillDir, '.git'))) {
   console.log(`更新 AgentDevWorkSpace: ${skillDir}`)
-  if (capture('git', ['-C', skillDir, 'status', '--porcelain']).trim()) {
-    console.warn('AgentDevWorkSpace 工作区有改动，跳过 git pull')
-  } else {
-    run('git', ['-C', skillDir, 'pull', '--ff-only'])
-  }
+  run('git', ['-C', skillDir, 'pull', '--ff-only'])
 } else if (fs.existsSync(skillDir)) {
   console.error(`${skillDir} 已存在但不是 git 仓库，请先移除`)
   process.exit(1)

@@ -1,7 +1,7 @@
 #!/bin/sh
-# 用法（在项目根目录执行）：sh agent-workspace/skills/common/sdd/new.sh <feature|bugfix|change> <名称>
-# 通常通过 new_feature.sh / new_bugfix.sh / new_change.sh 调用。
-# 在当前用户的个人目录下新建 agent-workspace/<个人目录>/<类型>/NNN-<slug>/（类型为 feature、bugfix、change），
+# 用法（在项目根目录执行）：sh agent-workspace/skills/common/sdd/new.sh <feature|bugfix|change|research> <名称>
+# 通常通过 new_feature.sh / new_bugfix.sh / new_change.sh / new_research.sh 调用。
+# 在当前用户的个人目录下新建 agent-workspace/<个人目录>/<类型>/NNN-<slug>/（类型为 feature、bugfix、change、research），
 # 复制该类型的 spec.md、plan.md、tasks.md 模板，填入名称、编号、负责人，最后输出目录的路径。
 # - 个人目录名同 init.sh：git user.name 的 ASCII 字母转小写，空白、标点和控制字符换成 -，合并连续的 -，去掉首尾的 -；
 # - slug 由名称按同样规则生成，例如 "Login Page" → login-page，中文原样保留；
@@ -19,8 +19,8 @@ slug() {
 esc() { printf '%s' "$1" | sed 's/[\\|&]/\\&/g'; }
 
 type=$1
-case "$type" in feature|bugfix|change) shift ;; *)
-  echo "用法：sh $0 <feature|bugfix|change> <名称>" >&2
+case "$type" in feature|bugfix|change|research) shift ;; *)
+  echo "用法：sh $0 <feature|bugfix|change|research> <名称>" >&2
   exit 1 ;;
 esac
 name=$*
