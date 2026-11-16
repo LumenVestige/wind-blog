@@ -5,10 +5,13 @@
   enabled: true,
   // 每个日期目录（notes/<类型>/<YYYY-MM-DD>/）的 Note 上限。超出时 verify.py 把最早的几条合并为一条，使数量回到上限，内容不删除。
   max_notes: 100,
-  // 自动更新开关。true 时 verify.py 运行前检查是否到期，到期则拉取 AgentDevWorkSpace（git pull --ff-only）、重新执行 setup.sh，再重新调用 verify.py。
+  // 自动更新开关。true 时 update.py 在会话开始（SessionStart hook）和检查到期时（Stop hook）于后台比较版本号：
+  // 本地 AgentDevWorkSpace 的 publish/version 低于 update_url 的版本时拉取（git pull --ff-only），当前 LLM 任务结束后再执行 setup.sh。
   auto_update: true,
-  // 自动更新的检查时长（小时）。距上次更新（agent-workspace/.agent/env/last-update）超过该时长即到期。
+  // 版本检查的间隔（小时），只作用于 Stop hook；会话开始时每次都检查。距上次检查（agent-workspace/.agent/env/last-update）超过该时长即到期。
   auto_update_interval_hours: 24,
+  // 远端版本号：versions 库中 AgentDevWorkSpace/version 的原始内容（https://github.com/LumenVestige/versions/blob/main/AgentDevWorkSpace/version）。
+  update_url: "https://raw.githubusercontent.com/LumenVestige/versions/main/AgentDevWorkSpace/version",
   // 触发 Note 的扫描规则（verify.py 判断是否触发、create.py 填入提交时共用）。
   scan: {
     // 基线之后存在未记录到任何 Note 的提交时触发。false 时不按提交触发。

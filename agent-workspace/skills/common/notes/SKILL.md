@@ -54,7 +54,16 @@ agent-workspace/.agent/env/venv/bin/python agent-workspace/skills/common/notes/v
 - 基线之后有提交的 hash 没出现在任何人的 Note 中时，提示写 `git-commit-change` Note；只改动各人 `notes/` 的提交不计入；
 - 未提交的改动（含未跟踪文件，不含各人 `notes/`）相对上次记录新增的文件数或行数达到 `scan.large_change` 的阈值时，提示写 `large-scale-file-change` Note；改动被提交或撤销后从记录中扣除，不会误触发；首次运行只建立记录；
 - 当前用户某个类型某个日期目录的 Note 超过 `max_notes` 时，把最早的几条按时间顺序合并为一个 `<最早一条的 HH-mm-ss>-merged.md`，使数量回到上限：每条保留全部内容和来源文件名（`<!-- source: … -->`，标题降一级），合并文件可再次参与合并；不删除内容，不处理别人的 Note；
-- 运行前先检查自动更新：到期则拉取 AgentDevWorkSpace（`git pull --ff-only`，工作区有改动时跳过）、重新执行 `setup.sh`，再重新调用 `verify.py` 继续流程。
+- 不阻止结束时（LLM 任务已结束）调用 `update.py` 触发自动更新，见下节。
+
+## 自动更新
+
+`update.py` 按版本号判断 AgentDevWorkSpace 是否需要更新，全部在后台进程中进行，hook 立即返回，不阻塞、不打断正在执行的 LLM 任务：
+
+- 触发：每次会话开始（SessionStart hook，startup / clear）都检查；每轮结束时（verify.py 不阻止结束）距上次检查超过 `auto_update_interval_hours` 才检查；
+- 检查：请求 `update_url`（versions 库的 `AgentDevWorkSpace/version`），与 AgentDevWorkSpace 的 `publish/version` 比较；本地低于远端时 `git pull --ff-only`（AgentDevWorkSpace 工作区有改动时跳过），拉取到新版本后写入 `agent-workspace/.agent/env/update-ready`；
+- 执行 setup.sh：setup.sh 会覆盖 `skills/common/` 和 hook 配置，所以不在检查时执行，而是排在 LLM 任务之后：存在 `update-ready` 时，由下一次 Stop（不阻止结束）或 SessionStart 启动后台进程执行 setup.sh，成功后删除标记；
+- 后台进程降低优先级（nice），同一时间只运行一个（`update.lock`）；过程和失败原因写入 `agent-workspace/.agent/env/update.log`，失败不影响 hook，下次触发时再试。
 
 ## 配置
 
@@ -63,5 +72,6 @@ agent-workspace/.agent/env/venv/bin/python agent-workspace/skills/common/notes/v
 - `enabled`：是否开启 Note 校验；
 - `max_notes`：每个日期目录（`notes/<类型>/<YYYY-MM-DD>/`）的 Note 上限，超过时合并最早的，默认 100；
 - `auto_update`：是否开启自动更新，默认开启；与 `enabled` 相互独立；
-- `auto_update_interval_hours`：自动更新的检查时长（小时），默认 24，上次更新时间记在 `agent-workspace/.agent/env/last-update`；
+- `auto_update_interval_hours`：每轮结束时版本检查的间隔（小时），默认 24，上次检查时间记在 `agent-workspace/.agent/env/last-update`；会话开始时每次都检查；
+- `update_url`：远端版本号地址，默认 versions 库 `AgentDevWorkSpace/version` 的原始内容（`https://raw.githubusercontent.com/LumenVestige/versions/main/AgentDevWorkSpace/version`）；
 - `scan`：触发条件。`commits` 为 true 时存在未记录的提交即触发；`include_merges` 是否计入 merge 提交；`paths` / `exclude_paths` 只统计 / 不统计改动这些路径的提交和工作区改动（git pathspec）；`large_change`（`enabled`、`files` 默认 20、`lines` 默认 1000）是大规模改动的触发阈值，改动快照记在 `agent-workspace/.agent/env/large-change-base`。
