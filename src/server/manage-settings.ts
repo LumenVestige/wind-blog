@@ -6,6 +6,7 @@ import {
   ensureSiteConfig,
   siteConfigData,
   saveThemeConfig,
+  homeLayout,
 } from '@/server/blog/site'
 import {
   settingsSections,
@@ -16,6 +17,7 @@ import {
 import { navigationArticleIds, saveNavigationArticles } from '@/server/blog/navigation'
 import { typographySettings } from '@/server/typography'
 import { fontSettingKeys, fontSettingOptions } from '@/lib/typography'
+import { homeLayoutOptions } from '@/lib/blog-layout'
 
 function version(value: unknown) {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex')
@@ -36,6 +38,7 @@ export function manageSettingsSnapshot(userId: number): SettingsSnapshot {
     appearance: {
       colorScheme: config.colorScheme,
       subtitle: config.subtitle,
+      homeLayout: homeLayout(),
       ...typographySettings(),
     },
     content: navigationArticleIds(userId),
@@ -136,6 +139,8 @@ export function saveManageSettings(
     } else if (key === 'appearance') {
       if (!['light', 'dark', 'system'].includes(String(value.colorScheme)))
         throw new ApiError('请选择有效的明暗模式', 1, 400)
+      if (value.homeLayout !== undefined && !homeLayoutOptions.some(option => option.value === value.homeLayout))
+        throw new ApiError('请选择有效的首页布局', 1, 400)
       if (value.wenkaiEnabled !== undefined && typeof value.wenkaiEnabled !== 'boolean')
         throw new ApiError('中文字体开关格式不正确', 1, 400)
       const fonts: Record<string, string> = {}
@@ -152,6 +157,8 @@ export function saveManageSettings(
       })
       if (value.wenkaiEnabled !== undefined)
         setSettings({ wenkai_enabled: value.wenkaiEnabled ? '1' : '0' })
+      if (value.homeLayout !== undefined)
+        setSettings({ home_layout: value.homeLayout as string })
       setSettings(fonts)
     } else if (key === 'content') {
       saveNavigationArticles(userId, value)

@@ -1,9 +1,9 @@
 // Note 配置。init.sh（由 setup.sh 调用）首次接入时复制到项目的 agent-workspace/config/notes.json5，之后不覆盖。
 // 缺少的字段取 agent-workspace/skills/common/notes/config.json5（本文件的原始版本）的默认值，可以只保留需要修改的字段。
 {
-  // Note 开关。false 时 verify.py 不触发 Note，也不按上限删除。
+  // Note 开关。false 时 verify.py 不触发 Note，也不按上限合并。
   enabled: true,
-  // 每人保留的 Note 上限。个人目录的 Note 超出时 verify.py 按文件名中的时间删除最早的。
+  // 每个日期目录（notes/<类型>/<YYYY-MM-DD>/）的 Note 上限。超出时 verify.py 把最早的几条合并为一条，使数量回到上限，内容不删除。
   max_notes: 100,
   // 自动更新开关。true 时 verify.py 运行前检查是否到期，到期则拉取 AgentDevWorkSpace（git pull --ff-only）、重新执行 setup.sh，再重新调用 verify.py。
   auto_update: true,
@@ -19,5 +19,12 @@
     paths: [],
     // 不统计只改动了这些路径的提交（git pathspec），例如 ["docs", "*.md"]。
     exclude_paths: [],
+    // 工作区大规模改动：未提交的改动（含未跟踪文件，同样按 paths / exclude_paths 过滤）相对上次记录新增的
+    // 文件数达到 files 或行数（增 + 删）达到 lines 时，触发 large-scale-file-change Note。
+    large_change: {
+      enabled: true,
+      files: 20,
+      lines: 1000,
+    },
   },
 }

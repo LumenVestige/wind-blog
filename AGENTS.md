@@ -76,7 +76,7 @@ npm run migrate -- --old-url ... --new-url ...
 - `<个人目录>/`：每人一个，目录名由 `git config user.name` 生成（转小写，空格和标点换成 `-`，例如 `Tony Chen` → `tony-chen`），除 `specs/` 外随项目提交；
   - `specs/`：个人的自定义约束 `constraints.md`，补充通用开发约束（见 `sdd` skill）；setup 时写入 `.gitignore`，不提交；
   - `feature/`、`bugfix/`、`change/`、`research/`：每个新功能、bug 修复、变更、调研一个目录 `NNN-<slug>/`，四种类型同级且独立编号；根目录只放 `spec.md`、`plan.md`、`tasks.md` 和可选的 `summary.md`，其他文件按主题归类到 `NN-<主题>/` 子目录（见 `sdd` skill「需求目录内的文件」，Stop hook 会检查）；
-  - `notes/`：Note 记录（见 `notes` skill）；只改动各人 `notes/` 的提交不会触发新的 Note；
+  - `notes/`：Note 记录（见 `notes` skill），按类型分 `git-commit-change/`、`large-scale-file-change/`，其下按 `YYYY-MM-DD/` 归档；只改动各人 `notes/` 的提交不会触发新的 Note；
 - `config/`：配置，`notes.json5` 见 `notes` skill；不提交；
 - `.agent/`：本机使用，不提交；
   - `env/`：`venv/` 是 `setup.sh` 创建的 Python 环境，依赖由 `deps.sh` 安装，skill 中的 Python 脚本都用它运行；另有 Note 校验的状态文件和 AgentDevWorkSpace 的路径；
@@ -88,7 +88,7 @@ npm run migrate -- --old-url ... --new-url ...
 SDD 流程、Note、Git 提交规则和开发知识库检索封装成 skill，在 `agent-workspace/skills/common/` 下；`init.sh` 把每个 skill 链接到 `.claude/skills/`（Claude Code 按需加载，同名时指向 `custom/`）。用到时读取对应的 `SKILL.md`（`custom/` 中有同名 skill 时读 `custom/` 中的）：
 
 - `sdd`（`agent-workspace/skills/common/sdd/SKILL.md`）：用户输入「创建feature:<名称>」「创建bugfix:<名称>」「创建change:<名称>」「创建research:<名称>」（或 new_feature / new_bugfix / new_change / new_research <名称>）时，按它创建对应的目录；新功能和跨模块的改动，必须先读通用开发约束和个人约束，再按它写 spec / plan / tasks，spec 中逐条做约束检查后才能实现。
-- `notes`（`agent-workspace/skills/common/notes/SKILL.md`）：改变行为、架构、接口或数据格式的改动，必须写一条 Note；Stop hook 提示有提交尚未记录到 Note 时，按它创建。
+- `notes`（`agent-workspace/skills/common/notes/SKILL.md`）：改变行为、架构、接口或数据格式的改动，必须写一条 Note；Stop hook 提示有提交尚未记录到 Note、或工作区有大规模改动时，按它创建。
 - `knowledge`（`agent-workspace/skills/common/knowledge/SKILL.md`）：搜索或回顾历史开发痕迹（以前做过什么、某个需求或 bug 的方案、为什么这样设计、某笔提交的来龙去脉）时，按它检索，用检索到的文档作为依据回答。
 - `git-commit`（`agent-workspace/skills/common/git-commit/SKILL.md`）：每笔提交信息必须以 `[fix]` / `[feature]` / `[research]` / `[del]` / `[update]` 标签开头；提交前按它编写提交信息。
 

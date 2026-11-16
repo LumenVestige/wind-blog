@@ -2,11 +2,16 @@ import { get, parseJson, run, toBool } from '@/db'
 import { ApiError } from '@/lib/api'
 import { isoToUnix } from '@/lib/utils'
 import { getSetting, setSetting } from '@/lib/settings'
+import { normalizeHomeLayout } from '@/lib/blog-layout'
 import { getOwner } from '../tenant'
 import { expandUrl } from '../images'
 
 export type ThemeId = 'mizuki' | 'chirpy' | 'simple'
 export type ColorScheme = 'light' | 'dark' | 'system'
+
+export function homeLayout() {
+  return normalizeHomeLayout(getSetting('home_layout'))
+}
 
 export interface SocialLink {
   type: string

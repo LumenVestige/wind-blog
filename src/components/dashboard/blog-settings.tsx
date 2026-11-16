@@ -52,6 +52,7 @@ import { RequestError } from '@/components/ui/request-error'
 import { AdminHeading } from './admin-ui'
 import { AccountSettings } from './site-account-settings'
 import { uiFontOptions, englishFontOptions, codeFontOptions } from '@/lib/typography'
+import { homeLayoutOptions } from '@/lib/blog-layout'
 
 function useModule<S extends SettingsSection>(
   section: S,
@@ -315,6 +316,22 @@ function Appearance({ initial }: { initial: SettingsSnapshot['appearance'] }) {
       description="Mizuki 是当前维护的博客主题。"
       state={form}
     >
+      <Field>
+        <FieldLabel id="home-layout-label">首页布局</FieldLabel>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          value={value.homeLayout}
+          onValueChange={(layout) => {
+            if (layout) change('homeLayout', layout as SettingsValues['appearance']['homeLayout'])
+          }}
+          aria-labelledby="home-layout-label"
+          aria-describedby="home-layout-description"
+        >
+          {homeLayoutOptions.map(option => <ToggleGroupItem key={option.value} value={option.value}>{option.label}</ToggleGroupItem>)}
+        </ToggleGroup>
+        <FieldDescription id="home-layout-description">设置首页文章列表的列数，默认双列；窄屏下自动显示为单列。</FieldDescription>
+      </Field>
       <Field>
         <FieldLabel id="scheme-label">默认明暗</FieldLabel>
         <ToggleGroup

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """会话开始时（Claude Code / Codex 的 SessionStart hook，新对话或 /clear）展示 SDD 欢迎语。
 
-输出 JSON：systemMessage 显示给用户（内容为同目录 welcome.md）；additionalContext 交给 Agent，说明快捷命令的处理方式。
+输出 JSON：systemMessage 供客户端展示；additionalContext 交给 Agent，说明快捷命令的处理方式。
+Codex CLI 输入前的欢迎语由 scripts/codex.sh 启动入口打印，不要求 Agent 在首次回复复述。
 读不到 welcome.md 时不输出，不影响会话。
 """
 import json

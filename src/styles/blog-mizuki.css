@@ -927,7 +927,7 @@ html:has([data-blog-theme='mizuki']) {
   }
 }
 
-/* ---------- home feed (GoAlgo blog plaza-style two-column feed) ---------- */
+/* ---------- home feed ---------- */
 
 .mz-feed-toolbar {
   --mz-feed-toolbar-h: 2.75rem;
@@ -1157,6 +1157,9 @@ html:has([data-blog-theme='mizuki']) {
 
 }
 
+[data-home-layout='single'] { --mz-feed-columns: 1; }
+[data-home-layout='double'] { --mz-feed-columns: 2; }
+
 .mz-feed-grid {
   display: grid;
   flex: 0 0 auto;
@@ -1167,7 +1170,7 @@ html:has([data-blog-theme='mizuki']) {
 
 @media (min-width: 768px) {
   .mz-feed-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--mz-feed-columns, 2), minmax(0, 1fr));
   }
 }
 
