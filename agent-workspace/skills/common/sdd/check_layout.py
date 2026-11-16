@@ -10,7 +10,7 @@
 - 作为 Claude Code / Codex 的 Stop hook：只检查当前用户个人目录中新增（未提交）的文件，已提交的旧文件不追溯；
   有未归类的文件时以退出码 2 把清单交回 Agent；Agent 已因 Stop hook 继续过一次（stop_hook_active）时只提示不再阻止，避免循环。
 - 手动执行加 --all：检查当前用户全部需求目录（含已提交的文件），有问题时退出码 1。
-非 git 工程、未配置 git user.name 或没有需求目录时什么都不做。
+非 Git 工程检查当前 personal 的全部需求目录；命名遵循统一 config.json5。
 """
 import json
 import re
@@ -20,6 +20,10 @@ import sys
 from pathlib import Path
 
 sys.dont_write_bytecode = True  # 不在工作区副本中生成 __pycache__
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if not (Path(__file__).resolve().parent.parent / "_workspace_config.py").is_file():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "common"))
+from _workspace_config import personal_name
 
 BLOCK = 2  # Stop hook：退出码 2 阻止结束，stderr 交给 Agent
 ROOT_FILES = {"spec.md", "plan.md", "tasks.md", "summary.md"}
@@ -45,9 +49,7 @@ def git(root, *args):
 
 
 def user_dir_name(root):
-    """与 init.sh、new.sh 一致：git user.name 的 ASCII 字母转小写，空白、标点和控制字符换成 -，合并连续的 -，去掉首尾的 -。"""
-    name = re.sub(r"[A-Z]", lambda m: m.group().lower(), (git(root, "config", "user.name") or "").strip())
-    return re.sub(r"[\x00-\x20\x7f!-/:-@\[-`{-~]+", "-", name).strip("-")
+    return personal_name(root)
 
 
 def new_files(root, base):
@@ -114,13 +116,12 @@ def main():
     if [x.name for x in here.parents[2:4]] != ["skills", "agent-workspace"]:
         sys.exit(f"{here} 不是工作区中的 sdd skill：请运行 <项目根目录>/agent-workspace/skills/common/sdd/check_layout.py")
     root = here.parents[4]
-    if git(root, "rev-parse", "--is-inside-work-tree") is None:
-        return 0
+    is_git = git(root, "rev-parse", "--is-inside-work-tree") is not None
     user = user_dir_name(root)
     base = f"agent-workspace/{user}"
     if not user or not (root / base).is_dir():
         return 0
-    found = problems(all_files(root, base) if manual else new_files(root, base), base)
+    found = problems(all_files(root, base) if manual or not is_git else new_files(root, base), base)
     if not found:
         if manual:
             print("需求目录已全部归类")

@@ -12,13 +12,17 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))
+if not (HERE.parent / "_workspace_config.py").is_file():
+    sys.path.insert(0, str(HERE.parent.parent / "common"))
+from _workspace_config import load_config as workspace_config, personal_name
 ROOT = HERE.parents[3]  # 项目根目录（本文件位于 agent-workspace/skills/common/notes/）
 ENV = ROOT / "agent-workspace" / ".agent" / "env"
 
 try:
     import json5
 except ImportError:
-    sys.exit(f"缺少依赖 json5：请重新执行 AgentDevWorkSpace 的 setup.sh，并用 {ENV / 'venv' / 'bin' / 'python'} 运行")
+    sys.exit(f"缺少依赖 json5：请执行 agentdev setup 和 agentdev init，并使用 {ENV / 'python-path'} 记录的解释器运行")
 
 # hook 环境会导出 GIT_DIR，影响 git -C 的结果。
 for var in ("GIT_DIR", "GIT_WORK_TREE"):
@@ -32,7 +36,7 @@ def git(*args):
 
 def project_root():
     """按本文件的位置取项目根目录；不在工作区副本中运行（例如直接运行 AgentDevWorkSpace 模板包中的脚本）时报错退出。"""
-    if [x.name for x in HERE.parents[:3]] != ["common", "skills", "agent-workspace"]:
+    if HERE.parent.name not in {"common", "custom"} or [x.name for x in HERE.parents[1:3]] != ["skills", "agent-workspace"]:
         sys.exit(f"{HERE} 不是工作区中的 notes skill：请运行 <项目根目录>/agent-workspace/skills/common/notes/ 下的脚本")
     return ROOT
 
@@ -46,10 +50,21 @@ def skill_dir():
     return d if (d / "scripts" / "setup.sh").is_file() else None
 
 
+def python_path(root):
+    """优先使用全局安装记录的解释器，兼容旧项目本地 venv。"""
+    env = root / "agent-workspace" / ".agent" / "env"
+    try:
+        text = (env / "python-path").read_text(encoding="utf-8").strip()
+        if text:
+            return Path(text)
+    except OSError:
+        pass
+    return env / "venv" / "bin/python"
+
+
 def user_dir_name(root):
-    """与 init.sh 一致：git user.name 的 ASCII 字母转小写，空白、标点和控制字符换成 -，合并连续的 -，去掉首尾的 -；非 ASCII 字符原样保留。"""
-    name = re.sub(r"[A-Z]", lambda m: m.group().lower(), git("-C", str(root), "config", "user.name"))
-    return re.sub(r"[\x00-\x20\x7f!-/:-@\[-`{-~]+", "-", name).strip("-")
+    """所有工作区命令共用 personal/peronsal、Git 和系统用户名规则。"""
+    return personal_name(root)
 
 
 # Note 类型：notes/ 下的一级目录。git-commit-change 因未记录的提交触发，large-scale-file-change 因工作区大规模改动触发。
@@ -63,7 +78,7 @@ def notes_dir(root):
     """当前用户的 Note 目录：agent-workspace/<个人目录>/notes。"""
     name = user_dir_name(root)
     if not name:
-        sys.exit("未配置 git user.name（或其中没有可用字符），找不到个人目录：请先执行 git config --global user.name <名字>")
+        sys.exit("找不到个人目录，请检查 config.json5 中的 personal 配置")
     return root / "agent-workspace" / name / "notes"
 
 
@@ -96,20 +111,11 @@ def large_base_file(root):
 
 
 def load_config(root):
-    """读取 agent-workspace/config/notes.json5，缺少的键用本 skill 的默认配置 config.json5 补齐。"""
-    cfg = json5.loads((HERE / "config.json5").read_text(encoding="utf-8"))
-    p = root / "agent-workspace" / "config" / "notes.json5"
-    if p.exists():
-        try:
-            user = json5.loads(p.read_text(encoding="utf-8") or "{}")
-        except ValueError as e:
-            sys.exit(f"配置文件格式错误：{p}：{e}")
-        user_scan = user.get("scan", {})
-        scan = {**cfg["scan"], **user_scan}
-        scan["large_change"] = {**cfg["scan"]["large_change"], **user_scan.get("large_change", {})}
-        cfg.update(user)
-        cfg["scan"] = scan
-    return cfg
+    """读取统一 config.json5，兼容旧 notes.json5；保留自定义 notes 默认值。"""
+    try:
+        return workspace_config(root, HERE / "config.json5")
+    except ValueError as error:
+        sys.exit(f"配置文件格式错误：{error}")
 
 
 def recorded_hashes(root):

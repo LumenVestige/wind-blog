@@ -13,7 +13,7 @@ description: 开发知识库检索。用户要搜索或回顾历史开发痕迹�
 ```
 agent-workspace/
 ├── skills/common/sdd/constraints.md   通用开发约束（项目定制时在 skills/custom/sdd/ 中），编号 C1、C2…
-└── <个人目录>/                         每人一个，目录名由 git user.name 生成，例如 tony-chen
+└── <个人目录>/                         每人一个，目录名遵循 config.json5 的 personal/peronsal 与默认用户名规则
     ├── specs/constraints.md            个人约束，编号 P1、P2…
     ├── feature/NNN-<slug>/             新功能
     ├── bugfix/NNN-<slug>/              bug 修复
