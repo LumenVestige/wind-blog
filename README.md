@@ -91,23 +91,7 @@ npm test             # 单元 / API / 插件契约测试
 npm run db:migrate   # 应用 schema
 npm run db:seed      # 初始化站管
 npm run migrate      # 旧站迁移
-
-npm run setup-agent-workspace   # 接入 / 更新 AgentDevWorkSpace（可选，见下）
 ```
-
-## AgentDevWorkSpace（可选）
-
-[AgentDevWorkSpace](https://github.com/LumenVestige/AgentDevWorkSpace) 是通用的 Agent 协作工作区。接入或更新：
-
-```bash
-npm run setup-agent-workspace
-```
-
-首次执行会将仓库克隆到 `scripts/dev/AgentDevWorkSpace`；重复执行时先运行 `git pull --ff-only` 更新已有仓库，再执行 `setup.sh`。更新失败时终止，不继续初始化。
-
-`setup.sh` 会初始化 `agent-workspace/`、项目约定、Python 虚拟环境、Stop hook 和 `commit-msg` 标签校验。工具仓库和本机配置不纳入版本管理，通用技能与改动记录随项目提交。需要换用其他仓库地址时设置 `AGENT_WORKSPACE_REPO`。
-
-Codex 中新增或修改的 Hook 需要在客户端重新审阅并信任，才能自动执行。
 
 ## 技术栈
 
@@ -123,7 +107,6 @@ src/
   server/                  业务逻辑（users、blog/*、api 路由分发）
   components/              UI（ui 基础组件、blog、dashboard）
 scripts/migrate.ts         旧站迁移 CLI
-scripts/dev/agent-workspace.mjs 接入 / 更新 AgentDevWorkSpace
 tests/                     单元 / API / 插件契约测试
 ```
 

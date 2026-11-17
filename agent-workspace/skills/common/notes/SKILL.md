@@ -61,7 +61,7 @@ agent-workspace/.agent/env/venv/bin/python agent-workspace/skills/common/notes/v
 仅支持 macOS/Linux。全局安装使用 `agentdev setup`，项目初始化使用 `agentdev init`；实际更新拆到 `update.sh`，与 `agentdev update` 共用跨平台核心。
 
 - `update.py` 只负责欢迎语/Stop hook 的版本查询、后台触发、项目锁和日志；不再执行全局 setup 或在项目副本中 git pull。
-- 欢迎语 `--welcome` 每次检查，Stop 按 `auto_update_interval_hours` 到期检查；已有远端版本传给后台进程，避免重复查询。
+- 欢迎语 `--welcome` 每次检查，Stop 按 `auto_update_interval_hours` 到期检查；已有远端版本传给后台进程，避免重复查询。版本查询默认按 API → Raw 回退，每个接口独立超时 5 秒，不平分超时。
 - 后台通过全局程序更新安装目录，并重新初始化当前工作区，保留 custom、个人约束和 Note。失败记录 update-ready，之后重试。
 - 版本使用大版本.小版本.补丁版本的整数三元组比较，例如 0.9.10 > 0.9.2；兼容读取旧一、两段版本并补齐三段。唯一版本源是主仓库 master 的 publish/version，旧配置地址自动映射，init 会保留注释并迁移。发现更新时提示“发现远端版本更新，由本地0.3.0版本更新到0.3.1版本”。
 - 后台进程使用 POSIX 会话分离与存活检查；全局程序另有安装/更新互斥锁。

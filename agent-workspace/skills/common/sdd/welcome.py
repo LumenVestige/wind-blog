@@ -49,8 +49,9 @@ def version_line():
     if not updater.is_file():
         updater = WS / "skills" / "common" / "notes" / "update.py"
     try:
+        # API 与 Raw 的请求超时各为 5 秒，额外预留解释器启动和结果处理时间。
         r = subprocess.run([interpreter(), str(updater), "--welcome"],
-                           stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=10)
+                           stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=15)
         line = r.stdout.strip()
         if r.returncode == 0 and line:
             return line

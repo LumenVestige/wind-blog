@@ -96,8 +96,6 @@ def render_welcome(text, version="", color=False, columns=80):
             lines.pop(0)
     if version:
         output.append(render_version(version, color))
-    if output:
-        output.append("")
     index = 0
     while index < len(lines):
         line = lines[index]

@@ -20,8 +20,6 @@ READY = ENV / "update-ready"
 LOCK = ENV / "update.lock"
 LOG = ENV / "update.log"
 LOG_LIMIT = 200_000  # 字节，超过时只保留后半部分
-FETCH_TIMEOUT = 10  # 秒
-WELCOME_TIMEOUT = 3  # 秒，欢迎语当场请求远端版本的超时，避免拖慢会话开始
 NICE = 10
 
 
@@ -127,10 +125,10 @@ def local_version(skill):
         return (0, 0, 0)
 
 
-def fetch_remote(cfg, timeout):
+def fetch_remote(cfg):
     """共享主仓库版本源与旧地址迁移规则，不请求已废弃服务。"""
     try:
-        return fetch_remote_version(cfg.get("update_url"), timeout)
+        return fetch_remote_version(cfg.get("update_url"))
     except RuntimeError as error:
         log(f"获取远端版本失败：{error}")
         return None
@@ -143,7 +141,7 @@ def check(root, cfg, remote=None):
         log("找不到 AgentDevWorkSpace，请先 agentdev setup，再 agentdev init")
         return
     if remote is None:
-        remote = fetch_remote(cfg, FETCH_TIMEOUT * 2)
+        remote = fetch_remote(cfg)
     if remote is None:
         return
     manager = skill / "scripts" / "agentdev.py"
@@ -184,7 +182,7 @@ def welcome(root):
     cfg = load_config(root)
     skill = skill_dir()
     local = local_version(skill) if skill else None
-    remote = fetch_remote(cfg, WELCOME_TIMEOUT)
+    remote = fetch_remote(cfg)
     if running():
         state = "正在后台更新"
     elif local is None:

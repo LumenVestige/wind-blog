@@ -55,3 +55,8 @@ npm run migrate -- --old-url ... --new-url ...
 - 管理端使用 shadcn/ui + 语义 token，导航唯一注册表为 `src/lib/admin-nav.ts`，二级入口按任务分组。
 - 内容模块默认进入列表，通过明确的新建按钮进入表单；静态页面 `/manage/pages` 与静态站点 `/manage/static-sites` 分开管理。
 - 设置按模块独立保存，`/api/manage/settings` 使用版本号防止旧表单覆盖新配置；修改时保留原插件兼容接口。
+
+<!-- agentskill:begin 以下内容由 AgentDevWorkSpace 的 init.sh 追加，重新执行时会被替换，请勿修改 -->
+
+请先阅读并遵守 [AgentDevWorkSpace 通用规则](agent-workspace/AGENTS.md)（路径相对于项目根目录）。
+<!-- agentskill:end -->

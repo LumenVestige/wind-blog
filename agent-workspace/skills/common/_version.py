@@ -54,7 +54,8 @@ def normalize_url(url):
     return url
 
 
-def fetch_remote_version(url=None, timeout=10):
+def fetch_remote_version(url=None, timeout=5):
+    """只有取得可解析的版本号才成功；失败尝试下一地址，timeout 为每个接口的超时秒数。"""
     url = normalize_url(url or DEFAULT_URL)
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if url in {RAW_URL, API_URL}:
@@ -68,10 +69,14 @@ def fetch_remote_version(url=None, timeout=10):
             headers["Authorization"] = "Bearer " + token
         try:
             request = urllib.request.Request(address, headers=headers)
-            with urllib.request.urlopen(request, timeout=max(0.1, timeout / len(urls))) as response:
+            with urllib.request.urlopen(request, timeout=max(0.1, timeout)) as response:
                 body = response.read(8192).decode("utf-8")
             if body.lstrip().startswith("{"):
-                body = base64.b64decode(json.loads(body)["content"]).decode("utf-8")
+                payload = json.loads(body)
+                content = payload.get("content")
+                if not isinstance(content, str) or not content.strip():
+                    raise ValueError(f"响应不包含版本内容：{payload.get('message') or '缺少有效 content'}")
+                body = base64.b64decode(content).decode("utf-8")
             return parse_version(body, allow_legacy=True)
         except (OSError, ValueError, KeyError, TypeError) as error:
             errors.append(str(error))
