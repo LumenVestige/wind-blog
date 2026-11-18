@@ -1,6 +1,5 @@
-import { siteName } from '@/server/tenant'
+import { getOwner, siteName } from '@/server/tenant'
 import { publicBase, siteDescription } from '@/server/metadata'
-import { siteOwner } from '@/server/tenant'
 import { getSetting } from '@/lib/settings'
 import { expandUrl } from '@/server/images'
 import type { Metadata } from 'next'
@@ -26,7 +25,7 @@ import { typographyStyles } from '@/lib/typography'
 export async function generateMetadata(): Promise<Metadata> {
   const name = siteName()
   const custom = expandUrl(getSetting('favicon_url', ''))
-  const avatar = expandUrl(siteOwner().avatar || '')
+  const avatar = expandUrl(getOwner()?.avatar || '')
   const icon = custom || avatar || '/favicon.svg'
   const icons = custom || avatar
     ? { icon, apple: icon }
